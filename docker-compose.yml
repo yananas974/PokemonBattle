@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  postgres:
+    container_name: pokemon-postgres
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: pokemon_battle
+      POSTGRES_USER: pokemon_user
+      POSTGRES_PASSWORD: pokemon_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - pokemon-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pokemon_user -d pokemon_battle"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    container_name: pokemon-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://pokemon_user:pokemon_password@postgres:5432/pokemon_battle
+      - PORT=3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - pokemon-network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    container_name: pokemon-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - API_URL=http://backend:3001
+    depends_on:
+      - backend
+    networks:
+      - pokemon-network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  pgadmin:
+    container_name: pokemon-pgadmin
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@pokemon.com
+      PGADMIN_DEFAULT_PASSWORD: pokemon123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - pokemon-network
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  pokemon-network:
+    driver: bridge 

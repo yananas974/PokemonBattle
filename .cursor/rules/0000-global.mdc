@@ -1,0 +1,14 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+@0000-cursor-rules.mdc créer une nouvelle règle pour initialiser un fichier README.md standard.
+
+Objectif: Créer un fichier README.md à la racine du projet s'il n'existe pas, et le remplir avec une structure de base (Titre, Description, Installation, Usage, Contribution, Licence).
+Fonctionnalités clés:
+- Vérifier l'existence de README.md à la racine.
+- Si absent, créer le fichier README.md.
+- Insérer un template de structure standard depuis sa "mémoire" (la KB).
+- Si présent, ne rien faire et m'informer.
+ID suggéré: 9001-init-readme

@@ -1,0 +1,54 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Règle 9001: Initialisation README.md
+
+## Objectif
+Créer un fichier README.md à la racine du projet s'il n'existe pas, et le remplir avec une structure de base (Titre, Description, Installation, Usage, Contribution, Licence).
+
+## Fonctionnalités clés
+- Vérifier l'existence de README.md à la racine
+- Si absent, créer le fichier README.md
+- Insérer un template de structure standard depuis la "mémoire" (KB)
+- Si présent, ne rien faire et informer l'utilisateur
+
+## Template standard README.md
+
+```markdown
+# [Nom du Projet]
+
+## Description
+[Description du projet, objectifs, technologies utilisées]
+
+## Installation
+### Prérequis
+- [Liste des prérequis]
+
+### Étapes d'installation
+1. [Étape 1]
+2. [Étape 2]
+3. [Étape 3]
+
+## Usage
+[Instructions d'utilisation, exemples, commandes principales]
+
+## Contribution
+[Guidelines pour contribuer au projet]
+
+## Licence
+[Information sur la licence]
+```
+
+## Déclenchement
+Cette règle s'active quand :
+- Un nouveau projet est créé
+- L'utilisateur demande explicitement la création d'un README
+- Référence à @9001-init-readme
+
+## Comportement
+1. Vérifier si README.md existe à la racine
+2. Si non : créer le fichier avec le template adapté au projet
+3. Si oui : informer que le fichier existe déjà
+4. Adapter le contenu selon le contexte du projet (technologies, structure, etc.)
