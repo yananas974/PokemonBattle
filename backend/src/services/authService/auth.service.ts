@@ -1,23 +1,29 @@
-import { Hono } from "hono";
-import { client } from "../../config/dataBase.Config";
-
-const authService = new Hono();
+import 'dotenv/config';
+import { db } from "../../config/drizzle.config";
+import { jwt } from 'hono/jwt';
+import { sql } from 'drizzle-orm';
+import { users } from "../../db/schema";
 
 export const insertUser = async (email: string, username: string, password: string) => {
   try {
-    const query = 'INSERT INTO users (email, username, password_hash) VALUES ($1, $2, $3) RETURNING *';
-    const values = [email, username, password];
-    const result = await client.query(query, values);
+    const result = await db.insert(users).values({
+      email,
+      username, 
+      password_hash: password
+    }).returning();
     
-    if (!result.rows[0]) {
+    if (!result[0]) {
       throw new Error('No user returned after insert');
     }
     
-    return result.rows[0];
+    return result[0];
   } catch (error) {
     console.error('Error in insertUser:', error);
-    throw error; // Rethrow pour que le contrôleur puisse le gérer
+    throw error;
   }
 };
 
-export default authService;
+export const authMiddleware = jwt({
+  secret: process.env.JWT_SECRET!,
+  cookie: 'authToken'
+});

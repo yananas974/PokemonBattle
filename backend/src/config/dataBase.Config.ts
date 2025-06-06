@@ -1,13 +1,18 @@
 import { Pool } from 'pg';
 
-export const client = new Pool({
-  connectionString: process.env.DATABASE_URL,
+const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: Number(process.env.DB_PORT),
 });
 
 export const connectToDatabase = async () => {
-  try{
-    await client.connect();
-    console.log('Connected to database');
+  try {
+    const client = await pool.connect();
+    console.log('Connected to database successfully');
+    return client;
   } catch (error) {
     console.error('Error connecting to database:', error);
     throw error;
@@ -16,7 +21,7 @@ export const connectToDatabase = async () => {
 
 export const closeDatabase = async () => {
   try{
-    await client.end();
+    await pool.end();
     console.log('Database connection closed');
   } catch (error) {
     console.error('Error closing database connection:', error);

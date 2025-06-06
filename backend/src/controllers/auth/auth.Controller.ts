@@ -11,7 +11,6 @@ import type { CookieOptions } from 'hono/utils/cookie';
 const authController = new Hono();
 
 authController.post('/signup', signupValidator, async (c) => {
-  const db = await connectToDatabase();
   const { email, password, username } = await c.req.json();
   
   try {
@@ -21,7 +20,7 @@ authController.post('/signup', signupValidator, async (c) => {
     const user = await insertUser(email, username, hashedPassword);
     console.log('User created:', user); // Log pour debug
     
-    const token = await generateToken(user.id);
+    const token = await generateToken(String(user.id));
     setCookie(c, 'authToken', token, cookieOptions as CookieOptions);
     
     return c.json({
