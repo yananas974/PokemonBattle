@@ -3,6 +3,9 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { sign } from 'hono/jwt';
 
+const JWT_SECRET = process.env.JWT_SECRET;
+
+
 const authUtils = new Hono();
 
 
@@ -25,6 +28,12 @@ export const cookieOptions = {
   path: '/',
   maxAge: 3600,
 };
+
+export const comparePassword = async (password: string, hash: string) => {
+  return await bcrypt.compare(password, hash);
+};
+
+export const verifyPassword = comparePassword;
 
 
 
