@@ -3,16 +3,16 @@ version: '3.8'
 services:
   postgres:
     container_name: pokemon-postgres
-    image: postgres:15-alpine
+    image: postgres:15
     environment:
       POSTGRES_DB: pokemon_battle
       POSTGRES_USER: pokemon_user
-      POSTGRES_PASSWORD: pokemon_password
+      POSTGRES_PASSWORD: lOgan
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - pokemon-network
     healthcheck:
@@ -30,8 +30,13 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=postgresql://pokemon_user:pokemon_password@postgres:5432/pokemon_battle
+      - DATABASE_URL=postgresql://pokemon_user:lOgan@postgres:5432/pokemon_battle
       - PORT=3001
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=pokemon_battle
+      - DB_USER=pokemon_user
+      - DB_PASSWORD=lOgan
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,7 +69,7 @@ services:
     image: dpage/pgadmin4:latest
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@pokemon.com
-      PGADMIN_DEFAULT_PASSWORD: pokemon123
+      PGADMIN_DEFAULT_PASSWORD: lOgan
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
       - "5050:80"

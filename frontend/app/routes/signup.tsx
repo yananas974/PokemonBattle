@@ -3,36 +3,41 @@ import { Form, useActionData, useNavigation, Link } from "@remix-run/react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 
-// Action pour gérer la soumission du formulaire de login
+// Action pour gérer la soumission du formulaire d'inscription
 export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const email = formData.get("email");
+  const username = formData.get("username");
   const password = formData.get("password");
+  const confirmPassword = formData.get("confirmPassword");
 
   // Validation côté serveur
-  if (!email || !password) {
-    return json({ error: "Email et mot de passe sont requis" }, { status: 400 });
+  if (!email || !username || !password || !confirmPassword) {
+    return json({ error: "Tous les champs sont requis" }, { status: 400 });
+  }
+
+  if (password !== confirmPassword) {
+    return json({ error: "Les mots de passe ne correspondent pas" }, { status: 400 });
   }
 
   try {
-    // Appel à l'API backend pour l'authentification
-    const response = await fetch("http://pokemon-backend:3001/api/auth/login", {
+    // Appel à l'API backend pour l'inscription
+    const response = await fetch("http://pokemon-backend:3001/api/auth/signup", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, username, password }),
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      return json({ error: data.message || "Erreur de connexion" }, { status: response.status });
+      return json({ error: data.message || "Erreur lors de l'inscription" }, { status: response.status });
     }
 
-    // Si la connexion réussit, rediriger vers la page d'accueil
-    // Note: Dans une vraie app, vous stockeriez le token dans les cookies
-    return redirect("/dashboard");
+    // Si l'inscription réussit, rediriger vers la page de connexion
+    return redirect("/login?message=Inscription réussie ! Vous pouvez maintenant vous connecter.");
   } catch (error) {
     return json({ error: "Erreur de connexion au serveur" }, { status: 500 });
   }
@@ -45,19 +50,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json({});
 };
 
-export default function Login() {
+export default function Signup() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const isSubmitting = navigation.state === "submitting";
 
   return (
     <div style={styles.container}>
-      <div style={styles.loginCard}>
+      <div style={styles.signupCard}>
         <div style={styles.header}>
-          <h1 style={styles.title}>Connexion</h1>
-          <p style={styles.subtitle}>Connectez-vous à Pokemon Battle</p>
+          <h1 style={styles.title}>Créer un compte</h1>
+          <p style={styles.subtitle}>Rejoignez Pokemon Battle</p>
         </div>
 
         <Form method="post" style={styles.form}>
@@ -77,6 +83,21 @@ export default function Login() {
           </div>
 
           <div style={styles.inputGroup}>
+            <label htmlFor="username" style={styles.label}>
+              Nom d'utilisateur
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              required
+              style={styles.input}
+              placeholder="votre_nom_utilisateur"
+              autoComplete="username"
+            />
+          </div>
+
+          <div style={styles.inputGroup}>
             <label htmlFor="password" style={styles.label}>
               Mot de passe
             </label>
@@ -88,7 +109,7 @@ export default function Login() {
                 required
                 style={styles.input}
                 placeholder="••••••••"
-                autoComplete="current-password"
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -98,6 +119,40 @@ export default function Login() {
                 {showPassword ? "👁️‍🗨️" : "👁️"}
               </button>
             </div>
+          </div>
+
+          <div style={styles.inputGroup}>
+            <label htmlFor="confirmPassword" style={styles.label}>
+              Confirmer le mot de passe
+            </label>
+            <div style={styles.passwordContainer}>
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                id="confirmPassword"
+                name="confirmPassword"
+                required
+                style={styles.input}
+                placeholder="••••••••"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                style={styles.passwordToggle}
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? "👁️‍🗨️" : "👁️"}
+              </button>
+            </div>
+          </div>
+
+          <div style={styles.passwordRequirements}>
+            <p style={styles.requirementsTitle}>Le mot de passe doit contenir :</p>
+            <ul style={styles.requirementsList}>
+              <li>Au moins 8 caractères</li>
+              <li>Une majuscule et une minuscule</li>
+              <li>Un chiffre</li>
+              <li>Un caractère spécial</li>
+            </ul>
           </div>
 
           {actionData?.error && (
@@ -114,15 +169,15 @@ export default function Login() {
               ...(isSubmitting ? styles.submitButtonDisabled : {})
             }}
           >
-            {isSubmitting ? "Connexion..." : "Se connecter"}
+            {isSubmitting ? "Création..." : "Créer mon compte"}
           </button>
         </Form>
 
         <div style={styles.footer}>
           <p style={styles.footerText}>
-            Pas encore de compte ?{" "}
-            <Link to="/signup" style={styles.link}>
-              Créer un compte
+            Déjà un compte ?{" "}
+            <Link to="/login" style={styles.link}>
+              Se connecter
             </Link>
           </p>
         </div>
@@ -141,13 +196,13 @@ const styles = {
     padding: "1rem",
   } as const,
   
-  loginCard: {
+  signupCard: {
     backgroundColor: "white",
     borderRadius: "16px",
     boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
     padding: "2rem",
     width: "100%",
-    maxWidth: "400px",
+    maxWidth: "450px",
   } as const,
   
   header: {
@@ -213,6 +268,27 @@ const styles = {
     fontSize: "1rem",
   } as const,
   
+  passwordRequirements: {
+    backgroundColor: "#f8fafc",
+    padding: "1rem",
+    borderRadius: "8px",
+    border: "1px solid #e2e8f0",
+  } as const,
+  
+  requirementsTitle: {
+    fontSize: "0.875rem",
+    fontWeight: "500",
+    color: "#374151",
+    margin: "0 0 0.5rem 0",
+  } as const,
+  
+  requirementsList: {
+    fontSize: "0.8rem",
+    color: "#6b7280",
+    margin: 0,
+    paddingLeft: "1.25rem",
+  } as const,
+  
   errorMessage: {
     backgroundColor: "#fef2f2",
     color: "#dc2626",
@@ -259,4 +335,4 @@ const styles = {
     textDecoration: "none",
     fontWeight: "500",
   } as const,
-};
+}; 
