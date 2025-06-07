@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { createCache } from '../../utils/cache.utils';
+import { createCache } from '../../utils/auth/cache.utils';
 
 const pokemonController = new Hono();
 

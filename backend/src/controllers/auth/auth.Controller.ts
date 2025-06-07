@@ -1,13 +1,10 @@
 import { Hono } from "hono";
 import { signupValidator } from '../../schemas/signup.schema';
-import { connectToDatabase } from '../../config/dataBase.Config';
-import { insertUser } from '../../services/authService/auth.service';
-import { hashPassword, generateToken, cookieOptions, comparePassword } from '../../utils/auth.utils'; 
+import { createUser, getUserByEmail } from '../../services/userService';
+import { hashPassword, generateToken, cookieOptions, comparePassword } from '../../utils/auth/auth.utils'; 
 import { setCookie } from 'hono/cookie';
 import type { CookieOptions } from 'hono/utils/cookie';
-import { db } from '../../config/drizzle.config';
-import { users } from '../../db/schema';
-import { eq } from 'drizzle-orm';
+
 
 const authController = new Hono();
 
@@ -16,10 +13,12 @@ authController.post('/signup', signupValidator, async (c) => {
   
   try {
     const hashedPassword = await hashPassword(password);
-    console.log('Attempting to create user:', { email, username }); // Log pour debug
+    console.log('Attempting to create user:', { email, username });
     
-    const user = await insertUser(email, username, hashedPassword);
-    console.log('User created:', user); // Log pour debug
+    
+    // Appel à la fonction métier qui insère en bdd
+    const user = await createUser({ email, username, password_hash: hashedPassword });
+    console.log('User created:', user);
     
     const token = await generateToken(String(user.id));
     setCookie(c, 'authToken', token, cookieOptions as CookieOptions);
@@ -59,44 +58,43 @@ authController.post('/signup', signupValidator, async (c) => {
 
 authController.post('/login', async (c) => {
   const { email, password } = await c.req.json();
-  
+
   try {
-    // Validation des champs requis
     if (!email || !password) {
       return c.json({ error: 'Email and password are required' }, 400);
     }
 
-    // Rechercher l'utilisateur par email
-    const user = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    
-    if (user.length === 0) {
+    const user = await getUserByEmail(email);
+
+    if (!user) {
       return c.json({ error: 'Invalid email or password' }, 401);
     }
-
-    // Vérifier le mot de passe
-    const isValidPassword = await comparePassword(password, user[0].password_hash);
-    
+ 
+    const isValidPassword = await comparePassword(password, user.password_hash);
     if (!isValidPassword) {
       return c.json({ error: 'Invalid email or password' }, 401);
     }
-
-    // Générer le token JWT
-    const token = await generateToken(String(user[0].id));
+ 
+    const token = await generateToken(String(user.id));
     setCookie(c, 'authToken', token, cookieOptions as CookieOptions);
-    
+
+    const { password_hash, ...userWithoutPassword } = user;
+
     return c.json({
       message: 'Login successful',
-      user: {
-        id: user[0].id,
-        email: user[0].email,
-        username: user[0].username
-      }
+      user: userWithoutPassword
     });
-    
+
   } catch (error) {
     console.error('Error in login:', error);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
+
+authController.post('/logout', async (c) => {
+  setCookie(c, 'authToken', '', {...cookieOptions, maxAge: 0} as CookieOptions);
+  return c.json({ message: 'Logged out successfully' });
+});
+
 
 export default authController;

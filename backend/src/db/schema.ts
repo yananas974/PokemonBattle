@@ -44,3 +44,10 @@ export const battles = pgTable("battles", {
   user_id: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
   battle_date: timestamp("battle_date").defaultNow(),
 });
+
+export const Team = pgTable("team", {
+  id: serial("id").primaryKey(),
+  team_name: varchar("team_name", { length: 100 }).notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
