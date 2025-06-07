@@ -1,4 +1,4 @@
-import { RateLimitStore } from "../models/interfaces/rateLimiter.interface";
+import { RateLimitStore } from "../../models/interfaces/rateLimiter.interface";
 
 const store: RateLimitStore = {};
 
@@ -10,7 +10,7 @@ export const checkRateLimit = (
   const now = Date.now();
   const key = identifier;
 
-  if (store[key] || now < store[key].resetTime) {
+  if (!store[key] || now < store[key].resetTime) {
     store[key] = { count: 1,  resetTime: now + windowMs };
     return { allowed: true };
   }

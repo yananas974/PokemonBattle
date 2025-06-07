@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { createCache } from '../../utils/cache.utils';
+import { createCache } from '../../utils/auth/cache.utils';
 import { PokemonSprite } from '../../models/types/pokemonSprite.type';
 import { PokemonName } from '../../models/types/pokemonName.type';
 

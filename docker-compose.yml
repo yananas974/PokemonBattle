@@ -37,6 +37,7 @@ services:
       - DB_NAME=pokemon_battle
       - DB_USER=pokemon_user
       - DB_PASSWORD=lOgan
+      - JWT_SECRET=votre_cle_secrete_jwt_super_securisee_ici_123456789
     depends_on:
       postgres:
         condition: service_healthy
