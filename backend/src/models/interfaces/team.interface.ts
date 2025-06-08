@@ -1,6 +1,7 @@
 export interface Team {
   id: number;
-  teamName:string;
-  createdAt: Date;
-  updatedAt: Date;
+  team_name: string;
+  user_id: number;
+  created_at: Date;
+  updated_at: Date;
 }

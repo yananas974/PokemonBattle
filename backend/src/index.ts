@@ -7,6 +7,7 @@ import pokemonRoutes from './routes/pokemon.route';
 import pokemonFrController from './controllers/pokemonController/pokemonFr.controller';
 import authRoutes from './routes/auth.route';
 import teamController from './controllers/team/team.controller';
+import pokemonTeamRoutes from './routes/pokemonTeam.route';
 
 const app = new Hono();
 
@@ -23,6 +24,7 @@ app.route('/api/pokemon', pokemonRoutes);
 app.route('/api/pokemon/fusion', pokemonFrController);
 app.route('/api/auth', authRoutes);
 app.route('/api/teams', teamController);
+app.route('/api/pokemon-team', pokemonTeamRoutes);
 
 app.get('/api/health', (c) => {
   return c.json({ status: 'healthy', timestamp: new Date().toISOString() });

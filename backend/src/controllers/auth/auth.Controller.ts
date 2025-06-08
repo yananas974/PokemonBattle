@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { signupValidator } from '../../schemas/signup.schema';
-import { createUser, getUserByEmail } from '../../services/userService';
+import { createUser, getUserByEmail } from '../../services/authService/userService';
 import { hashPassword, generateToken, cookieOptions, comparePassword } from '../../utils/auth/auth.utils'; 
 import { setCookie } from 'hono/cookie';
 import type { CookieOptions } from 'hono/utils/cookie';
@@ -57,10 +57,15 @@ authController.post('/signup', signupValidator, async (c) => {
 });
 
 authController.post('/login', async (c) => {
+  console.log('=== TENTATIVE DE CONNEXION ===');
+  console.log('Headers reçus dans login:', Object.fromEntries(c.req.raw.headers));
   const { email, password } = await c.req.json();
+  console.log('Email reçu:', email);
+  console.log('Password reçu:', password ? '***' : 'undefined');
 
   try {
     if (!email || !password) {
+      console.log('Erreur: Email ou mot de passe manquant');
       return c.json({ error: 'Email and password are required' }, 400);
     }
 
@@ -77,9 +82,13 @@ authController.post('/login', async (c) => {
  
     const token = await generateToken(String(user.id));
     setCookie(c, 'authToken', token, cookieOptions as CookieOptions);
+    
+    console.log('Token généré:', token.substring(0, 20) + '...');
+    console.log('Cookie défini avec options:', cookieOptions);
 
     const { password_hash, ...userWithoutPassword } = user;
 
+    console.log('Connexion réussie pour utilisateur:', userWithoutPassword.email);
     return c.json({
       message: 'Login successful',
       user: userWithoutPassword

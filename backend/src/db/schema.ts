@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, timestamp, integer, text, inet } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, timestamp, integer, text, inet, foreignKey } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -32,7 +32,7 @@ export const pokemon = pgTable("pokemon", {
   height: integer("height").default(100),
   weight: integer("weight").default(100),
   sprite_url: varchar("sprite_url", { length: 255 }),
-  user_id: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  team_id: integer("team_id").references(() => Team.id, { onDelete: "cascade" }),
   created_at: timestamp("created_at").defaultNow(),
 });
 
@@ -48,6 +48,13 @@ export const battles = pgTable("battles", {
 export const Team = pgTable("team", {
   id: serial("id").primaryKey(),
   team_name: varchar("team_name", { length: 100 }).notNull(),
+  user_id: integer("user_id").notNull(), // ✅ Champ user_id ajouté
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  user_fk: foreignKey({
+    columns: [table.user_id],
+    foreignColumns: [users.id],
+    name: "user_fk"
+  }).onDelete("cascade")
+}));

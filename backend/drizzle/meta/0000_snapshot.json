@@ -1,9 +1,68 @@
 {
-  "id": "fe190897-7566-4b09-adeb-d070635fe513",
+  "id": "426ea43e-275b-40d1-b8ce-34e2a53ad498",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.team": {
+      "name": "team",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "team_name": {
+          "name": "team_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_fk": {
+          "name": "user_fk",
+          "tableFrom": "team",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.battles": {
       "name": "battles",
       "schema": "",
@@ -190,8 +249,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "user_id": {
-          "name": "user_id",
+        "team_id": {
+          "name": "team_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -206,12 +265,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "pokemon_user_id_users_id_fk": {
-          "name": "pokemon_user_id_users_id_fk",
+        "pokemon_team_id_team_id_fk": {
+          "name": "pokemon_team_id_team_id_fk",
           "tableFrom": "pokemon",
-          "tableTo": "users",
+          "tableTo": "team",
           "columnsFrom": [
-            "user_id"
+            "team_id"
           ],
           "columnsTo": [
             "id"

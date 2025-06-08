@@ -1,262 +1,148 @@
-import { useState } from "react";
-import { Form, useActionData, useNavigation, Link } from "@remix-run/react";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import type { ActionFunctionArgs, MetaFunction } from '@remix-run/node';
+import { json, redirect } from '@remix-run/node';
+import { Form, Link, useActionData, useNavigation } from '@remix-run/react';
+import { authService } from '~/services/authService';
+import { createUserSession } from '~/sessions';
 
-// Action pour gérer la soumission du formulaire de login
+export const meta: MetaFunction = () => {
+  return [
+    { title: 'Connexion - Pokemon Battle' },
+    { name: 'description', content: 'Connectez-vous à votre compte Pokemon Battle' },
+  ];
+};
+
 export const action = async ({ request }: ActionFunctionArgs) => {
+  console.log('=== ACTION LOGIN APPELÉE ===');
   const formData = await request.formData();
-  const email = formData.get("email");
-  const password = formData.get("password");
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+  
+  console.log('Données reçues - Email:', email, 'Password:', password ? 'fourni' : 'manquant');
 
-  // Validation côté serveur
-  if (!email || !password) {
-    return json({ error: "Email et mot de passe sont requis" }, { status: 400 });
+  const errors: { [key: string]: string } = {};
+
+  if (!email) {
+    errors.email = 'L\'email est requis';
+  } else if (!/\S+@\S+\.\S+/.test(email)) {
+    errors.email = 'L\'email n\'est pas valide';
+  }
+
+  if (!password) {
+    errors.password = 'Le mot de passe est requis';
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return json({ errors, success: false });
   }
 
   try {
-    // Appel à l'API backend pour l'authentification
-    const response = await fetch("http://pokemon-backend:3001/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return json({ error: data.message || "Erreur de connexion" }, { status: response.status });
+    console.log('Appel du service de connexion...');
+    // Utiliser loginRaw pour récupérer la réponse complète avec headers
+    const response = await authService.loginRaw({ email, password });
+    const result = await response.json();
+    console.log('Connexion réussie:', result);
+    
+    // Récupérer le token backend depuis les cookies de réponse
+    const setCookieHeader = response.headers.get('set-cookie');
+    let backendToken = null;
+    
+    if (setCookieHeader) {
+      const tokenMatch = setCookieHeader.match(/authToken=([^;]+)/);
+      if (tokenMatch) {
+        backendToken = tokenMatch[1];
+        console.log('Token backend récupéré:', backendToken.substring(0, 30) + '...');
+      }
     }
-
-    // Si la connexion réussit, rediriger vers la page d'accueil
-    // Note: Dans une vraie app, vous stockeriez le token dans les cookies
-    return redirect("/dashboard");
+    
+    console.log('Création de la session utilisateur avec token...');
+    const userData = backendToken ? { ...result.user, backendToken } : result.user;
+    return createUserSession(result.user.id.toString(), userData, '/dashboard');
   } catch (error) {
-    return json({ error: "Erreur de connexion au serveur" }, { status: 500 });
+    console.log('Erreur de connexion:', error);
+    return json({
+      errors: { general: error instanceof Error ? error.message : 'Erreur de connexion' },
+      success: false,
+    });
   }
-};
-
-// Loader pour vérifier si l'utilisateur est déjà connecté
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  // Ici vous pourriez vérifier si l'utilisateur est déjà connecté
-  // et le rediriger si nécessaire
-  return json({});
 };
 
 export default function Login() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
-  const [showPassword, setShowPassword] = useState(false);
-  
-  const isSubmitting = navigation.state === "submitting";
+  const isSubmitting = navigation.state === 'submitting';
 
   return (
-    <div style={styles.container}>
-      <div style={styles.loginCard}>
-        <div style={styles.header}>
-          <h1 style={styles.title}>Connexion</h1>
-          <p style={styles.subtitle}>Connectez-vous à Pokemon Battle</p>
-        </div>
-
-        <Form method="post" style={styles.form}>
-          <div style={styles.inputGroup}>
-            <label htmlFor="email" style={styles.label}>
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              required
-              style={styles.input}
-              placeholder="votre@email.com"
-              autoComplete="email"
-            />
-          </div>
-
-          <div style={styles.inputGroup}>
-            <label htmlFor="password" style={styles.label}>
-              Mot de passe
-            </label>
-            <div style={styles.passwordContainer}>
-              <input
-                type={showPassword ? "text" : "password"}
-                id="password"
-                name="password"
-                required
-                style={styles.input}
-                placeholder="••••••••"
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                style={styles.passwordToggle}
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? "👁️‍🗨️" : "👁️"}
-              </button>
-            </div>
-          </div>
-
-          {actionData?.error && (
-            <div style={styles.errorMessage}>
-              {actionData.error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            style={{
-              ...styles.submitButton,
-              ...(isSubmitting ? styles.submitButtonDisabled : {})
-            }}
-          >
-            {isSubmitting ? "Connexion..." : "Se connecter"}
-          </button>
-        </Form>
-
-        <div style={styles.footer}>
-          <p style={styles.footerText}>
-            Pas encore de compte ?{" "}
-            <Link to="/signup" style={styles.link}>
-              Créer un compte
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Connectez-vous à votre compte
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Ou{' '}
+            <Link
+              to="/signup"
+              className="font-medium text-indigo-600 hover:text-indigo-500"
+            >
+              créez un nouveau compte
             </Link>
           </p>
         </div>
+
+        <Form method="post" className="mt-8 space-y-6">
+          {actionData?.errors?.general && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+              <p className="text-sm text-red-700">{actionData.errors.general}</p>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="Adresse email"
+              />
+              {actionData?.errors && 'email' in actionData.errors && (
+                <p className="mt-1 text-sm text-red-600">{actionData.errors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="Mot de passe"
+              />
+              {actionData?.errors && 'password' in actionData.errors && (
+                <p className="mt-1 text-sm text-red-600">{actionData.errors.password}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+            >
+              {isSubmitting ? 'Connexion...' : 'Se connecter'}
+            </button>
+          </div>
+
+          <div className="text-center">
+            <Link to="/" className="font-medium text-indigo-600 hover:text-indigo-500">
+              Retour à l'accueil
+            </Link>
+          </div>
+        </Form>
       </div>
     </div>
   );
-}
-
-const styles = {
-  container: {
-    minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    padding: "1rem",
-  } as const,
-  
-  loginCard: {
-    backgroundColor: "white",
-    borderRadius: "16px",
-    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
-    padding: "2rem",
-    width: "100%",
-    maxWidth: "400px",
-  } as const,
-  
-  header: {
-    textAlign: "center",
-    marginBottom: "2rem",
-  } as const,
-  
-  title: {
-    fontSize: "2rem",
-    fontWeight: "bold",
-    color: "#1f2937",
-    marginBottom: "0.5rem",
-    margin: 0,
-  } as const,
-  
-  subtitle: {
-    color: "#6b7280",
-    fontSize: "1rem",
-    margin: 0,
-  } as const,
-  
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "1.5rem",
-  } as const,
-  
-  inputGroup: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.5rem",
-  } as const,
-  
-  label: {
-    fontSize: "0.875rem",
-    fontWeight: "500",
-    color: "#374151",
-  } as const,
-  
-  input: {
-    padding: "0.75rem",
-    border: "1px solid #d1d5db",
-    borderRadius: "8px",
-    fontSize: "1rem",
-    transition: "all 0.2s",
-    outline: "none",
-    backgroundColor: "white",
-  } as const,
-  
-  passwordContainer: {
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-  } as const,
-  
-  passwordToggle: {
-    position: "absolute",
-    right: "0.75rem",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    padding: "0.25rem",
-    fontSize: "1rem",
-  } as const,
-  
-  errorMessage: {
-    backgroundColor: "#fef2f2",
-    color: "#dc2626",
-    padding: "0.75rem",
-    borderRadius: "8px",
-    fontSize: "0.875rem",
-    border: "1px solid #fecaca",
-  } as const,
-  
-  submitButton: {
-    backgroundColor: "#3b82f6",
-    color: "white",
-    padding: "0.75rem 1.5rem",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: "1rem",
-    fontWeight: "500",
-    cursor: "pointer",
-    transition: "all 0.2s",
-    marginTop: "0.5rem",
-  } as const,
-  
-  submitButtonDisabled: {
-    backgroundColor: "#9ca3af",
-    cursor: "not-allowed",
-  } as const,
-  
-  footer: {
-    textAlign: "center",
-    marginTop: "2rem",
-    paddingTop: "1.5rem",
-    borderTop: "1px solid #e5e7eb",
-  } as const,
-  
-  footerText: {
-    color: "#6b7280",
-    fontSize: "0.875rem",
-    margin: 0,
-    textAlign: "center",
-  } as const,
-  
-  link: {
-    color: "#3b82f6",
-    textDecoration: "none",
-    fontWeight: "500",
-  } as const,
-};
+} 
