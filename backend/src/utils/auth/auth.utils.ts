@@ -23,10 +23,10 @@ export const generateToken = async (user_id: string) => {
 
 export const cookieOptions = {
   httpOnly: true,
-  secure: true,
-  sameSite: 'Strict',
+  secure: process.env.NODE_ENV === 'production', // Seulement en production (HTTPS)
+  sameSite: 'lax' as const, // Plus permissif pour le développement
   path: '/',
-  maxAge: 3600,
+  maxAge: 60 * 60 * 24 * 7, // 7 jours au lieu de 1 heure
 };
 
 export const comparePassword = async (password: string, hash: string) => {

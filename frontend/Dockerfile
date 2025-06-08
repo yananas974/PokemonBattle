@@ -2,17 +2,21 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files first
+# Copier les fichiers de configuration
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Installer les dépendances
+RUN npm ci
 
-# Copy source code
+# Copier le code source
 COPY . .
 
-# Expose port
+# Exposer le port
 EXPOSE 3000
 
-# Start the application in development mode
+# Variables d'environnement
+ENV NODE_ENV=development
+ENV PORT=3000
+
+# Démarrer l'application en mode développement
 CMD ["npm", "run", "dev"] 
