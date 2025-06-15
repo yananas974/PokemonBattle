@@ -1,35 +1,65 @@
-import { Create } from "../../db/crud/create.js";
+import { Create, Get, GetMany, Delete, Update } from "../../db/crud/crud.js";
 import { Team } from "../../db/schema.js";
-import { Get } from "../../db/crud/get.js";
-import { GetMany } from "../../db/crud/get.js";
 import { eq } from "drizzle-orm";
-import { Delete } from "../../db/crud/delete.js";
-import { Update } from "../../db/crud/update.js";
+import type { CreateTeamData, TeamDB, Team as TeamAPI, UpdateTeamData } from "../../models/interfaces/interfaces.js";
+import { 
+  transformTeamForAPI,
+  transformTeamForDB 
+} from "../../models/interfaces/team.interface.js";
+import { createPokemonSelection, deletePokemonSelection } from "../services.js";
 
+// ✅ DRY : Classe avec méthodes typées
+export class TeamService {
+  
+  static async createTeam(data: CreateTeamData, userId: number): Promise<TeamAPI> {
+    const teamDB = await Create<TeamDB>(Team, {
+      team_name: data.teamName,
+      user_id: userId
+    });
+    return transformTeamForAPI(teamDB);
+  }
 
+  static async getTeamById(id: number): Promise<TeamAPI | null> {
+    const teamDB = await Get<TeamDB>(Team, eq(Team.id, id));
+    return teamDB ? transformTeamForAPI(teamDB) : null;
+  }
 
+  // ✅ UNE SEULE fonction pour récupérer les équipes d'un user
+  static async getTeamsByUserId(userId: number): Promise<TeamAPI[]> {
+    const teamsDB = await GetMany<TeamDB>(Team, eq(Team.user_id, userId));
+    return teamsDB.map(transformTeamForAPI);
+  }
 
+  static async updateTeam(id: number, data: UpdateTeamData): Promise<TeamAPI> {
+    const updateData = data.teamName ? { team_name: data.teamName } : {};
+    const teamDB = await Update<TeamDB>(Team, eq(Team.id, id), updateData);
+    return transformTeamForAPI(teamDB);
+  }
 
-export async function createTeam(teamName: string, userId: number) {
-  return Create(Team, { team_name: teamName, user_id: userId });
+  static async deleteTeam(id: number): Promise<void> {
+    await Delete(Team, eq(Team.id, id));
+  }
+
+  static async addPokemonToTeam(teamId: number, pokemonId: number, userId: number) {
+    const team = await this.getTeamById(teamId);
+    if (!team || team.userId !== userId) {
+      throw new Error('Équipe non trouvée ou non autorisée');
+    }
+    return await createPokemonSelection(teamId, pokemonId);
+  }
+
+  static async removePokemonFromTeam(teamId: number, pokemonId: number, userId: number) {
+    const team = await this.getTeamById(teamId);
+    if (!team || team.userId !== userId) {
+      throw new Error('Équipe non trouvée ou non autorisée');
+    }
+    return await deletePokemonSelection(teamId, pokemonId);
+  }
 }
 
-export async function getTeamById(id: number) {
-  return Get(Team, eq(Team.id, id));
-}
-
-export async function getAllTeams(userId: number) {
-  return GetMany(Team, eq(Team.user_id, userId));
-}
-
-export async function getTeamByUserId(userId: number) {
-  return GetMany(Team, eq(Team.user_id, userId));
-}
-
-export async function deleteTeam(id: number) {
-  return Delete(Team, eq(Team.id, id));
-}
-
-export async function updateTeam(id: number, data: Partial<typeof Team>) {
-  return Update(Team, eq(Team.id, id), data);
-}
+// ✅ Export des fonctions individuelles (rétrocompatibilité)
+export const createTeam = TeamService.createTeam;
+export const getTeamById = TeamService.getTeamById;
+export const getTeamByUserId = TeamService.getTeamsByUserId; // ✅ Plus de doublon
+export const updateTeam = TeamService.updateTeam;
+export const deleteTeam = TeamService.deleteTeam;

@@ -22,16 +22,6 @@ export const authService = {
     return response.json();
   },
 
-  // Connexion d'un utilisateur (version raw pour récupérer les headers)
-  async loginRaw(data: LoginData): Promise<Response> {
-    const response = await apiCall('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-    await handleApiError(response);
-    return response;
-  },
-
   // Déconnexion d'un utilisateur
   async logout(): Promise<{ message: string }> {
     const response = await apiCall('/api/auth/logout', {
@@ -39,5 +29,5 @@ export const authService = {
     });
     await handleApiError(response);
     return response.json();
-  },
+  }
 }; 

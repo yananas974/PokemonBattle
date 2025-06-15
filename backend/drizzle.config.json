@@ -1,8 +1,0 @@
-{
-  "schema": "./src/db/schema.ts",
-  "out": "./drizzle",
-  "dialect": "postgresql",
-  "dbCredentials": {
-    "url": "postgres://pokemon_user:lOgan@localhost:5432/pokemon_battle?sslmode=disable"
-  }
-}

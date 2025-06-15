@@ -11,8 +11,15 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Install wait-on globally and postgresql-client for psql
+RUN npm install -g wait-on tsx && \
+    apk add --no-cache postgresql-client
+
+# Make scripts executable
+RUN chmod +x scripts/*.sh 2>/dev/null || true
+
 # Expose port
 EXPOSE 3001
 
-# Start the application
-CMD ["npm", "run", "dev"] 
+# Default command (can be overridden)
+CMD ["npx", "tsx", "src/index.ts"] 
