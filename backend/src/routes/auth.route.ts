@@ -1,8 +1,11 @@
 import { Hono } from 'hono';
-import authController from '../controllers/auth/auth.Controller';
+import { signupHandler, loginHandler, logoutHandler, getUsersHandler } from '../handlers/auth.handler.js';
 
 const authRoutes = new Hono();
 
-authRoutes.route('', authController);
+authRoutes.post('/signup', signupHandler);
+authRoutes.post('/login', loginHandler);
+authRoutes.post('/logout', logoutHandler);
+authRoutes.get('/users', getUsersHandler);
 
 export default authRoutes;  

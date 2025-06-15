@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, timestamp, integer, text, inet, foreignKey } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, timestamp, integer, text, inet, foreignKey, unique } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -19,22 +19,33 @@ export const sessions = pgTable("sessions", {
   user_agent: text("user_agent").notNull().default(""),
 });
 
+export const friendships = pgTable("friendships", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  friend_id: integer("friend_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, accepted, blocked
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  unique_friendship: unique().on(table.user_id, table.friend_id),
+}));
+
 export const pokemon = pgTable("pokemon", {
   id: serial("id").primaryKey(),
-  pokemon_id: integer("pokemon_id").notNull().unique(),
-  name: varchar("name", { length: 100 }).notNull(),
-  type: varchar("type", { length: 100 }).notNull(),
+  pokemon_reference_id: integer("pokemon_reference_id")
+    .notNull()
+    .references(() => pokemonReference.id, { onDelete: "cascade" }),
   level: integer("level").default(1),
   hp: integer("hp").default(100),
   attack: integer("attack").default(50),
   defense: integer("defense").default(50),
   speed: integer("speed").default(50),
-  height: integer("height").default(100),
-  weight: integer("weight").default(100),
-  sprite_url: varchar("sprite_url", { length: 255 }),
+
   team_id: integer("team_id").references(() => Team.id, { onDelete: "cascade" }),
   created_at: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  unique_pokemon_per_team: unique().on(table.team_id, table.pokemon_reference_id),
+}));
 
 export const battles = pgTable("battles", {
   id: serial("id").primaryKey(),
@@ -58,3 +69,18 @@ export const Team = pgTable("team", {
     name: "user_fk"
   }).onDelete("cascade")
 }));
+
+export const pokemonReference = pgTable("pokemon_reference", {
+  id: serial("id").primaryKey(),
+  pokeapi_id: integer("pokeapi_id").notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull(),
+  type: varchar("type", { length: 100 }).notNull(),
+  base_hp: integer("base_hp"),
+  base_attack: integer("base_attack"),
+  base_defense: integer("base_defense"),
+  base_speed: integer("base_speed"),
+  height: integer("height"),
+  weight: integer("weight"),
+  sprite_url: varchar("sprite_url", { length: 255 }),
+  created_at: timestamp("created_at").defaultNow()
+});

@@ -1,5 +1,5 @@
 {
-  "id": "426ea43e-275b-40d1-b8ce-34e2a53ad498",
+  "id": "e441550c-b524-41b8-9ff9-c19ede2a8724",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -166,6 +166,94 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.friendships": {
+      "name": "friendships",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "friend_id": {
+          "name": "friend_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "friendships_user_id_users_id_fk": {
+          "name": "friendships_user_id_users_id_fk",
+          "tableFrom": "friendships",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "friendships_friend_id_users_id_fk": {
+          "name": "friendships_friend_id_users_id_fk",
+          "tableFrom": "friendships",
+          "tableTo": "users",
+          "columnsFrom": [
+            "friend_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "friendships_user_id_friend_id_unique": {
+          "name": "friendships_user_id_friend_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "friend_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.pokemon": {
       "name": "pokemon",
       "schema": "",
@@ -176,21 +264,9 @@
           "primaryKey": true,
           "notNull": true
         },
-        "pokemon_id": {
-          "name": "pokemon_id",
+        "pokemon_reference_id": {
+          "name": "pokemon_reference_id",
           "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "type": {
-          "name": "type",
-          "type": "varchar(100)",
           "primaryKey": false,
           "notNull": true
         },
@@ -229,26 +305,6 @@
           "notNull": false,
           "default": 50
         },
-        "height": {
-          "name": "height",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 100
-        },
-        "weight": {
-          "name": "weight",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 100
-        },
-        "sprite_url": {
-          "name": "sprite_url",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
         "team_id": {
           "name": "team_id",
           "type": "integer",
@@ -265,6 +321,19 @@
       },
       "indexes": {},
       "foreignKeys": {
+        "pokemon_pokemon_reference_id_pokemon_reference_id_fk": {
+          "name": "pokemon_pokemon_reference_id_pokemon_reference_id_fk",
+          "tableFrom": "pokemon",
+          "tableTo": "pokemon_reference",
+          "columnsFrom": [
+            "pokemon_reference_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "pokemon_team_id_team_id_fk": {
           "name": "pokemon_team_id_team_id_fk",
           "tableFrom": "pokemon",
@@ -281,11 +350,106 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "pokemon_pokemon_id_unique": {
-          "name": "pokemon_pokemon_id_unique",
+        "pokemon_team_id_pokemon_reference_id_unique": {
+          "name": "pokemon_team_id_pokemon_reference_id_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "pokemon_id"
+            "team_id",
+            "pokemon_reference_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pokemon_reference": {
+      "name": "pokemon_reference",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "pokeapi_id": {
+          "name": "pokeapi_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "base_hp": {
+          "name": "base_hp",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "base_attack": {
+          "name": "base_attack",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "base_defense": {
+          "name": "base_defense",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "base_speed": {
+          "name": "base_speed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "height": {
+          "name": "height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "weight": {
+          "name": "weight",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sprite_url": {
+          "name": "sprite_url",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "pokemon_reference_pokeapi_id_unique": {
+          "name": "pokemon_reference_pokeapi_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "pokeapi_id"
           ]
         }
       },

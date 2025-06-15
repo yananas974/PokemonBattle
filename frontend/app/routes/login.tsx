@@ -37,25 +37,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   try {
     console.log('Appel du service de connexion...');
-    // Utiliser loginRaw pour récupérer la réponse complète avec headers
-    const response = await authService.loginRaw({ email, password });
-    const result = await response.json();
+    const result = await authService.login({ email, password });
     console.log('Connexion réussie:', result);
     
-    // Récupérer le token backend depuis les cookies de réponse
-    const setCookieHeader = response.headers.get('set-cookie');
-    let backendToken = null;
-    
-    if (setCookieHeader) {
-      const tokenMatch = setCookieHeader.match(/authToken=([^;]+)/);
-      if (tokenMatch) {
-        backendToken = tokenMatch[1];
-        console.log('Token backend récupéré:', backendToken.substring(0, 30) + '...');
-      }
-    }
-    
     console.log('Création de la session utilisateur avec token...');
-    const userData = backendToken ? { ...result.user, backendToken } : result.user;
+    
+    // ✅ Stocker le token dans la session utilisateur
+    const userData = {
+      ...result.user,
+      backendToken: result.token // ✅ Changé de token à backendToken
+    };
+    
     return createUserSession(result.user.id.toString(), userData, '/dashboard');
   } catch (error) {
     console.log('Erreur de connexion:', error);
