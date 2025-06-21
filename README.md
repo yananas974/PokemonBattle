@@ -1,163 +1,271 @@
-# Pokemon Battle
+# 🎮 Pokemon Battle - Application Full-Stack
 
-## Description
+Une application de combat Pokémon développée avec une architecture moderne full-stack permettant aux utilisateurs de créer des équipes, défier leurs amis et simuler des combats épiques !
 
-Pokemon Battle est une application web complète permettant de créer et gérer des équipes de Pokémon pour des combats. L'application utilise l'API PokeAPI pour récupérer les données des Pokémon et permet aux utilisateurs de constituer leur équipe personnalisée.
+## 🚀 Fonctionnalités
 
-### Technologies utilisées
+- **🔐 Système d'authentification** : Inscription, connexion et gestion des sessions
+- **👥 Système d'amis** : Ajout d'amis, demandes d'amitié et gestion des relations
+- **⚔️ Combats Pokémon** : Système de combat au tour par tour avec effets météo
+- **🎲 Équipes personnalisées** : Création et gestion d'équipes Pokémon
+- **🌤️ Effets météorologiques** : Intégration avec l'API météo pour des combats dynamiques
+- **📊 Interface moderne** : Interface utilisateur réactive avec Tailwind CSS
 
-- **Frontend**: Remix (React) avec TypeScript
-- **Backend**: Hono (Node.js) avec TypeScript  
-- **Base de données**: PostgreSQL
-- **Containerisation**: Docker & Docker Compose
-- **API externe**: PokeAPI (https://pokeapi.co/)
+## 🛠️ Technologies Utilisées
 
-## Installation
+### Backend
+- **Node.js** avec **TypeScript**
+- **Hono** - Framework web ultra-rapide
+- **PostgreSQL** - Base de données relationnelle
+- **Drizzle ORM** - ORM TypeScript moderne
+- **JWT** - Authentification par tokens
+- **Zod** - Validation de schémas
 
-### Prérequis
+### Frontend
+- **React** avec **TypeScript**
+- **Remix** - Framework full-stack React
+- **Tailwind CSS** - Framework CSS utilitaire
+- **Vite** - Outil de build moderne
 
-- Docker et Docker Compose installés
-- Node.js 18+ (pour le développement local)
-- Git
+### Infrastructure
+- **Docker & Docker Compose** - Conteneurisation
+- **pgAdmin** - Interface d'administration PostgreSQL
 
-### Étapes d'installation
+## 📋 Prérequis
 
-1. **Cloner le repository**
-   ```bash
-   git clone <votre-repo>
-   cd pokemonTest
-   ```
+- **Node.js** >= 20.0.0
+- **Docker** et **Docker Compose**
+- **Git**
 
-2. **Lancer l'application avec Docker**
-   ```bash
-   docker compose up --build
-   ```
+## 🚀 Installation
 
-3. **Accéder à l'application**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:3001
-   - Base de données PostgreSQL: localhost:5432
-   - pgAdmin (Interface de gestion BDD): http://localhost:5050
+### 1. Cloner le repository
 
-## Usage
-
-### Interface utilisateur
-
-1. **Parcourir les Pokémon**: Consultez la liste des 151 premiers Pokémon avec leurs statistiques
-2. **Ajouter à l'équipe**: Cliquez sur "Ajouter à mon équipe" pour enregistrer un Pokémon en base de données
-3. **Voir les détails**: Chaque Pokémon affiche ses types, statistiques et attaques
-
-### API Endpoints
-
-- `GET /api/pokemon` - Récupérer tous les Pokémon de votre équipe
-- `POST /api/pokemon` - Ajouter un Pokémon à votre équipe
-- `DELETE /api/pokemon/:id` - Retirer un Pokémon de votre équipe
-- `GET /api/health` - Vérifier l'état de l'API
-
-### Structure du projet
-
+```bash
+git clone <url-du-repository>
+cd pokemonTest
 ```
-pokemon-battle/
-├── docker-compose.yml          # Configuration Docker
-├── frontend/                   # Application Remix
-│   ├── app/
-│   │   ├── routes/
-│   │   │   ├── _index.tsx     # Page principale
-│   │   │   └── pokemon.$id.tsx # Détails d'un Pokémon
-│   │   └── root.tsx           # Layout principal
-│   ├── Dockerfile
-│   └── package.json
-├── backend/                    # API Hono
-│   ├── src/
-│   │   └── index.ts           # Serveur principal
-│   ├── Dockerfile
-│   └── package.json
-└── database/
-    └── init.sql               # Script d'initialisation PostgreSQL
+
+### 2. Démarrer l'application avec Docker
+
+```bash
+# Construire et démarrer tous les services
+docker-compose up --build
+
+# Ou en arrière-plan
+docker-compose up -d --build
 ```
+
+### 3. Accéder aux services
+
+- **Frontend** : http://localhost:3000
+- **Backend API** : http://localhost:3001
+- **pgAdmin** : http://localhost:5050
+  - Email : `admin@pokemon.com`
+  - Mot de passe : `lOgan`
+
+## 🏗️ Développement Local
+
+### Installation des dépendances
+
+```bash
+# Dépendances racine
+npm install
+
+# Backend
+cd backend
+npm install
+
+# Frontend
+cd ../frontend
+npm install
+```
+
+### Démarrage en mode développement
+
+```bash
+# Backend (port 3001)
+cd backend
+npm run dev
+
+# Frontend (port 3000)
+cd frontend
+npm run dev
+```
+
+## 🗄️ Base de Données
 
 ### Commandes utiles
 
 ```bash
-# Reconstruire et relancer tous les services
-docker compose up --build
+cd backend
 
-# Arrêter les services
-docker compose down
+# Réinitialiser la base de données
+npm run db:reset
 
-# Supprimer les volumes (reset complet de la BDD)
-docker compose down -v
+# Générer les migrations
+npm run db:generate
 
-# Voir les logs
-docker compose logs -f
+# Appliquer les migrations
+npm run db:migrate
 
-# Accéder à la base de données via CLI
-docker compose exec postgres psql -U pokemon_user -d pokemon_battle
+# Réinitialisation complète + seed
+npm run seed:force
 
-# Développement local (sans Docker)
-cd frontend && npm run dev
-cd backend && npm run dev
+# Interface Drizzle Studio
+npm run db:studio
 ```
 
-### Accès à pgAdmin
+### Configuration
 
-1. **Ouvrir pgAdmin** : http://localhost:5050
-2. **Se connecter** :
-   - Email: `admin@pokemon.com`
-   - Mot de passe: `pokemon123`
-3. **Connexion à la base de données** :
-   - Le serveur "Pokemon Battle Database" devrait être pré-configuré
-   - Si besoin, créer une nouvelle connexion avec :
-     - Host: `postgres`
-     - Port: `5432`
-     - Database: `pokemon_battle`
-     - Username: `pokemon_user`
-     - Password: `pokemon_password`
+La base de données PostgreSQL est configurée avec :
+- **Nom** : `pokemon_battle`
+- **Utilisateur** : `pokemon_user`
+- **Mot de passe** : `lOgan`
+- **Port** : `5432`
 
-## Fonctionnalités
+## 🔧 Configuration
 
-### Actuelles
-- ✅ Affichage de tous les Pokémon (Génération 1)
-- ✅ Ajout de Pokémon à l'équipe personnelle
-- ✅ Stockage en base de données PostgreSQL
-- ✅ Interface responsive et moderne
-- ✅ API REST complète
-- ✅ Gestion des erreurs et validations
+### Variables d'environnement
 
-### À venir
-- 🔄 Système de combat entre Pokémon
-- 🔄 Gestion des niveaux et évolutions
-- 🔄 Interface d'administration
-- 🔄 Authentification utilisateur
-- 🔄 Sauvegarde/chargement d'équipes
+Le projet utilise les variables d'environnement suivantes :
 
-## Contribution
+#### Backend
+```env
+NODE_ENV=development
+DATABASE_URL=postgresql://pokemon_user:lOgan@postgres:5432/pokemon_battle
+PORT=3001
+JWT_SECRET=votre_cle_secrete_jwt_super_securisee_ici_123456789
+```
 
-### Développement
+#### Frontend
+```env
+NODE_ENV=development
+API_URL=http://backend:3001
+```
 
-1. **Fork** le projet
-2. **Créer une branche** pour votre fonctionnalité (`git checkout -b feature/nouvelle-fonctionnalite`)
-3. **Commiter** vos changements (`git commit -am 'Ajout nouvelle fonctionnalité'`)
-4. **Pusher** vers la branche (`git push origin feature/nouvelle-fonctionnalite`)
-5. **Créer une Pull Request**
+## 📡 API Endpoints
 
-### Standards de code
+### Authentification
+- `POST /api/auth/signup` - Inscription
+- `POST /api/auth/login` - Connexion
 
-- Utiliser TypeScript pour tous les nouveaux fichiers
-- Suivre les conventions de nommage React/Node.js
-- Ajouter des tests pour les nouvelles fonctionnalités
-- Documenter les nouvelles API endpoints
+### Équipes
+- `GET /api/teams` - Liste des équipes
+- `POST /api/teams` - Créer une équipe
+- `GET /api/teams/:id` - Détails d'une équipe
 
-### Base de données
+### Amis
+- `GET /api/friends` - Liste des amis
+- `POST /api/friends/request` - Demande d'amitié
+- `PUT /api/friends/accept/:id` - Accepter une demande
 
-La base de données utilise PostgreSQL avec les tables suivantes :
-- `pokemon` : Stockage des Pokémon de l'équipe
-- `battles` : Historique des combats (à venir)
+### Combats
+- `POST /api/battles` - Créer un combat
+- `GET /api/battles/:id` - État d'un combat
 
-## Licence
+## 🎮 Utilisation
+
+1. **Inscription/Connexion** : Créez un compte ou connectez-vous
+2. **Création d'équipe** : Composez votre équipe de Pokémon
+3. **Ajout d'amis** : Recherchez et ajoutez des amis
+4. **Combat** : Défiez vos amis en combat au tour par tour
+5. **Météo** : Les conditions météo influencent les combats
+
+## 🧪 Tests
+
+```bash
+# Backend
+cd backend
+npm test
+
+# Frontend
+cd frontend
+npm test
+```
+
+## 📁 Structure du Projet
+
+```
+pokemonTest/
+├── backend/                 # API Backend (Hono + TypeScript)
+│   ├── src/
+│   │   ├── controllers/     # Contrôleurs
+│   │   ├── services/        # Logique métier
+│   │   ├── routes/          # Définition des routes
+│   │   ├── models/          # Interfaces et types
+│   │   ├── db/              # Configuration base de données
+│   │   └── utils/           # Utilitaires
+│   └── drizzle/             # Migrations de base de données
+├── frontend/                # Interface utilisateur (Remix + React)
+│   ├── app/
+│   │   ├── components/      # Composants React
+│   │   ├── routes/          # Pages de l'application
+│   │   ├── services/        # Services API
+│   │   └── types/           # Types TypeScript
+├── database/                # Scripts de base de données
+└── docker-compose.yml       # Configuration Docker
+```
+
+## 🤝 Contribution
+
+1. Forkez le projet
+2. Créez une branche pour votre fonctionnalité (`git checkout -b feature/ma-fonctionnalite`)
+3. Commitez vos changements (`git commit -m 'Ajout de ma fonctionnalité'`)
+4. Pushez vers la branche (`git push origin feature/ma-fonctionnalite`)
+5. Ouvrez une Pull Request
+
+## 📜 Conventions de Code
+
+- **TypeScript** : Typage strict activé
+- **Composants** : Composants fonctionnels avec hooks
+- **Nommage** : camelCase pour les variables, PascalCase pour les composants
+- **Styling** : Tailwind CSS avec classes utilitaires
+
+## 🐛 Résolution de Problèmes
+
+### Problèmes courants
+
+1. **Erreur de connexion à la base de données**
+   - Vérifiez que PostgreSQL est démarré
+   - Contrôlez les variables d'environnement
+
+2. **Port déjà utilisé**
+   ```bash
+   # Arrêter tous les conteneurs
+   docker-compose down
+   
+   # Redémarrer
+   docker-compose up --build
+   ```
+
+3. **Problèmes de migrations**
+   ```bash
+   cd backend
+   npm run db:fresh
+   ```
+
+## 📋 TODO
+
+- [ ] Tests unitaires et d'intégration
+- [ ] Système de notifications en temps réel
+- [ ] Mode spectateur pour les combats
+- [ ] Statistiques de combat avancées
+- [ ] Intégration avec l'API Pokémon officielle
+- [ ] Mode tournoi
+- [ ] Chat en temps réel
+
+## 📞 Support
+
+Pour toute question ou problème, n'hésitez pas à :
+- Ouvrir une issue GitHub
+- Consulter la documentation des API utilisées
+- Vérifier les logs des conteneurs Docker
+
+## 📄 Licence
 
 Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
 ---
 
-**Développé avec ❤️ pour les fans de Pokémon** 
+⚡ **Développé avec passion pour la communauté Pokémon !** ⚡ 

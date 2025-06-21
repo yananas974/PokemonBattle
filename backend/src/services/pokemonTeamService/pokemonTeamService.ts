@@ -128,10 +128,16 @@ export class PokemonTeamService {
 
   /**
    * Retirer un Pokemon d'une équipe
+   * @param teamId ID de l'équipe
+   * @param pokemonPokeApiId ID PokeAPI du Pokemon (ex: 1 pour Bulbizarre)
+   * @param userId ID de l'utilisateur
    */
-  static async removePokemonFromTeam(teamId: number, pokemonId: number, userId: number) {
-    if (!teamId || !pokemonId) {
-      throw new Error('teamId et pokemonId sont requis');
+  static async removePokemonFromTeam(teamId: number, pokemonPokeApiId: number, userId: number) {
+    console.log('🗑️ === REMOVE POKEMON SERVICE APPELÉ ===');
+    console.log('🔍 Paramètres:', { teamId, pokemonPokeApiId, userId });
+    
+    if (!teamId || !pokemonPokeApiId) {
+      throw new Error('teamId et pokemonPokeApiId sont requis');
     }
 
     // ✅ Vérifier que l'équipe appartient à l'utilisateur
@@ -140,12 +146,20 @@ export class PokemonTeamService {
       throw new Error('Équipe non trouvée ou non autorisée');
     }
 
-    const pokemonRef = await this.getPokemonReference(pokemonId);
+    // ✅ Trouver la référence Pokemon par PokeAPI ID
+    console.log('🔍 Recherche référence Pokemon pour PokeAPI ID:', pokemonPokeApiId);
+    const pokemonRef = await this.getPokemonReference(pokemonPokeApiId);
+    console.log('✅ Référence trouvée:', pokemonRef);
     
-    return Delete(pokemon, and(
+    // ✅ Supprimer le Pokemon de l'équipe
+    console.log('🗑️ Suppression Pokemon de l\'équipe:', { teamId, pokemon_reference_id: pokemonRef.id });
+    const result = await Delete(pokemon, and(
       eq(pokemon.team_id, teamId), 
       eq(pokemon.pokemon_reference_id, pokemonRef.id)
     )!);
+    
+    console.log('✅ Pokemon supprimé avec succès');
+    return result;
   }
 
   /**
