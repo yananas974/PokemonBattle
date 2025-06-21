@@ -1,10 +1,10 @@
 import { db } from '../../config/drizzle.config.js';
 import type { PgTable } from 'drizzle-orm/pg-core';
 
-export const Create = async <T extends Record<string, any>>(
+export async function Create<T extends Record<string, any>>(
   table: PgTable,
   data: any
-): Promise<T> => {
+): Promise<T> {
   try {
     const result = await db.insert(table).values(data).returning();
 

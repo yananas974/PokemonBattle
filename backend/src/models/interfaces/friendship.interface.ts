@@ -42,24 +42,4 @@ export interface FriendshipsResponse {
 export interface CreateFriendshipResponse {
   message: string;
   friendship: Friendship;
-}
-
-// ✅ TRANSFORMATEURS (DRY)
-export function transformFriendshipForAPI(friendshipDB: FriendshipDB): Friendship {
-  return {
-    id: friendshipDB.id,
-    userId: friendshipDB.user_id,
-    friendId: friendshipDB.friend_id,
-    status: friendshipDB.status,
-    createdAt: friendshipDB.created_at.toISOString(),
-    updatedAt: friendshipDB.updated_at.toISOString(),
-  };
-}
-
-export function transformFriendshipForDB(data: CreateFriendshipData, userId: number): Omit<FriendshipDB, 'id' | 'created_at' | 'updated_at'> {
-  return {
-    user_id: userId,
-    friend_id: data.friendId,
-    status: 'pending'
-  };
 } 

@@ -6,17 +6,19 @@ export * from './authService/userService.js';
 // Team Services  
 export { TeamService } from './createTeamService/teamService.js';
 export * from './createTeamService/teamService.js'; // Pour les exports individuels
-export { TeamService as NewTeamService } from './teamService/gestionTeamService.js'; // ✅ Nouveau service
 
 // Pokemon Team Services
-export * from './pokemonTeamService/pokemonSelectionService.js';
-export * from './pokemonTeamService/teamPokemonService.js';
+export { PokemonTeamService } from './pokemonTeamService/pokemonTeamService.js';
+export * from './pokemonTeamService/pokemonTeamService.js';
 
 // Friendship Services
 export { FriendshipService } from './friendshipService/friendshipService.js';
-export * from './friendshipService/friendshipService.js'; // Pour les exports individuels
+export * from './friendshipService/friendshipService.js';
 
 // Note: friendsService/ est vide, donc pas d'export 
 
 // ✅ Ajouter le service de combat
-export { BattleService } from './battle/battleService.js'; 
+export { TeamBattleService } from './battle/teamBattleService.js';
+export { TurnBasedBattleService } from './battle/turnBasedBattleService.js';
+export { WeatherService } from './weatherService/weatherService.js';
+export { WeatherEffectService } from './weatherEffectService/weatherEffectService.js';

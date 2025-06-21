@@ -5,4 +5,4 @@ const weatherRoutes = new Hono();
 weatherRoutes.get('/effects', getWeatherEffectsHandler);
 weatherRoutes.post('/simulate-battle', simulateBattleHandler);
 
-export default weatherRoutes; 
+export { weatherRoutes };

@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
-import { signupHandler, loginHandler, logoutHandler, getUsersHandler } from '../handlers/auth.handler.js';
+import { signupHandler, loginHandler, logoutHandler, getUsersHandler, signupValidator, loginValidator } from '../handlers/auth.handler.js';
 
 const authRoutes = new Hono();
 
-authRoutes.post('/signup', signupHandler);
-authRoutes.post('/login', loginHandler);
+authRoutes.post('/signup', signupValidator, signupHandler);
+authRoutes.post('/login', loginValidator, loginHandler);
 authRoutes.post('/logout', logoutHandler);
 authRoutes.get('/users', getUsersHandler);
 
-export default authRoutes;  
+export { authRoutes };

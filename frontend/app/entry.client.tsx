@@ -1,18 +1,21 @@
-/**
- * By default, Remix will handle hydrating your app on the client for you.
- * You are free to delete this file if you'd like to, but if you ever want it revealed again, you can run `npx remix reveal` ✨
- * For more information, see https://remix.run/file-conventions/entry.client
- */
+import { RemixServer } from '@remix-run/react';
+import type { EntryContext } from '@remix-run/node';
+import { renderToString } from 'react-dom/server';
 
-import { RemixBrowser } from "@remix-run/react";
-import { startTransition, StrictMode } from "react";
-import { hydrateRoot } from "react-dom/client";
-
-startTransition(() => {
-  hydrateRoot(
-    document,
-    <StrictMode>
-      <RemixBrowser />
-    </StrictMode>
+export default function handleRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  const markup = renderToString(
+    <RemixServer context={remixContext} url={request.url} />
   );
-});
+
+  responseHeaders.set('Content-Type', 'text/html');
+
+  return new Response('<!DOCTYPE html>' + markup, {
+    status: responseStatusCode,
+    headers: responseHeaders,
+  });
+}

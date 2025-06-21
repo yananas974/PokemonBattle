@@ -46,14 +46,14 @@ export const getWeatherEffectsHandler = async (c: Context) => {
       
       // ✅ Utiliser le nouveau système d'effets
       const effects = WeatherEffectService.getWeatherEffectByCondition(effectCondition);
-      const timeBonus = WeatherEffectService.calculateTimeBonus();
+    const timeBonus = WeatherEffectService.calculateTimeBonus();
       
       console.log('🎯 Effets calculés:', effects);
       console.log('🌙 Est-ce la nuit?', isNight);
       console.log('🔧 Condition utilisée:', effectCondition);
-      
-      return c.json({
-        success: true,
+    
+    return c.json({
+      success: true,
         location: weatherData.location,
         country: weatherData.country,
         temperature: weatherData.temperature,
@@ -62,9 +62,9 @@ export const getWeatherEffectsHandler = async (c: Context) => {
         windSpeed: weatherData.windSpeed,
         icon: weatherData.icon,
         weather: { condition: effectCondition },
-        effects,
-        timeBonus
-      });
+      effects,
+      timeBonus
+    });
       
     } catch (weatherError) {
       console.error('❌ Erreur OpenWeatherMap:', weatherError);

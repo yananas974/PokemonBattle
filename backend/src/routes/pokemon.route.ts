@@ -38,4 +38,4 @@ protectedRoutes.delete('/teams/remove-pokemon/:teamId/:pokemonId', removePokemon
 // ✅ Combiner les routes publiques et protégées
 pokemonRoutes.route('/', protectedRoutes);
 
-export default pokemonRoutes;
+export { pokemonRoutes };
