@@ -1,16 +1,38 @@
 import type { Context } from 'hono';
 import { FriendshipService } from '../services/services.js';
-import type { CreateFriendshipData } from '../models/interfaces/interfaces.js';
-import { getAllUsers } from '../services/services.js';
+import { z } from 'zod';
+import { friendIdSchema, friendshipIdSchema, userIdSchema } from '../schemas/common.schemas.js';
+import { zValidator } from '@hono/zod-validator';
 
+const sendFriendRequestSchema = z.object({
+  friendId: friendIdSchema
+});
+
+const acceptFriendRequestSchema = z.object({
+  friendshipId: friendshipIdSchema
+});
+
+const blockFriendRequestSchema = z.object({
+  friendshipId: friendshipIdSchema
+});
+
+const getUserFriendsSchema = z.object({
+  userId: userIdSchema
+});
+
+// ✅ Créer les validators
+export const sendFriendRequestValidator = zValidator('json', sendFriendRequestSchema);
+export const acceptFriendRequestValidator = zValidator('param', z.object({ id: z.string() }));
+export const blockFriendRequestValidator = zValidator('param', z.object({ id: z.string() }));
 
 export const sendFriendRequestHandler = async (c: Context) => {
   try {
     const user = c.get('user');
+    // ✅ Données déjà validées par le validator
     const { friendId } = await c.req.json();
 
     // ✅ Déléguer TOUTE la logique au service
-    const friendship = await FriendshipService.sendFriendRequestWithValidation(friendId, user.id);
+    const friendship = await FriendshipService.sendFriendRequest(friendId, user.id);
 
     return c.json({
       message: 'Friend request sent successfully',
@@ -28,10 +50,11 @@ export const sendFriendRequestHandler = async (c: Context) => {
 export const acceptFriendRequestHandler = async (c: Context) => {
   try {
     const user = c.get('user');
+    // ✅ Paramètre déjà validé par le validator
     const friendshipId = parseInt(c.req.param('id'));
 
     // ✅ Déléguer TOUTE la logique au service
-    const friendship = await FriendshipService.acceptFriendRequestWithValidation(friendshipId, user.id);
+    const friendship = await FriendshipService.acceptFriendRequest(friendshipId, user.id);
 
     return c.json({
       message: 'Friend request accepted successfully',
@@ -49,10 +72,11 @@ export const acceptFriendRequestHandler = async (c: Context) => {
 export const blockFriendRequestHandler = async (c: Context) => {
   try {
     const user = c.get('user');
+    // ✅ Paramètre déjà validé par le validator
     const friendshipId = parseInt(c.req.param('id'));
 
     // ✅ Déléguer TOUTE la logique au service
-    const friendship = await FriendshipService.blockFriendWithValidation(friendshipId, user.id);
+    const friendship = await FriendshipService.updateFriendshipStatus(friendshipId, user.id, 'blocked');
 
     return c.json({
       message: 'Friend blocked successfully',
@@ -95,7 +119,7 @@ export const getPendingFriendRequestsHandler = async (c: Context) => {
     console.log(`📥 Récupération demandes reçues pour user ${user.id}`);
     
     // ✅ Déléguer TOUTE la logique au service
-    const requests = await FriendshipService.getPendingFriendRequestsFormatted(user.id);
+    const requests = await FriendshipService.getPendingFriendRequests(user.id);
     console.log(`✅ ${requests.length} demandes trouvées`);
     
     return c.json({
@@ -116,7 +140,7 @@ export const getSentFriendRequestsHandler = async (c: Context) => {
     const user = c.get('user');
     
     // ✅ Déléguer TOUTE la logique au service
-    const requests = await FriendshipService.getSentFriendRequestsFormatted(user.id);
+    const requests = await FriendshipService.getSentFriendRequests(user.id);
     
     return c.json({
       message: 'Sent friend requests retrieved successfully',
@@ -137,7 +161,7 @@ export const removeFriendHandler = async (c: Context) => {
     const friendshipId = parseInt(c.req.param('id'));
     
     // ✅ Déléguer TOUTE la logique au service
-    await FriendshipService.removeFriendWithValidation(friendshipId, user.id);
+    await FriendshipService.removeFriend(friendshipId, user.id);
     
     return c.json({
       message: 'Friend removed successfully'

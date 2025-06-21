@@ -5,11 +5,12 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
 // ✅ IMPORTS DIRECTS (plus fiables)
-import authRoutes from './routes/auth.route.js';
-import pokemonRoutes from './routes/pokemon.route.js';
-import friendshipRoutes from './routes/friendship.route.js';
-import teamRoutes from './routes/team.route.js';
-import weatherRoutes from './routes/weather.route.js';
+import { authRoutes } from './routes/auth.route.js';
+import { pokemonRoutes } from './routes/pokemon.route.js';
+import { friendshipRoutes } from './routes/friendship.route.js';
+import { teamRoutes } from './routes/team.route.js';
+import { weatherRoutes } from './routes/weather.route.js';
+import { battleRoutes } from './routes/battle.route.js';
 
 const app = new Hono();
 
@@ -31,6 +32,7 @@ app.route('/api/pokemon', pokemonRoutes);
 app.route('/api/friends', friendshipRoutes);
 app.route('/api/teams', teamRoutes);
 app.route('/api/weather', weatherRoutes);
+app.route('/api/battle', battleRoutes);
 
 // ✅ Route de test racine seulement
 app.get('/', (c) => {

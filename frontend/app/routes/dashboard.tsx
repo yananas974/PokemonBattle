@@ -10,7 +10,7 @@ import type { Friendship } from '~/services/friendshipService';
 import type { Team } from '~/types/team';
 import type { Pokemon, PokemonInTeam } from '~/types/pokemon';
 import { useState, useEffect } from 'react';
-import WeatherWidget from '~/components/WeatherWidget';
+import SimpleWeatherWidget from '~/components/SimpleWeatherWidget';
 import { weatherEffectService } from '~/services/weatherEffectService';
 
 export const meta: MetaFunction = () => {
@@ -41,7 +41,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     console.log('🔍 Récupération des équipes...');
     const teamsData = await teamService.getMyTeams(token);
     console.log('🔍 DEBUG TEAMS DATA:', teamsData);
-    console.log('✅ Équipes chargées:', teamsData.teams?.length || 0);
+    console.log('🔍 DEBUG TEAMS DATA STRUCTURE:', JSON.stringify(teamsData, null, 2));
+
+    // Vérifier chaque équipe individuellement
+    if (teamsData.teams && Array.isArray(teamsData.teams)) {
+      teamsData.teams.forEach((team, index) => {
+        console.log(`🔍 Équipe ${index}:`, team);
+        console.log(`🔍 Équipe ${index} - pokemon:`, team.pokemon);
+        console.log(`🔍 Équipe ${index} - pokemon length:`, team.pokemon?.length);
+      });
+    }
 
     console.log('🔍 Récupération des Pokémon...');
     const pokemonData = await pokemonService.getAllPokemon(token);
@@ -349,7 +358,7 @@ export default function Dashboard() {
   const isSubmitting = navigation.state === 'submitting';
   
   const [selectedPokemon, setSelectedPokemon] = useState<PokemonInTeam | null>(null);
-  const [activeTab, setActiveTab] = useState<'teams' | 'friends' | 'friendsTeams' | 'pokemon'>('teams');
+  const [activeTab, setActiveTab] = useState<'teams' | 'friends' | 'friendsTeams' | 'combat' | 'pokemon'>('teams');
 
   // Revalidation automatique après les actions réussies
   useEffect(() => {
@@ -388,7 +397,31 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-6">
-            <WeatherWidget />
+            <div className="bg-red-500 text-white p-2 mb-4">
+              <button onClick={() => console.log('TEST ONCLICK AVANT WEATHER')}>
+                Test onClick avant WeatherWidget
+              </button>
+            </div>
+            
+            <SimpleWeatherWidget />
+            
+            <div className="bg-green-500 text-white p-2 mt-4">
+              <button onClick={() => console.log('TEST ONCLICK APRÈS WEATHER')}>
+                Test onClick après WeatherWidget
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <div className="bg-blue-500 text-white p-4 rounded-lg">
+              <h3 className="text-lg font-semibold mb-3">🌤️ Test Direct</h3>
+              <button 
+                onClick={() => alert('Test direct fonctionne !')}
+                className="bg-white text-blue-500 px-4 py-2 rounded"
+              >
+                Test Direct
+              </button>
+            </div>
             
             {/* ✅ Affichage des effets météo sur les types */}
             {weatherEffects?.effects && (
@@ -473,6 +506,16 @@ export default function Dashboard() {
                   Équipes d'Amis
                 </button>
                 <button
+                  onClick={() => setActiveTab('combat')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'combat'
+                      ? 'border-red-500 text-red-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  ⚔️ Combat
+                </button>
+                <button
                   onClick={() => setActiveTab('pokemon')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     activeTab === 'pokemon'
@@ -552,7 +595,7 @@ export default function Dashboard() {
                             Pokémon dans l'équipe ({team.pokemon.length}/6):
                           </h4>
                           <div className="grid grid-cols-3 gap-2">
-                            {team.pokemon.map((pokemon: PokemonInTeam, index: number) => (
+                            {team.pokemon.map((pokemon: any, index: number) => (
                               <div 
                                 key={index} 
                                 className="bg-white rounded-lg p-2 text-center shadow-sm relative group cursor-pointer hover:shadow-md transition-shadow"
@@ -567,11 +610,11 @@ export default function Dashboard() {
                                     className="w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs flex items-center justify-center z-10"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      if (!confirm(`Retirer ${pokemon.name_fr} de l'équipe ?`)) {
+                                      if (!confirm(`Retirer ${pokemon.name} de l'équipe ?`)) {
                                         e.preventDefault();
                                       }
                                     }}
-                                    title={`Retirer ${pokemon.name_fr}`}
+                                    title={`Retirer ${pokemon.name}`}
                                   >
                                     ×
                                   </button>
@@ -579,11 +622,11 @@ export default function Dashboard() {
                                 
                                 <img 
                                   src={pokemon.sprite_url} 
-                                  alt={pokemon.name_fr}
+                                  alt={pokemon.name}
                                   className="w-12 h-12 mx-auto mb-1"
                                 />
                                 <p className="text-xs font-medium text-gray-800 truncate">
-                                  {pokemon.name_fr}
+                                  {pokemon.name}
                                 </p>
                                 <p className="text-xs text-gray-500">#{pokemon.pokemon_id}</p>
                               </div>
@@ -813,11 +856,11 @@ export default function Dashboard() {
                                           >
                                             <img 
                                               src={pokemon.sprite_url} 
-                                              alt={pokemon.name_fr}
+                                              alt={pokemon.name}
                                               className="w-10 h-10 mx-auto mb-1"
                                             />
                                             <p className="text-xs font-medium text-gray-800 truncate">
-                                              {pokemon.name_fr}
+                                              {pokemon.name}
                                             </p>
                                             <p className="text-xs text-gray-500">Niv. {pokemon.level}</p>
                                           </div>
@@ -866,6 +909,24 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-400">Ajoutez des amis pour voir leurs équipes !</p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'combat' && (
+            <div className="space-y-6">
+              {/* Combat Simplifié */}
+              <div className="bg-white shadow rounded-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">⚔️ Combat d'Équipes</h2>
+                
+                <TeamBattleComponent teams={teams} friendsTeams={friendsTeams} />
+              </div>
+
+              {/* Combat Tour par Tour */}
+              <div className="bg-white shadow rounded-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">🎮 Combat Tour par Tour</h2>
+                
+                <TurnBasedBattleComponent teams={teams} friendsTeams={friendsTeams} />
               </div>
             </div>
           )}
@@ -996,6 +1057,196 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Composant Combat Simplifié
+function TeamBattleComponent({ teams, friendsTeams }: { teams: any[], friendsTeams: any }) {
+  const [selectedTeam1, setSelectedTeam1] = useState('');
+  const [selectedTeam2, setSelectedTeam2] = useState('');
+  const [battleResult, setBattleResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  // ✅ Sécurisation complète des données
+  const safeTeams = Array.isArray(teams) ? teams : [];
+  const safeFriendsTeams = friendsTeams || {};
+  
+  // ✅ Convertir friendsTeams objet en tableau de façon sécurisée
+  const friendTeamsArray = Object.values(safeFriendsTeams).flat().filter(team => team && team.id);
+  const allTeams = [...safeTeams, ...friendTeamsArray];
+
+  const simulateBattle = async () => {
+    if (!selectedTeam1 || !selectedTeam2) {
+      alert('Sélectionnez deux équipes !');
+      return;
+    }
+
+    // ✅ Debug complet
+    console.log('🔍 selectedTeam1:', selectedTeam1);
+    console.log('🔍 selectedTeam2:', selectedTeam2);
+    console.log('🔍 allTeams:', allTeams);
+    console.log('🔍 allTeams IDs:', allTeams.map(t => ({ id: t.id, name: t.teamName })));
+
+    const team1 = allTeams.find(t => String(t.id) === String(selectedTeam1));
+    const team2 = allTeams.find(t => String(t.id) === String(selectedTeam2));
+
+    console.log('🔍 team1 trouvé:', team1);
+    console.log('🔍 team2 trouvé:', team2);
+
+    if (!team1 || !team2) {
+      alert(`Équipes non trouvées ! Team1: ${team1 ? 'OK' : 'MANQUANT'}, Team2: ${team2 ? 'OK' : 'MANQUANT'}`);
+      console.error('Équipes manquantes. IDs recherchés:', { selectedTeam1, selectedTeam2 });
+      console.error('IDs disponibles:', allTeams.map(t => ({ id: t.id, type: typeof t.id })));
+      return;
+    }
+
+    // ✅ Vérifier que les équipes ont des Pokémon
+    if (!team1.pokemon || team1.pokemon.length === 0) {
+      alert(`L'équipe "${team1.teamName}" n'a pas de Pokémon !`);
+      return;
+    }
+
+    if (!team2.pokemon || team2.pokemon.length === 0) {
+      alert(`L'équipe "${team2.teamName}" n'a pas de Pokémon !`);
+      return;
+    }
+
+    console.log('🚀 Lancement du combat:', {
+      team1: { name: team1.teamName, pokemon: team1.pokemon.length },
+      team2: { name: team2.teamName, pokemon: team2.pokemon.length }
+    });
+
+    setLoading(true);
+    try {
+      // ✅ Utiliser apiCall au lieu de fetch direct
+      const { apiCall } = await import('~/utils/api');
+      const response = await apiCall('/api/battle/team-battle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ team1, team2, lat: 48.8566, lon: 2.3522 })
+      });
+
+      console.log('📡 Réponse serveur status:', response.status);
+      const data = await response.json();
+      console.log('📡 Réponse serveur data:', data);
+
+      if (data.success) {
+        setBattleResult(data.result);
+      } else {
+        alert('Erreur serveur: ' + (data.error || 'Erreur inconnue'));
+      }
+    } catch (error) {
+      console.error('❌ Erreur combat:', error);
+      alert('Erreur de connexion: ' + error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Debug Panel */}
+      <div className="bg-yellow-50 p-3 rounded text-xs">
+        <div><strong>Debug Info:</strong></div>
+        <div>Équipes perso: {safeTeams.length} | Équipes amis: {friendTeamsArray.length}</div>
+        <div>Total équipes: {allTeams.length}</div>
+        <div>Selected: {selectedTeam1} & {selectedTeam2}</div>
+        {allTeams.length > 0 && (
+          <details className="mt-2">
+            <summary>Voir toutes les équipes</summary>
+            <div className="mt-1 text-xs">
+              {allTeams.map(team => (
+                <div key={team.id}>ID: {team.id} | Nom: {team.teamName} | Pokémon: {team.pokemon?.length || 0}</div>
+              ))}
+            </div>
+          </details>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Équipe 1</label>
+          <select 
+            value={selectedTeam1} 
+            onChange={(e) => setSelectedTeam1(e.target.value)}
+            className="w-full p-2 border rounded"
+          >
+            <option value="">Choisir une équipe...</option>
+            {safeTeams.map(team => (
+              <option key={team.id} value={team.id}>
+                🔵 {team.teamName} ({team.pokemon?.length || 0} Pokémon)
+              </option>
+            ))}
+            {friendTeamsArray.map(team => (
+              <option key={team.id} value={team.id}>
+                👥 {team.teamName} ({team.pokemon?.length || 0} Pokémon)
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium mb-2">Équipe 2</label>
+          <select 
+            value={selectedTeam2} 
+            onChange={(e) => setSelectedTeam2(e.target.value)}
+            className="w-full p-2 border rounded"
+          >
+            <option value="">Choisir une équipe...</option>
+            {safeTeams.map(team => (
+              <option key={team.id} value={team.id}>
+                🔵 {team.teamName} ({team.pokemon?.length || 0} Pokémon)
+              </option>
+            ))}
+            {friendTeamsArray.map(team => (
+              <option key={team.id} value={team.id}>
+                👥 {team.teamName} ({team.pokemon?.length || 0} Pokémon)
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <button
+        onClick={simulateBattle}
+        disabled={loading || !selectedTeam1 || !selectedTeam2}
+        className="w-full bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 disabled:opacity-50"
+      >
+        {loading ? '⚔️ Combat en cours...' : '⚔️ LANCER LE COMBAT !'}
+      </button>
+
+      {battleResult && (
+        <div className="mt-6 space-y-4">
+          <div className="text-center">
+            <h3 className="text-xl font-bold text-gray-800">
+              🏆 {battleResult.winner === 'team1' ? 'Équipe 1' : battleResult.winner === 'team2' ? 'Équipe 2' : 'Match nul'} GAGNE !
+            </h3>
+          </div>
+
+          <div className="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto">
+            <h4 className="font-bold mb-2 text-gray-800">📜 Journal de Combat:</h4>
+            <div className="text-sm space-y-1">
+              {battleResult.battleLog?.map((log: string, index: number) => (
+                <div key={index} className="text-gray-700">{log}</div>
+              )) || <div className="text-gray-500">Aucun log disponible</div>}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Composant Tour par Tour (simplifié pour commencer)
+function TurnBasedBattleComponent({ teams, friendsTeams }: { teams: any[], friendsTeams: any }) {
+  return (
+    <div className="text-center p-8 bg-gray-50 rounded-lg">
+      <h3 className="text-lg font-medium text-gray-600 mb-2">🚧 Combat Tour par Tour</h3>
+      <p className="text-gray-500">Fonctionnalité en développement...</p>
+      <div className="text-xs text-gray-400 mt-2">
+        Debug: {Array.isArray(teams) ? teams.length : 0} équipes disponibles
+      </div>
     </div>
   );
 } 

@@ -15,8 +15,6 @@ export default defineConfig({
         v3_fetcherPersist: true,
         v3_relativeSplatPath: true,
         v3_throwAbortReason: true,
-        v3_singleFetch: true,
-        v3_lazyRouteDiscovery: true,
       },
     }),
     tsconfigPaths(),
@@ -24,5 +22,12 @@ export default defineConfig({
   server: {
     host: true, // Permet l'accès depuis l'extérieur du conteneur
     port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://backend:3001',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   },
 });

@@ -32,4 +32,4 @@ teamRoutes.delete('/:teamId/pokemon/:pokemonId', authMiddleware, removePokemonFr
 
 console.log('🔥 === TEAM ROUTES DEFINED ===');
 
-export default teamRoutes; 
+export { teamRoutes }; 

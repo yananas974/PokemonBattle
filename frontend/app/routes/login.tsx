@@ -64,76 +64,159 @@ export default function Login() {
   const isSubmitting = navigation.state === 'submitting';
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Connectez-vous à votre compte
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Ou{' '}
-            <Link
-              to="/signup"
-              className="font-medium text-indigo-600 hover:text-indigo-500"
-            >
-              créez un nouveau compte
-            </Link>
-          </p>
+    <div className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat"
+         style={{
+           backgroundImage: 'url(/0a7fb6143ad3113e76e1de04a9eaee16.png)',
+           backgroundSize: '20%',
+           backgroundPosition: 'left center',
+           backgroundRepeat: 'no-repeat'
+         }}>
+      {/* Overlay avec dégradé Pokémon */}
+      <div className="absolute inset-0 bg-gradient-to-br from-red-900/40 via-blue-900/40 to-yellow-900/40"></div>
+      
+      <div className="relative max-w-md w-full space-y-8 z-10">
+        {/* Logo Pokémon au-dessus */}
+        <div className="text-center mb-8">
+          <img 
+            src="/0f05e7b85a1b3ba4fce9be78fde09861.png" 
+            alt="Pokémon Logo" 
+            className="mx-auto h-120 w-120  drop-shadow-2xl"
+          />
         </div>
 
-        <Form method="post" className="mt-8 space-y-6">
-          {actionData?.errors?.general && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
-              <p className="text-sm text-red-700">{actionData.errors.general}</p>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <div>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Adresse email"
-              />
-              {actionData?.errors && 'email' in actionData.errors && (
-                <p className="mt-1 text-sm text-red-600">{actionData.errors.email}</p>
-              )}
+        {/* Container principal style Pokédex */}
+        <div className="bg-gradient-to-br from-red-500 to-red-600 p-1 rounded-3xl shadow-2xl">
+          <div className="bg-gradient-to-br from-gray-100 to-white rounded-3xl p-6 relative overflow-hidden">
+            
+            {/* Éléments décoratifs style Pokédex */}
+            <div className="absolute top-4 left-4 flex space-x-2">
+              <div className="w-4 h-4 bg-blue-500 rounded-full shadow-lg animate-pulse"></div>
+              <div className="w-3 h-3 bg-red-500 rounded-full shadow-lg"></div>
+              <div className="w-3 h-3 bg-yellow-400 rounded-full shadow-lg"></div>
+              <div className="w-2 h-2 bg-green-500 rounded-full shadow-lg"></div>
             </div>
 
-            <div>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Mot de passe"
-              />
-              {actionData?.errors && 'password' in actionData.errors && (
-                <p className="mt-1 text-sm text-red-600">{actionData.errors.password}</p>
-              )}
+            {/* Header avec style Pokémon */}
+            <div className="text-center mb-8">
+              <div className="inline-block bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-full text-sm font-bold mb-4 shadow-lg">
+                🔴 POKÉDEX LOGIN
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                Connectez-vous, Dresseur !
+              </h2>
+              <p className="text-sm text-gray-600">
+                Accédez à votre <span className="text-blue-600 font-semibold">Pokédex</span> personnel
+              </p>
             </div>
-          </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-            >
-              {isSubmitting ? 'Connexion...' : 'Se connecter'}
-            </button>
-          </div>
+            {/* Messages d'erreur avec style Pokémon */}
+            {actionData?.errors?.general && (
+              <div className="bg-red-100 border-2 border-red-300 rounded-xl p-4 mb-6 relative">
+                <div className="flex items-center">
+                  <span className="text-2xl mr-3">⚠️</span>
+                  <p className="text-sm text-red-700 font-medium">{actionData.errors.general}</p>
+                </div>
+              </div>
+            )}
 
-          <div className="text-center">
-            <Link to="/" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Retour à l'accueil
-            </Link>
+            <Form method="post" className="space-y-6">
+              {/* Input Email style Pokémon */}
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500">
+                  ✉️
+                </div>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  className="w-full pl-12 pr-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90 backdrop-blur-sm transition-all duration-200 hover:border-blue-300"
+                  placeholder="Votre email de Dresseur"
+                />
+                {actionData?.errors && 'email' in actionData.errors && (
+                  <p className="mt-2 text-sm text-red-600 flex items-center">
+                    <span className="mr-1">🚫</span>
+                    {actionData.errors.email}
+                  </p>
+                )}
+              </div>
+
+              {/* Input Password style Pokémon */}
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-500">
+                  🔐
+                </div>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  className="w-full pl-12 pr-4 py-3 border-2 border-red-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white/90 backdrop-blur-sm transition-all duration-200 hover:border-red-300"
+                  placeholder="Mot de passe secret"
+                  style={{
+                    color: '#ef4444', // Texte rouge
+                    WebkitTextSecurity: 'disc',
+                  }}
+                />
+                {actionData?.errors && 'password' in actionData.errors && (
+                  <p className="mt-2 text-sm text-red-600 flex items-center">
+                    <span className="mr-1">🚫</span>
+                    {actionData.errors.password}
+                  </p>
+                )}
+              </div>
+
+              {/* Bouton de connexion style Pokéball */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-4 px-6 rounded-xl font-bold text-lg shadow-lg transform transition-all duration-200 hover:scale-105 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none border-2 border-red-400"
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                    Connexion en cours...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center">
+                    <span className="mr-2">⚡</span>
+                    Se connecter au Pokédex
+                    <span className="ml-2">⚡</span>
+                  </span>
+                )}
+              </button>
+
+              {/* Liens avec style Pokémon */}
+              <div className="text-center space-y-3">
+                <p className="text-sm text-gray-600">
+                  Nouveau Dresseur ?{' '}
+                  <Link
+                    to="/signup"
+                    className="font-bold text-blue-600 hover:text-blue-700 transition-colors duration-200 hover:underline"
+                  >
+                    Créer un compte 🎒
+                  </Link>
+                </p>
+                
+                <Link 
+                  to="/" 
+                  className="inline-flex items-center text-sm font-medium text-yellow-600 hover:text-yellow-700 transition-colors duration-200 hover:underline"
+                >
+                  <span className="mr-1">🏠</span>
+                  Retour au Centre Pokémon
+                </Link>
+              </div>
+
+              {/* Éléments décoratifs bottom */}
+              <div className="flex justify-center space-x-4 pt-4 border-t border-gray-200">
+                <span className="text-xl animate-bounce" style={{animationDelay: '0s'}}>⚡</span>
+                <span className="text-xl animate-bounce" style={{animationDelay: '0.1s'}}>🔥</span>
+                <span className="text-xl animate-bounce" style={{animationDelay: '0.2s'}}>💧</span>
+                <span className="text-xl animate-bounce" style={{animationDelay: '0.3s'}}>🌿</span>
+              </div>
+            </Form>
           </div>
-        </Form>
+        </div>
       </div>
     </div>
   );

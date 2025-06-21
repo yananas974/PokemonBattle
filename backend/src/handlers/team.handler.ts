@@ -1,5 +1,6 @@
 import type { Context } from "hono";
-import { TeamService } from "../services/teamService/gestionTeamService.js";
+import { TeamService } from "../services/createTeamService/teamService.js"; 
+import { PokemonTeamService } from "../services/pokemonTeamService/pokemonTeamService.js";
 
 
 
@@ -15,12 +16,24 @@ export const getTeamsHandler = async (c: Context) => {
       return c.json({ success: false, error: 'User not authenticated' }, 401);
     }
 
-    // ✅ UTILISER LE VRAI SERVICE
-    const teams = await TeamService.getTeamsWithPokemon(user.id);
+    // ✅ UTILISER LE SERVICE AVEC POKÉMONS INCLUS
+    console.log('🔍 Récupération des équipes avec Pokémons pour utilisateur:', user.id);
+    const teamsWithPokemon = await PokemonTeamService.getTeamsWithPokemon(user.id);
+    console.log('✅ Équipes avec Pokémons récupérées:', teamsWithPokemon.length);
+    
+    // Afficher les détails pour debug
+    teamsWithPokemon.forEach(team => {
+      console.log(`📋 Équipe "${team.teamName}": ${team.pokemon?.length || 0} Pokémons`);
+      if (team.pokemon && team.pokemon.length > 0) {
+        team.pokemon.forEach(pokemon => {
+          console.log(`  - ${pokemon.name} (#${pokemon.pokemon_id})`);
+        });
+      }
+    });
     
     return c.json({
       success: true,
-      teams
+      teams: teamsWithPokemon
     });
   } catch (error) {
     console.error('❌ Erreur dans getTeamsHandler:', error);
@@ -89,7 +102,7 @@ export const addPokemonToTeamHandler = async (c: Context) => {
       }, 400);
     }
 
-    const result = await TeamService.addPokemonToTeam(
+    const result = await PokemonTeamService.addPokemonToTeam(
       Number(teamId), 
       Number(pokemonId), 
       user.id

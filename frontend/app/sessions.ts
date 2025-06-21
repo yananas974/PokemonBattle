@@ -40,6 +40,12 @@ export async function createUserSession(userId: string, user: any, redirectTo: s
   });
 }
 
+export async function getTokenFromSession(request: Request) {
+  const session = await getUserSession(request);
+  const user = session.get('user');
+  return user?.token || null;
+}
+
 export async function logout(request: Request) {
   const session = await getSession(request.headers.get('Cookie'));
   return new Response(null, {
@@ -49,4 +55,10 @@ export async function logout(request: Request) {
       'Set-Cookie': await destroySession(session),
     },
   });
+} 
+
+export async function getBackendTokenFromSession(request: Request) {
+  const session = await getUserSession(request);
+  const user = session.get('user');
+  return user?.backendToken || null;
 } 

@@ -75,14 +75,32 @@ export const weatherService = {
     try {
       const response = await apiCall(`/api/weather/effects?lat=${lat}&lon=${lon}`);
       console.log('📡 Réponse API météo status:', response.status);
+      console.log('📡 Réponse API météo headers:', response.headers);
+      
+      // ✅ Vérifier le content-type
+      const contentType = response.headers.get('content-type');
+      console.log('📡 Content-Type:', contentType);
       
       await handleApiError(response);
-      const result = await response.json();
+      
+      // ✅ Lire la réponse comme texte d'abord pour debug
+      const responseText = await response.text();
+      console.log('📡 Réponse brute:', responseText);
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ Erreur parsing JSON:', parseError);
+        throw new Error('Réponse API invalide');
+      }
       
       console.log('✅ Données météo COMPLÈTES reçues:', result);
-      console.log('🔍 result.location:', result.location);
+      console.log('🔍 result.success:', result.success);
+      console.log('�� result.location:', result.location);
       console.log('🔍 result.temperature:', result.temperature);
       console.log('🔍 result.description:', result.description);
+      console.log('🔍 result.icon:', result.icon);
       
       return {
         location: result.location || 'Ville inconnue',
@@ -95,7 +113,18 @@ export const weatherService = {
       };
     } catch (error) {
       console.error('❌ Erreur appel API météo:', error);
-      throw error;
+      
+      // ✅ Fallback plus robuste en cas d'erreur API
+      console.log('🔄 Utilisation des données météo par défaut');
+      return {
+        location: `Position ${lat.toFixed(2)}, ${lon.toFixed(2)}`,
+        temperature: 20,
+        description: 'Temps clair',
+        humidity: 50,
+        windSpeed: 10,
+        icon: '01d',
+        country: 'FR'
+      };
     }
   },
 
