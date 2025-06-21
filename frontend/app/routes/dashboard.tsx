@@ -191,18 +191,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const teamId = parseInt(formData.get('teamId') as string);
     const pokemonId = parseInt(formData.get('pokemonId') as string);
     
+    console.log('🗑️ Suppression Pokémon:', { teamId, pokemonId });
+    
     if (!teamId || !pokemonId) {
       return json({ error: 'ID équipe et Pokemon requis', success: false });
     }
 
     try {
-      await teamService.removePokemonFromTeam(teamId, pokemonId, token);
+      const result = await teamService.removePokemonFromTeam(teamId, pokemonId, token);
+      console.log('✅ Pokémon supprimé:', result);
       
       return json({ 
         success: true, 
         message: 'Pokémon retiré avec succès'
       });
     } catch (error) {
+      console.error('❌ Erreur suppression Pokémon:', error);
       return json({ 
         error: error instanceof Error ? error.message : 'Erreur lors de la suppression',
         success: false 
@@ -360,6 +364,15 @@ export default function Dashboard() {
   const [selectedPokemon, setSelectedPokemon] = useState<PokemonInTeam | null>(null);
   const [activeTab, setActiveTab] = useState<'teams' | 'friends' | 'friendsTeams' | 'combat' | 'pokemon'>('teams');
 
+  // ✅ DEBUG : Afficher l'onglet actuel
+  console.log('🔍 DEBUG - Onglet actuel:', activeTab);
+
+  // ✅ DEBUG : Fonction de changement d'onglet avec logging
+  const handleTabChange = (tab: 'teams' | 'friends' | 'friendsTeams' | 'combat' | 'pokemon') => {
+    console.log('🔄 Changement d\'onglet de', activeTab, 'vers', tab);
+    setActiveTab(tab);
+  };
+
   // Revalidation automatique après les actions réussies
   useEffect(() => {
     if (actionData?.success && !isSubmitting) {
@@ -397,30 +410,11 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-6">
-            <div className="bg-red-500 text-white p-2 mb-4">
-              <button onClick={() => console.log('TEST ONCLICK AVANT WEATHER')}>
-                Test onClick avant WeatherWidget
-              </button>
-            </div>
+            {/* ❌ DÉSACTIVER TEMPORAIREMENT */}
+            {/* <SimpleWeatherWidget /> */}
             
-            <SimpleWeatherWidget />
-            
-            <div className="bg-green-500 text-white p-2 mt-4">
-              <button onClick={() => console.log('TEST ONCLICK APRÈS WEATHER')}>
-                Test onClick après WeatherWidget
-              </button>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <div className="bg-blue-500 text-white p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-3">🌤️ Test Direct</h3>
-              <button 
-                onClick={() => alert('Test direct fonctionne !')}
-                className="bg-white text-blue-500 px-4 py-2 rounded"
-              >
-                Test Direct
-              </button>
+            <div className="bg-red-500 text-white p-4 rounded-lg">
+              <p>🧪 Widget météo désactivé pour test</p>
             </div>
             
             {/* ✅ Affichage des effets météo sur les types */}
@@ -447,6 +441,16 @@ export default function Dashboard() {
             )}
           </div>
 
+          {/* ✅ DEBUG : Affichage de l'état actuel */}
+          <div className="mb-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
+            <p className="text-sm text-yellow-800">
+              🔍 DEBUG - Onglet actuel: <strong>{activeTab}</strong>
+            </p>
+            <p className="text-xs text-yellow-600 mt-1">
+              Équipes: {teams?.length || 0} | Amis: {friends?.length || 0} | Pokémon: {pokemon?.length || 0}
+            </p>
+          </div>
+
           {/* Messages d'erreur/succès */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
@@ -466,23 +470,30 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Onglets de navigation */}
+          {/* Onglets de navigation - VERSION ALTERNATIVE */}
           <div className="mb-6">
             <div className="border-b border-gray-200">
               <nav className="-mb-px flex space-x-8">
-                <button
-                  onClick={() => setActiveTab('teams')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                <div
+                  onClick={() => {
+                    console.log('🔥 CLIC DÉTECTÉ sur teams');
+                    handleTabChange('teams');
+                  }}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors cursor-pointer ${
                     activeTab === 'teams'
                       ? 'border-indigo-500 text-indigo-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
                   Mes Équipes ({teams?.length || 0})
-                </button>
-                <button
-                  onClick={() => setActiveTab('friends')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                </div>
+                
+                <div
+                  onClick={() => {
+                    console.log('🔥 CLIC DÉTECTÉ sur friends');
+                    handleTabChange('friends');
+                  }}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors cursor-pointer ${
                     activeTab === 'friends'
                       ? 'border-indigo-500 text-indigo-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -494,46 +505,72 @@ export default function Dashboard() {
                       {pendingRequests?.length || 0}
                     </span>
                   )}
-                </button>
-                <button
-                  onClick={() => setActiveTab('friendsTeams')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                </div>
+                
+                <div
+                  onClick={() => {
+                    console.log('🔥 CLIC DÉTECTÉ sur friendsTeams');
+                    handleTabChange('friendsTeams');
+                  }}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors cursor-pointer ${
                     activeTab === 'friendsTeams'
                       ? 'border-indigo-500 text-indigo-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
                   Équipes d'Amis
-                </button>
-                <button
-                  onClick={() => setActiveTab('combat')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                </div>
+                
+                <div
+                  onClick={() => {
+                    console.log('🔥 CLIC DÉTECTÉ sur combat');
+                    handleTabChange('combat');
+                  }}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors cursor-pointer ${
                     activeTab === 'combat'
                       ? 'border-red-500 text-red-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
                   ⚔️ Combat
-                </button>
-                <button
-                  onClick={() => setActiveTab('pokemon')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                </div>
+                
+                <div
+                  onClick={() => {
+                    console.log('🔥 CLIC DÉTECTÉ sur pokemon');
+                    handleTabChange('pokemon');
+                  }}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors cursor-pointer ${
                     activeTab === 'pokemon'
                       ? 'border-indigo-500 text-indigo-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
                   Pokémon ({pokemon?.length || 0})
-                </button>
+                </div>
               </nav>
             </div>
+          </div>
+
+          {/* ✅ CONTENU DES ONGLETS - Vérifiez que tous existent */}
+          
+          {/* DEBUG: Contenu conditionnel visible */}
+          <div className="mb-4 p-2 bg-blue-100 rounded">
+            <p className="text-xs text-blue-700">
+              Rendu conditionnel - activeTab: {activeTab}
+              {activeTab === 'teams' && ' → Affichage ÉQUIPES'}
+              {activeTab === 'friends' && ' → Affichage AMIS'}
+              {activeTab === 'friendsTeams' && ' → Affichage ÉQUIPES D\'AMIS'}
+              {activeTab === 'combat' && ' → Affichage COMBAT'}
+              {activeTab === 'pokemon' && ' → Affichage POKÉMON'}
+            </p>
           </div>
 
           {/* Contenu des onglets */}
           {activeTab === 'teams' && (
             <div className="bg-white shadow rounded-lg p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Mes Équipes</h2>
+                <h2 className="text-2xl font-bold text-gray-900">✅ Mes Équipes</h2>
               </div>
               
               {/* Formulaire création équipe */}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface WeatherData {
   location: string;
@@ -21,22 +21,39 @@ export default function SimpleWeatherWidget() {
     setError(null);
 
     try {
-      // Utiliser la géolocalisation
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000
-        });
-      });
-
-      console.log('✅ Position obtenue:', position.coords);
-
-      // Appel à votre API (qui fonctionne maintenant !)
-      const response = await fetch(`/api/weather/effects?lat=${position.coords.latitude}&lon=${position.coords.longitude}`);
+      // ✅ MÉTHODE NON-BLOQUANTE : Utiliser des coordonnées par défaut
+      const defaultLat = 48.8566; // Paris par défaut
+      const defaultLon = 2.3522;
       
-      console.log('📡 Status:', response.status);
+      let lat = defaultLat;
+      let lon = defaultLon;
+      
+      // ✅ Essayer la géolocalisation SANS bloquer l'interface
+      try {
+        const position = await Promise.race([
+          new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: false, // Moins précis mais plus rapide
+              timeout: 3000, // Timeout plus court
+              maximumAge: 300000
+            });
+          }),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout géolocalisation')), 3000)
+          )
+        ]);
+        
+        lat = position.coords.latitude;
+        lon = position.coords.longitude;
+        console.log('✅ Position obtenue:', { lat, lon });
+      } catch (geoError) {
+        console.log('⚠️ Géolocalisation échouée, utilisation coordonnées par défaut:', geoError);
+        // Continuer avec les coordonnées par défaut
+      }
 
+      // Appel API météo
+      const response = await fetch(`/api/weather/effects?lat=${lat}&lon=${lon}`);
+      
       if (!response.ok) {
         throw new Error(`Erreur API: ${response.status}`);
       }
@@ -55,12 +72,22 @@ export default function SimpleWeatherWidget() {
       });
 
     } catch (err) {
-      console.error('❌ Erreur:', err);
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      console.error('❌ Erreur météo:', err);
+      setError(err instanceof Error ? err.message : 'Erreur météo');
     } finally {
       setLoading(false);
     }
   };
+
+  // ✅ Charger automatiquement au démarrage SANS bloquer
+  useEffect(() => {
+    // Délai pour éviter de bloquer l'hydratation
+    const timer = setTimeout(() => {
+      getWeather();
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="bg-gradient-to-r from-blue-400 to-blue-600 rounded-lg p-4 text-white shadow-lg">
