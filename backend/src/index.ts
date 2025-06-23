@@ -3,46 +3,48 @@ import 'dotenv/config';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { logger } from 'hono/logger';
+import { errorHandler } from './middlewares/errorHandler.middleware.js';
+import { corsMiddleware } from './config/cors.Config.js';
+import routes from './routes/routes.js';
 
-// ✅ IMPORTS DIRECTS (plus fiables)
-import { authRoutes } from './routes/auth.route.js';
-import { pokemonRoutes } from './routes/pokemon.route.js';
-import { friendshipRoutes } from './routes/friendship.route.js';
-import { teamRoutes } from './routes/team.route.js';
-import { weatherRoutes } from './routes/weather.route.js';
-import { battleRoutes } from './routes/battle.route.js';
 
-const app = new Hono();
 
-// ✅ CORS middleware
-app.use('*', cors({
-  origin: ['http://localhost:3000', 'http://frontend:3000'],
-  credentials: true,
-}));
+const app = new Hono()
 
-// ✅ Middleware de debug
-app.use('*', (c, next) => {
-  console.log(`🌐 REQUÊTE REÇUE: ${c.req.method} ${c.req.url}`);
-  return next();
+// ✅ IMPORTANT: Enregistrer le gestionnaire d'erreurs AVANT tout le reste
+app.onError(errorHandler);
+
+// Middlewares globaux
+app.use('*', logger());
+app.use('*', corsMiddleware); 
+
+// Routes
+app.route('/api', routes);
+
+// Route de santé
+app.get('/health', (c) => {
+  return c.json({ 
+    success: true,
+    status: 'healthy', 
+    timestamp: new Date().toISOString() 
+  });
 });
 
-// ✅ Routes principales PROPRES
-app.route('/api/auth', authRoutes);
-app.route('/api/pokemon', pokemonRoutes);
-app.route('/api/friends', friendshipRoutes);
-app.route('/api/teams', teamRoutes);
-app.route('/api/weather', weatherRoutes);
-app.route('/api/battle', battleRoutes);
+// 🚀 DÉMARRAGE SIMPLE - Plus de try/catch !
+async function startServer() {
+  console.log('🚀 === DÉMARRAGE DU SERVEUR ===');
+  
+  const port = 3001;
+  console.log(`🌟 Server is running on port ${port}`);
+  
+  serve({
+    fetch: app.fetch,
+    port
+  });
+}
 
-// ✅ Route de test racine seulement
-app.get('/', (c) => {
-  return c.text('Pokemon Battle API is running! 🚀');
-});
+// Démarrer le serveur - Les erreurs seront gérées par le processus Node.js
+startServer();
 
-const port = 3001;
-console.log(`🚀 Server is running on port ${port}`);
-
-serve({
-  fetch: app.fetch,
-  port
-}); 
+export default app; 

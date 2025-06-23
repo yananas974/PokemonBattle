@@ -1,21 +1,12 @@
-import { RemixServer } from '@remix-run/react';
-import type { EntryContext } from '@remix-run/node';
-import { renderToString } from 'react-dom/server';
+import { RemixBrowser } from "@remix-run/react";
+import { startTransition, StrictMode } from "react";
+import { hydrateRoot } from "react-dom/client";
 
-export default function handleRequest(
-  request: Request,
-  responseStatusCode: number,
-  responseHeaders: Headers,
-  remixContext: EntryContext
-) {
-  const markup = renderToString(
-    <RemixServer context={remixContext} url={request.url} />
+startTransition(() => {
+  hydrateRoot(
+    document,
+    <StrictMode>
+      <RemixBrowser />
+    </StrictMode>
   );
-
-  responseHeaders.set('Content-Type', 'text/html');
-
-  return new Response('<!DOCTYPE html>' + markup, {
-    status: responseStatusCode,
-    headers: responseHeaders,
-  });
-}
+});

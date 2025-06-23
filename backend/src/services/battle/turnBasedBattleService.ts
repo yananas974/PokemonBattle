@@ -1,9 +1,11 @@
 import { WeatherEffectService, type WeatherEffectNew } from '../weatherEffectService/weatherEffectService.js';
+import { PokemonMoveService } from '../pokemonMoveService/pokemonMoveService.js';
 
 export interface BattlePokemon {
   pokemon_id: number;
   name_fr: string;
   type: string;
+  level: number;
   base_hp: number;
   base_attack: number;
   base_defense: number;
@@ -11,23 +13,44 @@ export interface BattlePokemon {
   sprite_url: string;
   // Stats de combat
   current_hp: number;
+  max_hp: number;
   effective_attack: number;
   effective_defense: number;
   effective_speed: number;
   is_ko: boolean;
   team: 'team1' | 'team2';
-  position: number; // Position dans l'équipe (0-5)
+  position: number;
+  // Météo
   weatherMultiplier: number;
   weatherStatus: string;
+  // Statuts de combat
+  statusCondition: 'none' | 'burn' | 'freeze' | 'paralysis' | 'poison' | 'sleep';
+  statusTurns: number;
+}
+
+export interface PokemonMove {
+  name: string;
+  type: string;
+  power: number;
+  accuracy: number;
+  pp: number;
+  category: 'physical' | 'special' | 'status';
+  criticalHitRatio: number;
+  description: string;
 }
 
 export interface TurnAction {
   turn: number;
+  phase: 'move_selection' | 'move_execution' | 'status_effects' | 'weather_effects';
   attacker: BattlePokemon;
   defender: BattlePokemon;
+  move: PokemonMove;
   damage: number;
   isCritical: boolean;
-  effectiveness: number;
+  typeEffectiveness: number;
+  stab: boolean; // Same Type Attack Bonus
+  weatherBonus: number;
+  accuracy: boolean;
   description: string;
   remainingHP: number;
   isKO: boolean;
@@ -36,21 +59,22 @@ export interface TurnAction {
 export interface TurnBasedBattleState {
   turn: number;
   phase: 'setup' | 'battle' | 'finished';
+  battlePhase: 'move_selection' | 'move_execution' | 'status_damage' | 'weather_damage' | 'end_turn';
   team1Pokemon: BattlePokemon[];
   team2Pokemon: BattlePokemon[];
   currentTeam1Pokemon: BattlePokemon | null;
   currentTeam2Pokemon: BattlePokemon | null;
-  turnOrder: BattlePokemon[];
   battleLog: TurnAction[];
   winner: 'team1' | 'team2' | 'draw' | null;
   weatherEffects: WeatherEffectNew | null;
+  weatherTurns: number;
   timeBonus: number;
 }
 
 export class TurnBasedBattleService {
   
   /**
-   * Initialiser un combat tour par tour
+   * Initialiser un combat Pokémon authentique
    */
   static initializeBattle(
     team1: any,
@@ -63,95 +87,37 @@ export class TurnBasedBattleService {
     const team1Pokemon = this.preparePokemonForBattle(team1.pokemon, 'team1', weatherEffects, timeBonus);
     const team2Pokemon = this.preparePokemonForBattle(team2.pokemon, 'team2', weatherEffects, timeBonus);
     
-    // ✅ Déterminer l'ordre des tours basé sur la vitesse
-    const allPokemon = [...team1Pokemon, ...team2Pokemon];
-    const turnOrder = allPokemon
-      .filter(p => !p.is_ko)
-      .sort((a, b) => b.effective_speed - a.effective_speed);
-    
     return {
       turn: 1,
       phase: 'battle',
+      battlePhase: 'move_selection',
       team1Pokemon,
       team2Pokemon,
       currentTeam1Pokemon: team1Pokemon.find(p => !p.is_ko) || null,
       currentTeam2Pokemon: team2Pokemon.find(p => !p.is_ko) || null,
-      turnOrder,
       battleLog: [],
       winner: null,
       weatherEffects,
+      weatherTurns: weatherEffects ? 5 : 0, // ✅ La météo dure 5 tours comme dans Pokémon
       timeBonus
     };
   }
-  
+
   /**
-   * Exécuter un tour de combat automatique
+   * Simuler un combat complet avec logique Pokémon authentique
    */
-  static executeTurn(battleState: TurnBasedBattleState): TurnBasedBattleState {
-    if (battleState.phase !== 'battle' || battleState.winner) {
-      return battleState;
-    }
-    
-    const newState = { ...battleState };
-    
-    // ✅ Déterminer qui attaque ce tour
-    const activePokemon = newState.turnOrder.filter(p => !p.is_ko);
-    if (activePokemon.length < 2) {
-      return this.checkWinner(newState);
-    }
-    
-    const attackerIndex = (newState.turn - 1) % activePokemon.length;
-    const attacker = activePokemon[attackerIndex];
-    
-    // ✅ Trouver la cible (Pokémon adverse le plus rapide encore vivant)
-    const opposingTeam = attacker.team === 'team1' ? 'team2' : 'team1';
-    const possibleTargets = activePokemon.filter(p => p.team === opposingTeam && !p.is_ko);
-    
-    if (possibleTargets.length === 0) {
-      return this.checkWinner(newState);
-    }
-    
-    const defender = possibleTargets[0]; // Attaque le plus rapide adverse
-    
-    // ✅ Calculer l'attaque
-    const turnAction = this.calculateAttack(attacker, defender, newState.turn);
-    
-    // ✅ Appliquer les dégâts
-    defender.current_hp = Math.max(0, defender.current_hp - turnAction.damage);
-    if (defender.current_hp === 0) {
-      defender.is_ko = true;
-      turnAction.isKO = true;
-    }
-    
-    // ✅ Mettre à jour l'état
-    newState.battleLog.push(turnAction);
-    newState.turn++;
-    
-    // ✅ Mettre à jour les Pokémon actifs
-    newState.currentTeam1Pokemon = newState.team1Pokemon.find(p => !p.is_ko) || null;
-    newState.currentTeam2Pokemon = newState.team2Pokemon.find(p => !p.is_ko) || null;
-    
-    // ✅ Recalculer l'ordre des tours
-    newState.turnOrder = newState.turnOrder.filter(p => !p.is_ko);
-    
-    return this.checkWinner(newState);
-  }
-  
-  /**
-   * Simuler un combat complet jusqu'à la fin
-   */
-  static simulateFullBattle(
+  static async simulateFullBattle(
     team1: any,
     team2: any,
     weatherEffects: WeatherEffectNew | null,
     timeBonus: number = 1.0,
-    maxTurns: number = 50
-  ): TurnBasedBattleState {
+    maxTurns: number = 100
+  ): Promise<TurnBasedBattleState> {
     
     let battleState = this.initializeBattle(team1, team2, weatherEffects, timeBonus);
     
     while (battleState.phase === 'battle' && battleState.turn <= maxTurns && !battleState.winner) {
-      battleState = this.executeTurn(battleState);
+      battleState = await this.executePokemonTurn(battleState);
     }
     
     if (battleState.turn > maxTurns && !battleState.winner) {
@@ -161,9 +127,90 @@ export class TurnBasedBattleService {
     
     return battleState;
   }
-  
+
   /**
-   * Préparer les Pokémon pour le combat avec les effets météo
+   * Exécuter un tour complet de combat Pokémon
+   */
+  private static async executePokemonTurn(battleState: TurnBasedBattleState): Promise<TurnBasedBattleState> {
+    if (battleState.phase !== 'battle' || battleState.winner) {
+      return battleState;
+    }
+
+    const newState = { ...battleState };
+    
+    // ✅ PHASE 1: Sélection des attaques (automatique)
+    const team1Active = newState.currentTeam1Pokemon;
+    const team2Active = newState.currentTeam2Pokemon;
+    
+    if (!team1Active || !team2Active) {
+      return this.checkWinner(newState);
+    }
+
+    // ✅ PHASE 2: Déterminer l'ordre de priorité (Vitesse)
+    const firstAttacker = team1Active.effective_speed >= team2Active.effective_speed ? team1Active : team2Active;
+    const secondAttacker = firstAttacker === team1Active ? team2Active : team1Active;
+
+    // ✅ PHASE 3: Exécution des attaques
+    // Premier attaquant
+    if (!firstAttacker.is_ko) {
+      const move1 = await this.selectMove(firstAttacker);
+      const target1 = firstAttacker === team1Active ? team2Active : team1Active;
+      
+      if (!target1.is_ko) {
+        const action1 = this.executeMove(firstAttacker, target1, move1, newState.turn, newState.weatherEffects);
+        newState.battleLog.push(action1);
+        
+        // Appliquer les dégâts
+        target1.current_hp = Math.max(0, target1.current_hp - action1.damage);
+        if (target1.current_hp === 0) {
+          target1.is_ko = true;
+          action1.isKO = true;
+          // ✅ Changer de Pokémon actif
+          this.switchToNextPokemon(newState, target1.team);
+        }
+      }
+    }
+
+    // Deuxième attaquant (si encore vivant)
+    if (!secondAttacker.is_ko) {
+      const move2 = await this.selectMove(secondAttacker);
+      const target2 = secondAttacker === team1Active ? team2Active : team1Active;
+      
+      if (!target2.is_ko) {
+        const action2 = this.executeMove(secondAttacker, target2, move2, newState.turn, newState.weatherEffects);
+        newState.battleLog.push(action2);
+        
+        // Appliquer les dégâts
+        target2.current_hp = Math.max(0, target2.current_hp - action2.damage);
+        if (target2.current_hp === 0) {
+          target2.is_ko = true;
+          action2.isKO = true;
+          // ✅ Changer de Pokémon actif
+          this.switchToNextPokemon(newState, target2.team);
+        }
+      }
+    }
+
+    // ✅ PHASE 4: Effets de statut (poison, brûlure, etc.)
+    this.applyStatusEffects(newState);
+
+    // ✅ PHASE 5: Effets météorologiques
+    this.applyWeatherEffects(newState);
+
+    // ✅ PHASE 6: Fin de tour
+    newState.turn++;
+    newState.weatherTurns = Math.max(0, newState.weatherTurns - 1);
+    
+    // La météo se dissipe après 5 tours
+    if (newState.weatherTurns === 0) {
+      newState.weatherEffects = null;
+    }
+
+    return this.checkWinner(newState);
+  }
+
+  /**
+   * Préparer les Pokémon avec stats Pokémon authentiques
    */
   private static preparePokemonForBattle(
     pokemon: any[],
@@ -173,18 +220,32 @@ export class TurnBasedBattleService {
   ): BattlePokemon[] {
     
     return pokemon.map((p, index) => {
-      // ✅ Calculer l'effet météo
+      // ✅ Niveau par défaut
+      const level = p.level || 50;
+      
+      // ✅ Calcul des stats selon la formule Pokémon Gen 1
+      // HP = ((Base + IV) * 2 + sqrt(EV)/4) * Level/100 + Level + 10
+      // Autres stats = ((Base + IV) * 2 + sqrt(EV)/4) * Level/100 + 5
+      
+      const iv = 15; // IV maximum en Gen 1 (0-15)
+      const ev = 65535; // EV maximum en Gen 1
+      
+      const hp = Math.floor(((p.base_hp + iv) * 2 + Math.sqrt(ev) / 4) * level / 100 + level + 10);
+      const attack = Math.floor(((p.base_attack + iv) * 2 + Math.sqrt(ev) / 4) * level / 100 + 5);
+      const defense = Math.floor(((p.base_defense + iv) * 2 + Math.sqrt(ev) / 4) * level / 100 + 5);
+      const speed = Math.floor(((p.base_speed + iv) * 2 + Math.sqrt(ev) / 4) * level / 100 + 5);
+
+      // ✅ Effet météo
       const weatherMultiplier = weatherEffects?.getMultiplierFor 
         ? weatherEffects.getMultiplierFor(p.type)
         : 1.0;
       
       const finalMultiplier = weatherMultiplier * timeBonus;
       
-      // ✅ Stats de combat
-      const effective_hp = Math.round(p.base_hp * finalMultiplier);
-      const effective_attack = Math.round(p.base_attack * finalMultiplier);
-      const effective_defense = Math.round(p.base_defense * finalMultiplier);
-      const effective_speed = Math.round(p.base_speed * finalMultiplier);
+      // ✅ Appliquer les bonus météo
+      const effective_attack = Math.round(attack * finalMultiplier);
+      const effective_defense = Math.round(defense * finalMultiplier);
+      const effective_speed = Math.round(speed * finalMultiplier);
       
       // ✅ Status météo
       let weatherStatus = 'Normal';
@@ -198,12 +259,14 @@ export class TurnBasedBattleService {
         pokemon_id: p.pokemon_id,
         name_fr: p.name_fr,
         type: p.type,
+        level,
         base_hp: p.base_hp,
         base_attack: p.base_attack,
         base_defense: p.base_defense,
         base_speed: p.base_speed,
         sprite_url: p.sprite_url,
-        current_hp: effective_hp,
+        current_hp: hp,
+        max_hp: hp,
         effective_attack,
         effective_defense,
         effective_speed,
@@ -211,55 +274,237 @@ export class TurnBasedBattleService {
         team,
         position: index,
         weatherMultiplier,
-        weatherStatus
+        weatherStatus,
+        statusCondition: 'none',
+        statusTurns: 0
       };
     });
   }
-  
+
   /**
-   * Calculer une attaque entre deux Pokémon
+   * Sélectionner une attaque aléatoire pour un Pokémon depuis la BDD
    */
-  private static calculateAttack(attacker: BattlePokemon, defender: BattlePokemon, turn: number): TurnAction {
+  private static async selectMove(pokemon: BattlePokemon): Promise<PokemonMove> {
+    try {
+      const moves = await PokemonMoveService.getPokemonMoves(pokemon.pokemon_id);
+      
+      if (moves.length > 0) {
+        const randomIndex = Math.floor(Math.random() * moves.length);
+        const selectedMove = moves[randomIndex];
+        
+        // ✅ Log plus visible
+        console.log(`🎲 ${pokemon.name_fr} choisit ${selectedMove.name} (${selectedMove.type}, ${selectedMove.power} power)`);
+        
+        return selectedMove;
+      }
+      
+      // ✅ Attaque de secours si aucune trouvée en BDD
+      console.log(`⚠️ Aucune attaque trouvée pour ${pokemon.name_fr}, utilisation de Charge`);
+      return {
+        name: 'Charge',
+        type: 'Normal',
+        power: 40,
+        accuracy: 100,
+        pp: 35,
+        category: 'physical',
+        criticalHitRatio: 6.25,
+        description: 'Attaque de base'
+      };
+      
+    } catch (error) {
+      console.error(`❌ Erreur lors de la sélection d'attaque pour ${pokemon.name_fr}:`, error);
+      
+      // ✅ Attaque de secours en cas d'erreur
+      return {
+        name: 'Charge',
+        type: 'Normal',
+        power: 40,
+        accuracy: 100,
+        pp: 35,
+        category: 'physical',
+        criticalHitRatio: 6.25,
+        description: 'Attaque de base'
+      };
+    }
+  }
+
+  /**
+   * Exécuter une attaque avec la formule de dégâts Pokémon Gen 1
+   */
+  private static executeMove(
+    attacker: BattlePokemon, 
+    defender: BattlePokemon, 
+    move: PokemonMove, 
+    turn: number,
+    weatherEffects: WeatherEffectNew | null
+  ): TurnAction {
+    
+    // ✅ Test de précision
+    const accuracy = Math.random() * 100 <= move.accuracy;
+    
+    if (!accuracy) {
+      return {
+        turn,
+        phase: 'move_execution',
+        attacker,
+        defender,
+        move,
+        damage: 0,
+        isCritical: false,
+        typeEffectiveness: 1,
+        stab: false,
+        weatherBonus: 1,
+        accuracy: false,
+        description: `${attacker.name_fr} utilise ${move.name} mais rate son attaque !`,
+        remainingHP: defender.current_hp,
+        isKO: false
+      };
+    }
+
+    // ✅ Calcul de dégâts selon la formule Pokémon Gen 1
+    // Damage = ((2 * Level + 10) / 250) * (Attack / Defense) * Base + 2) * Modifiers
+    
+    const level = attacker.level;
+    const attackStat = move.category === 'physical' ? attacker.effective_attack : attacker.effective_attack; // Pas de Special en Gen 1
+    const defenseStat = move.category === 'physical' ? defender.effective_defense : defender.effective_defense;
+    
+    // ✅ Calcul de base
+    const baseDamage = Math.floor(
+      ((2 * level + 10) / 250) * (attackStat / defenseStat) * move.power + 2
+    );
+    
+    // ✅ STAB (Same Type Attack Bonus) - 50% de bonus si même type
+    const stab = attacker.type === move.type;
+    const stabMultiplier = stab ? 1.5 : 1.0;
+    
     // ✅ Efficacité des types
     const typeEffectiveness = WeatherEffectService.calculateTypeEffectiveness(
-      attacker.type as any, 
+      move.type as any, 
       defender.type as any
     );
     
-    // ✅ Calcul des dégâts de base
-    const baseDamage = Math.max(1, attacker.effective_attack - defender.effective_defense);
+    // ✅ Coup critique (basé sur la vitesse en Gen 1)
+    const criticalChance = Math.min(255, attacker.effective_speed) / 512;
+    const isCritical = Math.random() < criticalChance;
+    const criticalMultiplier = isCritical ? 2.0 : 1.0;
     
-    // ✅ Coup critique (5% de chance)
-    const isCritical = Math.random() < 0.05;
-    const criticalMultiplier = isCritical ? 1.5 : 1.0;
+    // ✅ Bonus météo
+    let weatherBonus = 1.0;
+    if (weatherEffects) {
+      if (move.type === 'Feu' && weatherEffects.condition.includes('Soleil')) {
+        weatherBonus = 1.5;
+      } else if (move.type === 'Eau' && weatherEffects.condition.includes('Pluie')) {
+        weatherBonus = 1.5;
+      } else if (move.type === 'Feu' && weatherEffects.condition.includes('Pluie')) {
+        weatherBonus = 0.5;
+      } else if (move.type === 'Eau' && weatherEffects.condition.includes('Soleil')) {
+        weatherBonus = 0.5;
+      }
+    }
     
-    // ✅ Variation aléatoire (±10%)
-    const randomFactor = 0.9 + Math.random() * 0.2;
+    // ✅ Variation aléatoire (85-100% en Gen 1)
+    const randomFactor = (Math.floor(Math.random() * 16) + 85) / 100;
     
     // ✅ Dégâts finaux
-    const finalDamage = Math.round(
-      baseDamage * typeEffectiveness * criticalMultiplier * randomFactor
-    );
+    const finalDamage = Math.max(1, Math.floor(
+      baseDamage * stabMultiplier * typeEffectiveness * criticalMultiplier * weatherBonus * randomFactor
+    ));
     
-    // ✅ Description de l'attaque
-    let description = `${attacker.name_fr} attaque ${defender.name_fr}`;
-    if (isCritical) description += ' (CRITIQUE!)';
-    if (typeEffectiveness > 1) description += ' (Super efficace!)';
-    if (typeEffectiveness < 1) description += ' (Peu efficace...)';
+    // ✅ Description détaillée
+    let description = `${attacker.name_fr} utilise ${move.name}`;
+
+    // ✅ Ajouter le type de l'attaque pour plus de clarté
+    if (move.type !== attacker.type) {
+      description += ` (${move.type})`;
+    }
+
+    description += ' !';
+
+    if (isCritical) description += ' Coup critique !';
+    if (typeEffectiveness > 1) description += ' C\'est super efficace !';
+    if (typeEffectiveness < 1) description += ' Ce n\'est pas très efficace...';
+    if (stab) description += ' (STAB)';
+    if (weatherBonus !== 1.0) {
+      description += weatherBonus > 1.0 ? ' (Renforcé par la météo)' : ' (Affaibli par la météo)';
+    }
     
     return {
       turn,
+      phase: 'move_execution',
       attacker,
       defender,
+      move,
       damage: finalDamage,
       isCritical,
-      effectiveness: typeEffectiveness,
+      typeEffectiveness,
+      stab,
+      weatherBonus,
+      accuracy: true,
       description,
       remainingHP: Math.max(0, defender.current_hp - finalDamage),
       isKO: (defender.current_hp - finalDamage) <= 0
     };
   }
-  
+
+  /**
+   * Changer de Pokémon actif quand un Pokémon est KO
+   */
+  private static switchToNextPokemon(battleState: TurnBasedBattleState, team: 'team1' | 'team2'): void {
+    const teamPokemon = team === 'team1' ? battleState.team1Pokemon : battleState.team2Pokemon;
+    const nextPokemon = teamPokemon.find(p => !p.is_ko);
+    
+    if (team === 'team1') {
+      battleState.currentTeam1Pokemon = nextPokemon || null;
+    } else {
+      battleState.currentTeam2Pokemon = nextPokemon || null;
+    }
+  }
+
+  /**
+   * Appliquer les effets de statut (poison, brûlure, etc.)
+   */
+  private static applyStatusEffects(battleState: TurnBasedBattleState): void {
+    // ✅ Implémentation future pour les statuts
+    // Pour l'instant, on garde simple
+  }
+
+  /**
+   * Appliquer les effets météorologiques en fin de tour
+   */
+  private static applyWeatherEffects(battleState: TurnBasedBattleState): void {
+    if (!battleState.weatherEffects) return;
+    
+    // ✅ Dégâts météo (tempête de sable, grêle)
+    if (battleState.weatherEffects.condition.includes('Tempête')) {
+      [battleState.currentTeam1Pokemon, battleState.currentTeam2Pokemon].forEach(pokemon => {
+        if (pokemon && !pokemon.is_ko && pokemon.type !== 'Sol' && pokemon.type !== 'Roche') {
+          const sandDamage = Math.floor(pokemon.max_hp / 16); // 1/16 des HP max
+          pokemon.current_hp = Math.max(0, pokemon.current_hp - sandDamage);
+          if (pokemon.current_hp === 0) {
+            pokemon.is_ko = true;
+          }
+          
+          battleState.battleLog.push({
+            turn: battleState.turn,
+            phase: 'weather_effects',
+            attacker: pokemon,
+            defender: pokemon,
+            move: { name: 'Tempête de Sable', type: 'Sol', power: 0, accuracy: 100, pp: 0, category: 'status', criticalHitRatio: 0, description: 'Dégâts de tempête' },
+            damage: sandDamage,
+            isCritical: false,
+            typeEffectiveness: 1,
+            stab: false,
+            weatherBonus: 1,
+            accuracy: true,
+            description: `${pokemon.name_fr} est blessé par la tempête de sable !`,
+            remainingHP: pokemon.current_hp,
+            isKO: pokemon.current_hp === 0
+          });
+        }
+      });
+    }
+  }
+
   /**
    * Vérifier s'il y a un vainqueur
    */
