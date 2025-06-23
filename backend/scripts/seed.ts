@@ -1,7 +1,8 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { pokemonReference } from '../src/db/schema.js';
-import { eq } from 'drizzle-orm';
+import { pokemonReference, hacks } from '../src/db/schema.js';
+import { eq, lte } from 'drizzle-orm';
+import { PokemonMoveService } from '../src/services/pokemonMoveService/pokemonMoveService.js';
 
 interface PokemonApiResponse {
   id: number;
@@ -273,6 +274,133 @@ class PokemonSeeder {
     return { success: insertSuccess, wasExisting: false };
   }
 
+  /**
+   * 🌐 Seed des mots de base pour les hacks
+   */
+  private async seedHacks(): Promise<void> {
+    console.log(`🌐 Ajout des mots de base pour les hacks...`);
+
+    const existing = await this.db.select().from(hacks);
+    if (existing.length > 0) {
+      console.log(`🟡 Mots de base déjà insérés (${existing.length})`);
+      return;
+    }
+
+    // ✅ Mots sans difficulté - la difficulté vient du traitement
+    const baseWords = [
+      { base_word: "FEED" },
+      { base_word: "PAUSE" },
+      { base_word: "CATCH" },
+      { base_word: "OPEN" },
+      { base_word: "DEFEND" },
+    ];
+
+    try {
+      await this.db.insert(hacks).values(baseWords);
+      console.log(`✅ Mots de base insérés (${baseWords.length})`);
+    } catch (error) {
+      console.error(`❌ Erreur lors de l'insertion des mots de base:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 🎯 Seed des attaques Pokémon depuis PokéAPI
+   */
+  private async seedPokemonMoves(): Promise<void> {
+    console.log(`⚔️ Import des attaques Pokémon depuis PokéAPI...`);
+    
+    try {
+      // ✅ CORRECTION : Récupérer TOUS les Pokémon Gen 1
+      const allPokemon = await this.db
+        .select({
+          id: pokemonReference.id,
+          pokeapi_id: pokemonReference.pokeapi_id,
+          name: pokemonReference.name
+        })
+        .from(pokemonReference)
+        .where(lte(pokemonReference.pokeapi_id, 151)); // ✅ Utiliser lte (≤) au lieu de eq (=)
+      
+      console.log(`📊 ${allPokemon.length} Pokémon trouvés pour l'import des attaques`);
+      
+      if (allPokemon.length === 0) {
+        console.log('⚠️ Aucun Pokémon trouvé, veuillez d\'abord seeder les Pokémon');
+        return;
+      }
+      
+      let successful = 0;
+      let failed = 0;
+      
+      // ✅ Traiter chaque Pokémon
+      for (let i = 0; i < allPokemon.length; i++) {
+        const pokemon = allPokemon[i];
+        console.log(`\n[${i + 1}/${allPokemon.length}] 🔄 Import attaques: ${pokemon.name} (ID: ${pokemon.pokeapi_id})`);
+        
+        try {
+          await PokemonMoveService.fetchAndSavePokemonMoves(pokemon.pokeapi_id);
+          successful++;
+          console.log(`✅ Attaques importées pour ${pokemon.name}`);
+        } catch (error) {
+          failed++;
+          console.error(`❌ Erreur pour ${pokemon.name}:`, error);
+        }
+        
+        // ✅ Délai entre chaque Pokémon pour éviter de surcharger l'API
+        if (i < allPokemon.length - 1) {
+          await this.delay(500);
+        }
+      }
+      
+      console.log(`\n🎉 Import des attaques terminé !`);
+      console.log(`✅ Succès: ${successful}`);
+      console.log(`❌ Échecs: ${failed}`);
+      console.log(`📊 Total traité: ${successful + failed}/${allPokemon.length}`);
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'import des attaques:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 🌱 Seed complet : Pokémon + Hacks + Attaques
+   */
+  public async seedAll(startId = 1, endId = 151): Promise<void> {
+    console.log(`🌱 Début du seed complet`);
+    
+    try {
+      // 1. Seed des Pokémon
+      await this.seedPokemon(startId, endId);
+      
+      // 2. Seed des Hacks
+      await this.seedHacks();
+      
+      // 3. ✅ NOUVEAU : Seed des attaques Pokémon
+      await this.seedPokemonMoves();
+      
+      console.log(`🎉 Seed complet terminé avec succès !`);
+    } catch (error) {
+      console.error(`💥 Erreur lors du seed complet:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 🎯 Seed seulement les attaques
+   */
+  public async seedOnlyMoves(): Promise<void> {
+    console.log(`⚔️ Seed des attaques uniquement`);
+    await this.seedPokemonMoves();
+  }
+
+  /**
+   * 🎯 Seed seulement les hacks
+   */
+  public async seedOnlyHacks(): Promise<void> {
+    console.log(`🌐 Seed des hacks uniquement`);
+    await this.seedHacks();
+  }
+
   public async close(): Promise<void> {
     await this.pool.end();
     console.log('🔌 Connexion fermée');
@@ -281,15 +409,27 @@ class PokemonSeeder {
 
 async function main() {
   const seeder = new PokemonSeeder();
+  const args = process.argv.slice(2);
   
   try {
-    // Test de connexion
     console.log('🔍 Test de connexion à la base de données...');
     await seeder['db'].select().from(pokemonReference).limit(1);
     console.log('✅ Connexion réussie !');
 
-    // Lancement du seed
-    await seeder.seedPokemon(1, 151); // Génération 1 complète
+    // ✅ Gestion des arguments étendus
+    if (args.includes('--pokemon-only')) {
+      console.log('🎯 Seed Pokémon uniquement');
+      await seeder.seedPokemon(1, 151);
+    } else if (args.includes('--hacks-only')) {
+      console.log('🎯 Seed Hacks uniquement');
+      await seeder.seedOnlyHacks();
+    } else if (args.includes('--moves-only')) {
+      console.log('🎯 Seed Attaques uniquement');
+      await seeder.seedOnlyMoves();
+    } else {
+      console.log('🎯 Seed complet (Pokémon + Hacks + Attaques)');
+      await seeder.seedAll(1, 151);
+    }
     
   } catch (error) {
     console.error('💥 Erreur critique:', error);

@@ -410,12 +410,8 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-6">
-            {/* ❌ DÉSACTIVER TEMPORAIREMENT */}
-            {/* <SimpleWeatherWidget /> */}
-            
-            <div className="bg-red-500 text-white p-4 rounded-lg">
-              <p>🧪 Widget météo désactivé pour test</p>
-            </div>
+            {/* ✅ RÉACTIVER LE WIDGET MÉTÉO */}
+            <SimpleWeatherWidget />
             
             {/* ✅ Affichage des effets météo sur les types */}
             {weatherEffects?.effects && (
@@ -951,19 +947,10 @@ export default function Dashboard() {
           )}
 
           {activeTab === 'combat' && (
-            <div className="space-y-6">
-              {/* Combat Simplifié */}
-              <div className="bg-white shadow rounded-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">⚔️ Combat d'Équipes</h2>
-                
-                <TeamBattleComponent teams={teams} friendsTeams={friendsTeams} />
-              </div>
-
-              {/* Combat Tour par Tour */}
-              <div className="bg-white shadow rounded-lg p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">🎮 Combat Tour par Tour</h2>
-                
-                <TurnBasedBattleComponent teams={teams} friendsTeams={friendsTeams} />
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">⚔️ Combat</h2>
+              <div className="space-y-6">
+                <TeamBattleComponent teams={teams} friendsTeams={friendsTeams} token={user?.backendToken} />
               </div>
             </div>
           )}
@@ -1099,7 +1086,7 @@ export default function Dashboard() {
 }
 
 // Composant Combat Simplifié
-function TeamBattleComponent({ teams, friendsTeams }: { teams: any[], friendsTeams: any }) {
+function TeamBattleComponent({ teams, friendsTeams, token }: { teams: any[], friendsTeams: any, token?: string }) {
   const [selectedTeam1, setSelectedTeam1] = useState('');
   const [selectedTeam2, setSelectedTeam2] = useState('');
   const [battleResult, setBattleResult] = useState<any>(null);
@@ -1119,22 +1106,16 @@ function TeamBattleComponent({ teams, friendsTeams }: { teams: any[], friendsTea
       return;
     }
 
-    // ✅ Debug complet
-    console.log('🔍 selectedTeam1:', selectedTeam1);
-    console.log('🔍 selectedTeam2:', selectedTeam2);
-    console.log('🔍 allTeams:', allTeams);
-    console.log('🔍 allTeams IDs:', allTeams.map(t => ({ id: t.id, name: t.teamName })));
+    if (!token) {
+      alert('Token d\'authentification manquant !');
+      return;
+    }
 
     const team1 = allTeams.find(t => String(t.id) === String(selectedTeam1));
     const team2 = allTeams.find(t => String(t.id) === String(selectedTeam2));
 
-    console.log('🔍 team1 trouvé:', team1);
-    console.log('🔍 team2 trouvé:', team2);
-
     if (!team1 || !team2) {
-      alert(`Équipes non trouvées ! Team1: ${team1 ? 'OK' : 'MANQUANT'}, Team2: ${team2 ? 'OK' : 'MANQUANT'}`);
-      console.error('Équipes manquantes. IDs recherchés:', { selectedTeam1, selectedTeam2 });
-      console.error('IDs disponibles:', allTeams.map(t => ({ id: t.id, type: typeof t.id })));
+      alert(`Équipes non trouvées !`);
       return;
     }
 
@@ -1156,20 +1137,80 @@ function TeamBattleComponent({ teams, friendsTeams }: { teams: any[], friendsTea
 
     setLoading(true);
     try {
-      // ✅ Utiliser apiCall au lieu de fetch direct
+      // ✅ Préparer les données de combat
+      const combatData = {
+        team1: {
+          id: String(team1.id),
+          teamName: team1.teamName,
+          pokemon: team1.pokemon.map((p: any) => ({
+            pokemon_id: p.pokemon_id,
+            name_fr: p.name,
+            type: p.type,
+            base_hp: p.hp,
+            base_attack: p.attack,
+            base_defense: p.defense,
+            base_speed: p.speed,
+            sprite_url: p.sprite_url
+          }))
+        },
+        team2: {
+          id: String(team2.id),
+          teamName: team2.teamName,
+          pokemon: team2.pokemon.map((p: any) => ({
+            pokemon_id: p.pokemon_id,
+            name_fr: p.name,
+            type: p.type,
+            base_hp: p.hp,
+            base_attack: p.attack,
+            base_defense: p.defense,
+            base_speed: p.speed,
+            sprite_url: p.sprite_url
+          }))
+        },
+        lat: 48.8566,
+        lon: 2.3522,
+        mode: 'full'
+      };
+
+      console.log('📤 Données envoyées:', combatData);
+
+      // ✅ Appel API
       const { apiCall } = await import('~/utils/api');
-      const response = await apiCall('/api/battle/team-battle', {
+      const response = await apiCall('/api/battle/turn-based', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ team1, team2, lat: 48.8566, lon: 2.3522 })
-      });
+        body: JSON.stringify(combatData)
+      }, token);
 
       console.log('📡 Réponse serveur status:', response.status);
       const data = await response.json();
       console.log('📡 Réponse serveur data:', data);
 
       if (data.success) {
-        setBattleResult(data.result);
+        // ✅ Récupérer toutes les données détaillées
+        const team1Pokemon = data.battleState.team1Pokemon;
+        const team2Pokemon = data.battleState.team2Pokemon;
+        const battleLog = data.battleState.battleLog;
+        const weatherEffects = data.battleState.weatherEffects;
+        
+        setBattleResult({
+          winner: data.battleState.winner,
+          battleLog: battleLog,
+          weatherEffects: weatherEffects,
+          turns: data.battleState.turn - 1,
+          fullBattleState: data.battleState,
+          team1Stats: { 
+            teamName: combatData.team1.teamName,
+            pokemon: team1Pokemon,
+            survivingPokemon: team1Pokemon.filter((p: any) => !p.is_ko).length,
+            totalPokemon: team1Pokemon.length
+          },
+          team2Stats: { 
+            teamName: combatData.team2.teamName,
+            pokemon: team2Pokemon,
+            survivingPokemon: team2Pokemon.filter((p: any) => !p.is_ko).length,
+            totalPokemon: team2Pokemon.length
+          }
+        });
       } else {
         alert('Erreur serveur: ' + (data.error || 'Erreur inconnue'));
       }
@@ -1254,19 +1295,148 @@ function TeamBattleComponent({ teams, friendsTeams }: { teams: any[], friendsTea
       </button>
 
       {battleResult && (
-        <div className="mt-6 space-y-4">
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-gray-800">
-              🏆 {battleResult.winner === 'team1' ? 'Équipe 1' : battleResult.winner === 'team2' ? 'Équipe 2' : 'Match nul'} GAGNE !
+        <div className="mt-6 space-y-6">
+          {/* ✅ NOUVEAU : Conditions météo du combat */}
+          {battleResult.weatherEffects && (
+            <div className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white p-4 rounded-lg shadow-lg">
+              <h4 className="font-bold text-lg mb-2 flex items-center">
+                🌤️ Conditions Météorologiques
+              </h4>
+              <p className="text-blue-100 mb-3">
+                {battleResult.weatherEffects.description}
+              </p>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="bg-white bg-opacity-20 p-3 rounded">
+                  <h5 className="font-semibold mb-2">🔵 Effets sur {battleResult.team1Stats?.teamName}</h5>
+                  <div className="space-y-1">
+                    {battleResult.team1Stats?.pokemon?.map((pokemon: any, index: number) => (
+                      <div key={index} className="flex justify-between">
+                        <span>{pokemon.name_fr}</span>
+                        <span className={`font-bold ${
+                          pokemon.weatherMultiplier > 1.05 ? 'text-green-200' : 
+                          pokemon.weatherMultiplier < 0.95 ? 'text-red-200' : 'text-gray-200'
+                        }`}>
+                          {pokemon.weatherStatus}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="bg-white bg-opacity-20 p-3 rounded">
+                  <h5 className="font-semibold mb-2">🔴 Effets sur {battleResult.team2Stats?.teamName}</h5>
+                  <div className="space-y-1">
+                    {battleResult.team2Stats?.pokemon?.map((pokemon: any, index: number) => (
+                      <div key={index} className="flex justify-between">
+                        <span>{pokemon.name_fr}</span>
+                        <span className={`font-bold ${
+                          pokemon.weatherMultiplier > 1.05 ? 'text-green-200' : 
+                          pokemon.weatherMultiplier < 0.95 ? 'text-red-200' : 'text-gray-200'
+                        }`}>
+                          {pokemon.weatherStatus}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ✅ Résultat principal */}
+          <div className="text-center bg-gradient-to-r from-yellow-400 to-orange-500 text-white p-6 rounded-lg shadow-lg">
+            <h3 className="text-2xl font-bold mb-2">
+              🏆 {battleResult.winner === 'team1' ? battleResult.team1Stats?.teamName : 
+                   battleResult.winner === 'team2' ? battleResult.team2Stats?.teamName : 
+                   'MATCH NUL'} REMPORTE LE COMBAT !
             </h3>
+            <p className="text-yellow-100">Combat terminé en {battleResult.turns} tours</p>
           </div>
 
-          <div className="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto">
-            <h4 className="font-bold mb-2 text-gray-800">📜 Journal de Combat:</h4>
-            <div className="text-sm space-y-1">
-              {battleResult.battleLog?.map((log: string, index: number) => (
-                <div key={index} className="text-gray-700">{log}</div>
-              )) || <div className="text-gray-500">Aucun log disponible</div>}
+          {/* ✅ État final des équipes */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Équipe 1 */}
+            <div className={`p-4 rounded-lg border-2 ${battleResult.winner === 'team1' ? 'bg-green-50 border-green-300' : 'bg-gray-50 border-gray-300'}`}>
+              <h4 className={`font-bold text-lg mb-3 ${battleResult.winner === 'team1' ? 'text-green-700' : 'text-gray-700'}`}>
+                🔵 {battleResult.team1Stats?.teamName}
+                {battleResult.winner === 'team1' && ' 👑'}
+              </h4>
+              <p className="text-sm mb-3">
+                <span className="font-semibold">{battleResult.team1Stats?.survivingPokemon}</span>/{battleResult.team1Stats?.totalPokemon} Pokémon survivants
+              </p>
+              
+              <div className="space-y-2">
+                {battleResult.team1Stats?.pokemon?.map((pokemon: any, index: number) => (
+                  <div key={index} className={`p-2 rounded text-sm ${pokemon.is_ko ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <img src={pokemon.sprite_url} alt={pokemon.name_fr} className="w-6 h-6" />
+                        <span className="font-medium">{pokemon.name_fr}</span>
+                        <span className="text-xs bg-gray-200 px-1 rounded">{pokemon.type}</span>
+                      </div>
+                      <div className="text-right">
+                        {pokemon.is_ko ? (
+                          <span className="font-bold text-red-600">💀 K.O.</span>
+                        ) : (
+                          <span className="font-bold text-green-600">❤️ {pokemon.current_hp} HP</span>
+                        )}
+                      </div>
+                    </div>
+                    {/* ✅ NOUVEAU : Affichage de l'effet météo */}
+                    <div className="text-xs mt-1 text-center">
+                      <span className={`px-2 py-1 rounded ${
+                        pokemon.weatherMultiplier > 1.05 ? 'bg-green-200 text-green-800' :
+                        pokemon.weatherMultiplier < 0.95 ? 'bg-red-200 text-red-800' :
+                        'bg-gray-200 text-gray-600'
+                      }`}>
+                        🌤️ {pokemon.weatherStatus}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Équipe 2 */}
+            <div className={`p-4 rounded-lg border-2 ${battleResult.winner === 'team2' ? 'bg-green-50 border-green-300' : 'bg-gray-50 border-gray-300'}`}>
+              <h4 className={`font-bold text-lg mb-3 ${battleResult.winner === 'team2' ? 'text-green-700' : 'text-gray-700'}`}>
+                🔴 {battleResult.team2Stats?.teamName}
+                {battleResult.winner === 'team2' && ' 👑'}
+              </h4>
+              <p className="text-sm mb-3">
+                <span className="font-semibold">{battleResult.team2Stats?.survivingPokemon}</span>/{battleResult.team2Stats?.totalPokemon} Pokémon survivants
+              </p>
+              
+              <div className="space-y-2">
+                {battleResult.team2Stats?.pokemon?.map((pokemon: any, index: number) => (
+                  <div key={index} className={`p-2 rounded text-sm ${pokemon.is_ko ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <img src={pokemon.sprite_url} alt={pokemon.name_fr} className="w-6 h-6" />
+                        <span className="font-medium">{pokemon.name_fr}</span>
+                        <span className="text-xs bg-gray-200 px-1 rounded">{pokemon.type}</span>
+                      </div>
+                      <div className="text-right">
+                        {pokemon.is_ko ? (
+                          <span className="font-bold text-red-600">💀 K.O.</span>
+                        ) : (
+                          <span className="font-bold text-green-600">❤️ {pokemon.current_hp} HP</span>
+                        )}
+                      </div>
+                    </div>
+                    {/* ✅ NOUVEAU : Affichage de l'effet météo */}
+                    <div className="text-xs mt-1 text-center">
+                      <span className={`px-2 py-1 rounded ${
+                        pokemon.weatherMultiplier > 1.05 ? 'bg-green-200 text-green-800' :
+                        pokemon.weatherMultiplier < 0.95 ? 'bg-red-200 text-red-800' :
+                        'bg-gray-200 text-gray-600'
+                      }`}>
+                        🌤️ {pokemon.weatherStatus}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -1274,16 +1444,3 @@ function TeamBattleComponent({ teams, friendsTeams }: { teams: any[], friendsTea
     </div>
   );
 }
-
-// Composant Tour par Tour (simplifié pour commencer)
-function TurnBasedBattleComponent({ teams, friendsTeams }: { teams: any[], friendsTeams: any }) {
-  return (
-    <div className="text-center p-8 bg-gray-50 rounded-lg">
-      <h3 className="text-lg font-medium text-gray-600 mb-2">🚧 Combat Tour par Tour</h3>
-      <p className="text-gray-500">Fonctionnalité en développement...</p>
-      <div className="text-xs text-gray-400 mt-2">
-        Debug: {Array.isArray(teams) ? teams.length : 0} équipes disponibles
-      </div>
-    </div>
-  );
-} 

@@ -153,19 +153,45 @@ export const simulateTurnBasedBattleHandler = async (c: Context) => {
       // ✅ Juste initialiser le combat
       result = TurnBasedBattleService.initializeBattle(team1, team2, weatherEffects, timeBonus);
     } else if (mode === 'turn') {
-      // ✅ Exécuter un tour (pour mode interactif futur)
-      const battleState = await c.req.json(); // ✅ Ajout de await
-      result = TurnBasedBattleService.executeTurn(battleState);
+      // ✅ Pour mode interactif futur - utiliser simulateFullBattle avec 1 tour max
+      const battleState = await c.req.json();
+      result = await TurnBasedBattleService.simulateFullBattle(
+        battleState.team1, 
+        battleState.team2, 
+        weatherEffects, 
+        timeBonus, 
+        1 // ✅ Limiter à 1 tour seulement
+      );
     } else {
       // ✅ Simuler le combat complet
-      result = TurnBasedBattleService.simulateFullBattle(team1, team2, weatherEffects, timeBonus);
+      result = await TurnBasedBattleService.simulateFullBattle(team1, team2, weatherEffects, timeBonus);
     }
     
     console.log(`🏆 Résultat tour par tour: ${result.winner} en ${result.turn} tours`);
 
+    // ✅ AJOUTER : Log détaillé des attaques
+    if (result.battleLog && result.battleLog.length > 0) {
+      console.log('\n📜 LOG DE COMBAT:');
+      result.battleLog.forEach((action, index) => {
+        console.log(`${index + 1}. ${action.description} (${action.damage} dégâts)`);
+      });
+    }
+
     return c.json({
       success: true,
-      battleState: result
+      battleState: result,
+      // ✅ AJOUTER : Inclure le log de combat dans la réponse
+      combatLog: result.battleLog?.map(action => ({
+        turn: action.turn,
+        attacker: action.attacker.name_fr,
+        move: action.move.name,
+        moveType: action.move.type,
+        damage: action.damage,
+        description: action.description,
+        isCritical: action.isCritical,
+        typeEffectiveness: action.typeEffectiveness,
+        stab: action.stab
+      })) || []
     });
 
   } catch (error: any) {

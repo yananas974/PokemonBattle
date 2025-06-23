@@ -3,6 +3,8 @@ import { FriendshipService } from '../services/services.js';
 import { z } from 'zod';
 import { friendIdSchema, friendshipIdSchema, userIdSchema } from '../schemas/common.schemas.js';
 import { zValidator } from '@hono/zod-validator';
+import { asyncHandler, authAsyncHandler } from '../utils/asyncWrapper.js';
+import { ValidationError, NotFoundError, ConflictError } from '../models/errors.js';
 
 const sendFriendRequestSchema = z.object({
   friendId: friendIdSchema
@@ -25,193 +27,139 @@ export const sendFriendRequestValidator = zValidator('json', sendFriendRequestSc
 export const acceptFriendRequestValidator = zValidator('param', z.object({ id: z.string() }));
 export const blockFriendRequestValidator = zValidator('param', z.object({ id: z.string() }));
 
-export const sendFriendRequestHandler = async (c: Context) => {
-  try {
-    const user = c.get('user');
-    // ✅ Données déjà validées par le validator
-    const { friendId } = await c.req.json();
+// ✅ Handlers refactorisés sans try/catch
+export const sendFriendRequestHandler = authAsyncHandler(async (c: Context) => {
+  const user = c.get('user');
+  const { friendId } = await c.req.json();
 
-    // ✅ Déléguer TOUTE la logique au service
-    const friendship = await FriendshipService.sendFriendRequest(friendId, user.id);
-
-    return c.json({
-      message: 'Friend request sent successfully',
-      friendship
-    });
-
-  } catch (error: any) {
-    console.error('Error in sendFriendRequest:', error);
-    return c.json({ 
-      error: error.message || 'Failed to send friend request' 
-    }, 500);
+  if (friendId === user.id) {
+    throw new ValidationError('Vous ne pouvez pas vous envoyer une demande d\'ami à vous-même');
   }
-};
 
-export const acceptFriendRequestHandler = async (c: Context) => {
-  try {
-    const user = c.get('user');
-    // ✅ Paramètre déjà validé par le validator
-    const friendshipId = parseInt(c.req.param('id'));
+  const friendship = await FriendshipService.sendFriendRequest(friendId, user.id);
 
-    // ✅ Déléguer TOUTE la logique au service
-    const friendship = await FriendshipService.acceptFriendRequest(friendshipId, user.id);
+  return c.json({
+    success: true,
+    message: 'Friend request sent successfully',
+    friendship
+  });
+});
 
-    return c.json({
-      message: 'Friend request accepted successfully',
-      friendship
-    });
+export const acceptFriendRequestHandler = authAsyncHandler(async (c: Context) => {
+  const user = c.get('user');
+  const friendshipId = parseInt(c.req.param('id'));
 
-  } catch (error: any) {
-    console.error('Error in acceptFriendRequest:', error);
-    return c.json({ 
-      error: error.message || 'Failed to accept friend request' 
-    }, 500);
+  if (isNaN(friendshipId)) {
+    throw new ValidationError('ID de demande d\'ami invalide');
   }
-};
 
-export const blockFriendRequestHandler = async (c: Context) => {
-  try {
-    const user = c.get('user');
-    // ✅ Paramètre déjà validé par le validator
-    const friendshipId = parseInt(c.req.param('id'));
+  const friendship = await FriendshipService.acceptFriendRequest(friendshipId, user.id);
 
-    // ✅ Déléguer TOUTE la logique au service
-    const friendship = await FriendshipService.updateFriendshipStatus(friendshipId, user.id, 'blocked');
+  return c.json({
+    success: true,
+    message: 'Friend request accepted successfully',
+    friendship
+  });
+});
 
-    return c.json({
-      message: 'Friend blocked successfully',
-      friendship
-    });
+export const blockFriendRequestHandler = authAsyncHandler(async (c: Context) => {
+  const user = c.get('user');
+  const friendshipId = parseInt(c.req.param('id'));
 
-  } catch (error: any) {
-    console.error('Error in blockFriend:', error);
-    return c.json({ 
-      error: error.message || 'Failed to block friend' 
-    }, 500);
+  if (isNaN(friendshipId)) {
+    throw new ValidationError('ID de demande d\'ami invalide');
   }
-};
 
-export const getUserFriendsHandler = async (c: Context) => {
-  try {
-    const user = c.get('user');
-    console.log(`👥 Récupération amis pour user ${user.id}`);
-    
-    // ✅ Déléguer TOUTE la logique au service
-    const friends = await FriendshipService.getUserFriends(user.id);
-    console.log(`✅ ${friends.length} amis trouvés`);
-    
-    return c.json({
-      message: 'Friends retrieved successfully',
-      friends
-    });
+  const friendship = await FriendshipService.updateFriendshipStatus(friendshipId, user.id, 'blocked');
 
-  } catch (error: any) {
-    console.error('Error in getUserFriends:', error);
-    return c.json({ 
-      error: 'Failed to retrieve friends' 
-    }, 500);
+  return c.json({
+    success: true,
+    message: 'Friend blocked successfully',
+    friendship
+  });
+});
+
+export const getUserFriendsHandler = authAsyncHandler(async (c: Context) => {
+  const user = c.get('user');
+  console.log(`👥 Récupération amis pour user ${user.id}`);
+  
+  const friends = await FriendshipService.getUserFriends(user.id);
+  console.log(`✅ ${friends.length} amis trouvés`);
+  
+  return c.json({
+    success: true,
+    message: 'Friends retrieved successfully',
+    friends
+  });
+});
+
+export const getPendingFriendRequestsHandler = authAsyncHandler(async (c: Context) => {
+  const user = c.get('user');
+  console.log(`📥 Récupération demandes reçues pour user ${user.id}`);
+  
+  const requests = await FriendshipService.getPendingFriendRequests(user.id);
+  console.log(`✅ ${requests.length} demandes trouvées`);
+  
+  return c.json({
+    success: true,
+    message: 'Pending friend requests retrieved successfully',
+    friends: requests
+  });
+});
+
+export const getSentFriendRequestsHandler = authAsyncHandler(async (c: Context) => {
+  const user = c.get('user');
+  
+  const requests = await FriendshipService.getSentFriendRequests(user.id);
+  
+  return c.json({
+    success: true,
+    message: 'Sent friend requests retrieved successfully',
+    requests
+  });
+});
+
+export const removeFriendHandler = authAsyncHandler(async (c: Context) => {
+  const user = c.get('user');
+  const friendshipId = parseInt(c.req.param('id'));
+  
+  if (isNaN(friendshipId)) {
+    throw new ValidationError('ID d\'amitié invalide');
   }
-};
+  
+  await FriendshipService.removeFriend(friendshipId, user.id);
+  
+  return c.json({
+    success: true,
+    message: 'Friend removed successfully'
+  });
+});
 
-export const getPendingFriendRequestsHandler = async (c: Context) => {
-  try {
-    const user = c.get('user');
-    console.log(`📥 Récupération demandes reçues pour user ${user.id}`);
-    
-    // ✅ Déléguer TOUTE la logique au service
-    const requests = await FriendshipService.getPendingFriendRequests(user.id);
-    console.log(`✅ ${requests.length} demandes trouvées`);
-    
-    return c.json({
-      message: 'Pending friend requests retrieved successfully',
-      friends: requests // ✅ Retourner 'friends' pour correspondre au frontend
-    });
+export const getAvailableUsersHandler = authAsyncHandler(async (c: Context) => {
+  const user = c.get('user');
+  
+  const usersWithoutPasswords = await FriendshipService.getAvailableUsers(user.id);
+  
+  return c.json({
+    success: true,
+    message: 'Available users retrieved successfully',
+    users: usersWithoutPasswords
+  });
+});
 
-  } catch (error: any) {
-    console.error('Error in getPendingFriendRequests:', error);
-    return c.json({ 
-      error: 'Failed to retrieve friend requests' 
-    }, 500);
+export const getFriendTeamsHandler = authAsyncHandler(async (c: Context) => {
+  const user = c.get('user');
+  const friendId = parseInt(c.req.param('friendId'));
+
+  if (isNaN(friendId)) {
+    throw new ValidationError('ID d\'ami invalide');
   }
-};
 
-export const getSentFriendRequestsHandler = async (c: Context) => {
-  try {
-    const user = c.get('user');
-    
-    // ✅ Déléguer TOUTE la logique au service
-    const requests = await FriendshipService.getSentFriendRequests(user.id);
-    
-    return c.json({
-      message: 'Sent friend requests retrieved successfully',
-      requests
-    });
+  const teams = await FriendshipService.getFriendTeamsWithValidation(friendId, user.id);
 
-  } catch (error: any) {
-    console.error('Error in getSentFriendRequests:', error);
-    return c.json({ 
-      error: 'Failed to retrieve sent requests' 
-    }, 500);
-  }
-};
-
-export const removeFriendHandler = async (c: Context) => {
-  try {
-    const user = c.get('user');
-    const friendshipId = parseInt(c.req.param('id'));
-    
-    // ✅ Déléguer TOUTE la logique au service
-    await FriendshipService.removeFriend(friendshipId, user.id);
-    
-    return c.json({
-      message: 'Friend removed successfully'
-    });
-
-  } catch (error: any) {
-    console.error('Error in removeFriend:', error);
-    return c.json({ 
-      error: error.message || 'Failed to remove friend' 
-    }, 500);
-  }
-};
-
-export const getAvailableUsersHandler = async (c: Context) => {
-  try {
-    const user = c.get('user');
-    
-    // ✅ Déléguer TOUTE la logique au service
-    const usersWithoutPasswords = await FriendshipService.getAvailableUsers(user.id);
-    
-    return c.json({
-      message: 'Available users retrieved successfully',
-      users: usersWithoutPasswords
-    });
-
-  } catch (error: any) {
-    console.error('Error in getAvailableUsers:', error);
-    return c.json({ 
-      error: 'Failed to retrieve available users' 
-    }, 500);
-  }
-};
-
-export const getFriendTeamsHandler = async (c: Context) => {
-  try {
-    const user = c.get('user');
-    const friendId = parseInt(c.req.param('friendId'));
-
-    // ✅ Déléguer TOUTE la logique au service
-    const teams = await FriendshipService.getFriendTeamsWithValidation(friendId, user.id);
-
-    return c.json({
-      message: 'Friend teams retrieved successfully',
-      teams
-    });
-
-  } catch (error: any) {
-    console.error('Error in getFriendTeams:', error);
-    return c.json({ 
-      error: error.message || 'Failed to retrieve friend teams' 
-    }, 500);
-  }
-};
+  return c.json({
+    success: true,
+    message: 'Friend teams retrieved successfully',
+    teams
+  });
+});

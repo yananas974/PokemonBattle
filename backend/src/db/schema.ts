@@ -84,3 +84,41 @@ export const pokemonReference = pgTable("pokemon_reference", {
   sprite_url: varchar("sprite_url", { length: 255 }),
   created_at: timestamp("created_at").defaultNow()
 });
+
+export const hacks = pgTable("hacks", {
+  id: serial("id").primaryKey(),
+  base_word: varchar("base_word", { length: 100 }).notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// ✅ TABLE MOVES - Stockage unique des attaques
+export const moves = pgTable("moves", {
+  id: serial("id").primaryKey(),
+  pokeapi_id: integer("pokeapi_id").notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull(),
+  name_fr: varchar("name_fr", { length: 100 }),
+  type: varchar("type", { length: 50 }).notNull(),
+  power: integer("power"),
+  accuracy: integer("accuracy"),
+  pp: integer("pp"),
+  category: varchar("category", { length: 20 }), // physical, special, status
+  description: text("description"),
+  description_fr: text("description_fr"),
+  created_at: timestamp("created_at").defaultNow()
+});
+
+// ✅ TABLE POKEMON_MOVES - Relation many-to-many
+export const pokemonMoves = pgTable("pokemon_moves", {
+  id: serial("id").primaryKey(),
+  pokemon_reference_id: integer("pokemon_reference_id")
+    .notNull()
+    .references(() => pokemonReference.id, { onDelete: "cascade" }),
+  move_id: integer("move_id")
+    .notNull()
+    .references(() => moves.id, { onDelete: "cascade" }),
+  learn_method: varchar("learn_method", { length: 50 }).default("level-up"), // level-up, machine, tutor, egg
+  level_learned: integer("level_learned").default(1),
+  created_at: timestamp("created_at").defaultNow()
+}, (table) => ({
+  unique_pokemon_move: unique().on(table.pokemon_reference_id, table.move_id),
+}));

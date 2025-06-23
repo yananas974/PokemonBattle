@@ -38,7 +38,8 @@ services:
       - DB_USER=pokemon_user
       - DB_PASSWORD=lOgan
       - JWT_SECRET=votre_cle_secrete_jwt_super_securisee_ici_123456789
-      - FORCE_DB_INIT=false
+      - DOCKER_AUTO_SEED=true
+      - FIRST_INSTALL_THRESHOLD=0
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,7 +48,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
-    command: sh -c "scripts/init-db.sh && npm run start"
+    command: sh -c "npm run build && npm start"
 
   frontend:
     container_name: pokemon-frontend
