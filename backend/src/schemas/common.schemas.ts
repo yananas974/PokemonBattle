@@ -2,16 +2,22 @@ import { z } from "zod";
 
 // ✅ Schémas de base réutilisables
 export const idSchema = z.number().min(1, "ID must be positive");
-export const userIdSchema = z.number().min(1, "User ID must be positive");
 export const teamIdSchema = z.number().min(1, "Team ID must be positive");
 export const pokemonIdSchema = z.number().min(1, "Pokemon ID must be positive");
+export const userIdSchema = z.number().min(1, "User ID must be positive");
 export const friendIdSchema = z.number().min(1, "Friend ID must be positive");
 export const friendshipIdSchema = z.number().min(1, "Friendship ID must be positive");
+
+// ✅ Schémas de coordonnées (déjà utilisés ailleurs)
+export const coordinatesSchema = z.object({
+  lat: z.number().min(-90).max(90).default(48.8566),
+  lon: z.number().min(-180).max(180).default(2.3522)
+});
 
 // ✅ Schémas composés
 export const teamNameSchema = z.string().min(1, "Team name is required").max(100, "Team name too long");
 export const emailSchema = z.string().email("Invalid email format");
-export const usernameSchema = z.string().min(3, "Username too short").max(50, "Username too long");
+export const usernameSchema = z.string().min(3, "Username must be at least 3 characters");
 
 // ✅ Schémas Auth
 export const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -90,13 +96,6 @@ export const getUserFriendsSchema = z.object({
   userId: userIdSchema
 });
 
-// ✅ Schémas Team composés
-export const createTeamSchema = z.object({
-  teamName: teamNameSchema
-});
 
-export const addPokemonToTeamSchema = z.object({
-  teamId: teamIdSchema,
-  pokemonId: pokemonIdSchema
-}); 
+
  

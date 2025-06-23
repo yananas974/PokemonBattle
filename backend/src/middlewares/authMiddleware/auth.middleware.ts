@@ -2,6 +2,7 @@ import { getCookie } from 'hono/cookie';
 import jwt from 'jsonwebtoken';
 import { getUserById } from '../../services/services.js';
 import type { MiddlewareHandler } from 'hono';
+import { UnauthorizedError, NotFoundError } from '../../models/errors.js';
 
 export const authMiddleware: MiddlewareHandler = async (c, next) => {
   console.log('🔐 === AUTH MIDDLEWARE ===');
@@ -11,7 +12,7 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
   // Vérifier JWT_SECRET
   if (!process.env.JWT_SECRET) {
     console.error('❌ JWT_SECRET manquant');
-    return c.json({ error: 'Server configuration error' }, 500);
+    throw new Error('Server configuration error');
   }
 
   // Récupérer le token depuis les cookies
@@ -21,6 +22,10 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
   // Récupérer le token depuis les headers Authorization
   const authHeader = c.req.header('authorization');
   console.log('📋 Header Auth:', authHeader ? authHeader.substring(0, 30) + '...' : 'AUCUN');
+
+  // ✅ Essayer le header alternatif
+  const altTokenHeader = c.req.header('x-auth-token');
+  console.log('📋 Header Alt Token:', altTokenHeader ? altTokenHeader.substring(0, 20) + '...' : 'AUCUN');
 
   // Debug tous les headers
   console.log('📋 Tous les headers:');
@@ -33,30 +38,31 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
     console.log('🔑 Token header:', token ? token.substring(0, 20) + '...' : 'AUCUN');
   }
 
+  // ✅ Essayer le header alternatif
+  if (!token && altTokenHeader) {
+    token = altTokenHeader;
+    console.log('🔑 Token alt header:', token ? token.substring(0, 20) + '...' : 'AUCUN');
+  }
+
   if (!token) {
     console.log('❌ Aucun token trouvé');
-    return c.json({ error: 'User not authenticated' }, 401);
+    throw new UnauthorizedError('User not authenticated');
   }
 
-  try {
-    console.log('🔍 Vérification token...');
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as { sub: string };
-    console.log('✅ Token valide, userId:', payload.sub);
-    
-    const user = await getUserById(Number(payload.sub));
-    if (!user) {
-      console.log('❌ Utilisateur non trouvé:', payload.sub);
-      return c.json({ error: 'User not found' }, 404);
-    }
-    
-    console.log('✅ Utilisateur authentifié:', user.email);
-    c.set('user', user);
-    await next();
-  } catch (error) {
-    console.error('❌ Erreur token:', error);
-    return c.json({ error: 'Invalid or expired token' }, 401);
+  // ✅ CORRIGÉ : Plus de try/catch, les erreurs remontent naturellement
+  console.log('🔍 Vérification token...');
+  const payload = jwt.verify(token, process.env.JWT_SECRET!) as { sub: string };
+  console.log('✅ Token valide, userId:', payload.sub);
+  
+  const user = await getUserById(Number(payload.sub));
+  if (!user) {
+    console.log('❌ Utilisateur non trouvé:', payload.sub);
+    throw new NotFoundError('User not found');
   }
+  
+  console.log('✅ Utilisateur authentifié:', user.email);
+  c.set('user', user);
+  await next();
 
-  console.log('✅ Auth middleware terminé, passage au handler suivant...');
-  console.log('🔄 Retour du handler vers le middleware');
+  console.log('✅ Auth middleware terminé');
 };

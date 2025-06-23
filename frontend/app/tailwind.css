@@ -1,5 +1,8 @@
+/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind base;
+/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind components;
+/* stylelint-disable-next-line at-rule-no-unknown */
 @tailwind utilities;
 
 html,
@@ -10,3 +13,367 @@ body {
     color-scheme: dark;
   }
 }
+
+/* Animations personnalisées pour le combat */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Scrollbar personnalisée */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thumb-gray-600::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+  border-radius: 6px;
+}
+
+.scrollbar-track-gray-800::-webkit-scrollbar-track {
+  background-color: #1f2937;
+}
+
+/* Effet de secousse pour les dégâts */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Animation de KO */
+@keyframes ko-fall {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(90deg) scale(0.8); }
+  100% { transform: rotate(180deg) scale(0.6) translateY(20px); opacity: 0.3; }
+}
+
+.animate-ko {
+  animation: ko-fall 1s ease-in-out forwards;
+}
+
+/* Effet de critique */
+@keyframes critical-hit {
+  0% { transform: scale(1); filter: brightness(1); }
+  25% { transform: scale(1.2); filter: brightness(1.5) hue-rotate(45deg); }
+  50% { transform: scale(1.1); filter: brightness(1.8) hue-rotate(90deg); }
+  75% { transform: scale(1.15); filter: brightness(1.3) hue-rotate(45deg); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+.animate-critical {
+  animation: critical-hit 0.8s ease-in-out;
+}
+
+/* Effet de guérison */
+@keyframes heal {
+  0% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.5) hue-rotate(120deg); }
+  100% { filter: brightness(1) hue-rotate(0deg); }
+}
+
+.animate-heal {
+  animation: heal 1s ease-in-out;
+}
+
+/* Particules flottantes pour les effets météo */
+@keyframes float-down {
+  0% { transform: translateY(-100vh) translateX(0); opacity: 1; }
+  100% { transform: translateY(100vh) translateX(20px); opacity: 0; }
+}
+
+@keyframes float-up {
+  0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateY(-100vh) translateX(-20px); opacity: 0; }
+}
+
+@keyframes sparkle {
+  0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+  50% { transform: scale(1) rotate(180deg); opacity: 1; }
+}
+
+.animate-float-down {
+  animation: float-down 3s linear infinite;
+}
+
+.animate-float-up {
+  animation: float-up 4s linear infinite;
+}
+
+.animate-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+/* Effet de statut - empoisonnement */
+@keyframes poison-pulse {
+  0%, 100% { filter: hue-rotate(0deg) brightness(1); }
+  50% { filter: hue-rotate(90deg) brightness(0.7); }
+}
+
+.animate-poison {
+  animation: poison-pulse 1.5s ease-in-out infinite;
+}
+
+/* Effet de statut - paralysie */
+@keyframes paralysis-glitch {
+  0%, 90%, 100% { transform: translateX(0); }
+  95% { transform: translateX(-2px); }
+  97% { transform: translateX(2px); }
+}
+
+.animate-paralysis {
+  animation: paralysis-glitch 2s infinite;
+}
+
+/* Effet de statut - sommeil */
+@keyframes sleep-bob {
+  0%, 100% { transform: translateY(0); opacity: 0.8; }
+  50% { transform: translateY(-5px); opacity: 0.6; }
+}
+
+.animate-sleep {
+  animation: sleep-bob 2s ease-in-out infinite;
+}
+
+/* Effet de statut - gel */
+@keyframes freeze-shimmer {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  50% { filter: brightness(1.3) hue-rotate(180deg); }
+}
+
+.animate-freeze {
+  animation: freeze-shimmer 1s ease-in-out infinite;
+}
+
+/* Effet de statut - brûlure */
+@keyframes burn-flicker {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  25% { filter: brightness(1.2) hue-rotate(15deg); }
+  75% { filter: brightness(0.9) hue-rotate(-15deg); }
+}
+
+.animate-burn {
+  animation: burn-flicker 0.8s ease-in-out infinite;
+}
+
+/* Barre de HP avec animation de dégâts */
+@keyframes hp-damage {
+  0% { background-color: currentColor; }
+  50% { background-color: #ef4444; }
+  100% { background-color: currentColor; }
+}
+
+.animate-hp-damage {
+  animation: hp-damage 0.5s ease-in-out;
+}
+
+/* Effet de brillance sur les barres de HP */
+@keyframes hp-shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.hp-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  animation: hp-shine 2s ease-in-out infinite;
+}
+
+/* Animation de sélection des attaques */
+@keyframes move-select {
+  0% { transform: scale(1); box-shadow: 0 0 0 rgba(59, 130, 246, 0.5); }
+  50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+  100% { transform: scale(1); box-shadow: 0 0 0 rgba(59, 130, 246, 0.5); }
+}
+
+.animate-move-select {
+  animation: move-select 0.3s ease-in-out;
+}
+
+/* Effet de hover pour les boutons d'attaque */
+.move-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.move-button:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Animation de chargement pour le combat */
+@keyframes battle-loading {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-battle-loading {
+  animation: battle-loading 1s linear infinite;
+}
+
+/* Effet de transition entre les tours */
+@keyframes turn-transition {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.animate-turn-transition {
+  animation: turn-transition 0.5s ease-in-out;
+}
+
+/* Style pour les messages de combat avec typewriter effect */
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typewriter 2s steps(40, end);
+}
+
+/* Effet de victoire */
+@keyframes victory-celebration {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.1) rotate(5deg); }
+  75% { transform: scale(1.1) rotate(-5deg); }
+}
+
+.animate-victory {
+  animation: victory-celebration 0.6s ease-in-out infinite;
+}
+
+/* Effet de défaite */
+@keyframes defeat-fade {
+  0% { opacity: 1; filter: grayscale(0%); }
+  100% { opacity: 0.5; filter: grayscale(100%); }
+}
+
+.animate-defeat {
+  animation: defeat-fade 1s ease-in-out forwards;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .animate-shake {
+    animation: shake 0.3s ease-in-out;
+  }
+  
+  .animate-critical {
+    animation: critical-hit 0.5s ease-in-out;
+  }
+  
+  /* Réduire les animations sur mobile pour les performances */
+  .animate-float-down,
+  .animate-float-up,
+  .animate-sparkle {
+    animation-duration: 2s;
+  }
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+  .scrollbar-thumb-gray-600::-webkit-scrollbar-thumb {
+    background-color: #6b7280;
+  }
+  
+  .scrollbar-track-gray-800::-webkit-scrollbar-track {
+    background-color: #111827;
+  }
+}
+
+/* Accessibilité - réduire les animations si demandé */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-shake,
+  .animate-ko,
+  .animate-critical,
+  .animate-heal,
+  .animate-float-down,
+  .animate-float-up,
+  .animate-sparkle,
+  .animate-poison,
+  .animate-paralysis,
+  .animate-sleep,
+  .animate-freeze,
+  .animate-burn,
+  .animate-hp-damage,
+  .animate-move-select,
+  .animate-battle-loading,
+  .animate-turn-transition,
+  .animate-victory,
+  .animate-defeat {
+    animation: none;
+  }
+  
+  .typewriter {
+    animation: none;
+    width: 100%;
+  }
+  
+  .hp-shine::after {
+    animation: none;
+  }
+}
+
+/* Utilités pour les effets de combat */
+.battle-screen {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}
+
+.pokemon-platform {
+  background: radial-gradient(ellipse at center, rgba(255,255,255,0.1) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.battle-ui {
+  background: linear-gradient(145deg, #1f2937 0%, #111827 100%);
+  border: 2px solid #374151;
+}
+
+/* Styles pour les types de Pokémon */
+.type-normal { @apply bg-gray-500; }
+.type-fire { @apply bg-red-500; }
+.type-water { @apply bg-blue-500; }
+.type-electric { @apply bg-yellow-500; }
+.type-grass { @apply bg-green-500; }
+.type-ice { @apply bg-cyan-400; }
+.type-fighting { @apply bg-red-700; }
+.type-poison { @apply bg-purple-500; }
+.type-ground { @apply bg-yellow-600; }
+.type-flying { @apply bg-indigo-400; }
+.type-psychic { @apply bg-pink-500; }
+.type-bug { @apply bg-green-600; }
+.type-rock { @apply bg-yellow-800; }
+.type-ghost { @apply bg-purple-700; }
+.type-dragon { @apply bg-indigo-700; }
+.type-dark { @apply bg-gray-800; }
+.type-steel { @apply bg-gray-400; }
+.type-fairy { @apply bg-pink-300; }

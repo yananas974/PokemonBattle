@@ -1,6 +1,9 @@
-import { WeatherEffectService, type WeatherEffectNew, type PokemonType } from '../weatherEffectService/weatherEffectService.js';
+import { WeatherEffectService, type WeatherEffectNew } from '../weatherEffectService/weatherEffectService.js';
+import type { BattleResult, Team, TeamStats } from '../../models/interfaces/battle.interface.js';
+import type { PokemonType } from '../../models/interfaces/pokemon.interface.js';
 import { z } from 'zod';
-import type { Pokemon, Team, BattleResult, TeamStats } from '../../models/interfaces/battle.interface.js'
+import { serviceWrapper } from '../../utils/asyncWrapper.js';
+import { ValidationError } from '../../models/errors.js';
 
 // ✅ Schémas Zod pour validation interne du service
 const pokemonSchema = z.object({
@@ -11,7 +14,7 @@ const pokemonSchema = z.object({
   attack: z.number().min(1),
   defense: z.number().min(1),
   speed: z.number().min(1),
-  sprite_url: z.string().url().optional()
+  sprite_url: z.string().default('')
 });
 
 const teamSchema = z.object({
@@ -30,70 +33,68 @@ export class TeamBattleService {
     timeBonus: number = 1.0
   ): Promise<BattleResult> {
     
-    // ✅ Validation Zod des équipes
-    try {
-      teamSchema.parse(team1);
-      teamSchema.parse(team2);
-    } catch (error) {
-      throw new Error(`Invalid team data: ${error instanceof z.ZodError ? error.errors.map(e => e.message).join(', ') : error}`);
-    }
-    
-    // ✅ Validation des paramètres
-    if (timeBonus <= 0) {
-      throw new Error('Time bonus must be positive');
-    }
-    
-    const battleLog: string[] = [];
-    
-    battleLog.push(`⚔️ Combat entre "${team1.teamName}" VS "${team2.teamName}"`);
-    battleLog.push(`🌤️ Conditions météo: ${weatherEffects?.description || 'Temps normal'}`);
-    battleLog.push('');
-    
-    // ✅ Calculer les stats d'équipe
-    const team1Stats = this.calculateTeamStats(team1, weatherEffects, timeBonus, battleLog);
-    const team2Stats = this.calculateTeamStats(team2, weatherEffects, timeBonus, battleLog);
-    
-    battleLog.push('📊 RÉSUMÉ DES ÉQUIPES:');
-    battleLog.push(`🔵 ${team1.teamName}: ${team1Stats.effectiveAttack} ATK vs ${team1Stats.effectiveHP} HP`);
-    battleLog.push(`🔴 ${team2.teamName}: ${team2Stats.effectiveAttack} ATK vs ${team2Stats.effectiveHP} HP`);
-    battleLog.push('');
-    
-    // ✅ Calculer les dégâts infligés
-    const team1Damage = this.calculateTeamDamage(team1Stats, team2Stats, battleLog, team1.teamName);
-    const team2Damage = this.calculateTeamDamage(team2Stats, team1Stats, battleLog, team2.teamName);
-    
-    // ✅ Calculer les HP restants
-    const team1RemainingHP = Math.max(0, team1Stats.effectiveHP - team2Damage);
-    const team2RemainingHP = Math.max(0, team2Stats.effectiveHP - team1Damage);
-    
-    battleLog.push('💥 RÉSULTAT DU COMBAT:');
-    battleLog.push(`🔵 ${team1.teamName}: ${team1RemainingHP}/${team1Stats.effectiveHP} HP restants`);
-    battleLog.push(`🔴 ${team2.teamName}: ${team2RemainingHP}/${team2Stats.effectiveHP} HP restants`);
-    
-    // ✅ Déterminer le vainqueur
-    let winner: 'team1' | 'team2' | 'draw';
-    if (team1RemainingHP > team2RemainingHP) {
-      winner = 'team1';
-      battleLog.push(`🏆 VICTOIRE DE "${team1.teamName}" !`);
-    } else if (team2RemainingHP > team1RemainingHP) {
-      winner = 'team2';
-      battleLog.push(`🏆 VICTOIRE DE "${team2.teamName}" !`);
-    } else {
-      winner = 'draw';
-      battleLog.push(`🤝 MATCH NUL !`);
-    }
-    
-    return {
-      winner,
-      team1Stats,
-      team2Stats,
-      battleLog,
-      weatherEffects,
-      damage: {
-        team1Damage,
-        team2Damage
+    return serviceWrapper(async () => {
+      // ✅ Validation Zod des équipes
+      const validatedTeam1 = teamSchema.parse(team1);
+      const validatedTeam2 = teamSchema.parse(team2);
+      
+      // ✅ Validation des paramètres
+      if (timeBonus <= 0) {
+        throw new ValidationError('Time bonus must be positive');
       }
-    };
+      
+      const battleLog: string[] = [];
+      
+      battleLog.push(`⚔️ Combat entre "${validatedTeam1.teamName}" VS "${validatedTeam2.teamName}"`);
+      battleLog.push(`🌤️ Conditions météo: ${weatherEffects?.description || 'Temps normal'}`);
+      battleLog.push('');
+      
+      // ✅ Calculer les stats d'équipe
+      const team1Stats = this.calculateTeamStats(validatedTeam1, weatherEffects, timeBonus, battleLog);
+      const team2Stats = this.calculateTeamStats(validatedTeam2, weatherEffects, timeBonus, battleLog);
+      
+      battleLog.push('📊 RÉSUMÉ DES ÉQUIPES:');
+      battleLog.push(`🔵 ${validatedTeam1.teamName}: ${team1Stats.effectiveAttack} ATK vs ${team1Stats.effectiveHP} HP`);
+      battleLog.push(`🔴 ${validatedTeam2.teamName}: ${team2Stats.effectiveAttack} ATK vs ${team2Stats.effectiveHP} HP`);
+      battleLog.push('');
+      
+      // ✅ Calculer les dégâts infligés
+      const team1Damage = this.calculateTeamDamage(team1Stats, team2Stats, battleLog, validatedTeam1.teamName);
+      const team2Damage = this.calculateTeamDamage(team2Stats, team1Stats, battleLog, validatedTeam2.teamName);
+      
+      // ✅ Calculer les HP restants
+      const team1RemainingHP = Math.max(0, team1Stats.effectiveHP - team2Damage);
+      const team2RemainingHP = Math.max(0, team2Stats.effectiveHP - team1Damage);
+      
+      battleLog.push('💥 RÉSULTAT DU COMBAT:');
+      battleLog.push(`🔵 ${validatedTeam1.teamName}: ${team1RemainingHP}/${team1Stats.effectiveHP} HP restants`);
+      battleLog.push(`🔴 ${validatedTeam2.teamName}: ${team2RemainingHP}/${team2Stats.effectiveHP} HP restants`);
+      
+      // ✅ Déterminer le vainqueur
+      let winner: 'team1' | 'team2' | 'draw';
+      if (team1RemainingHP > team2RemainingHP) {
+        winner = 'team1';
+        battleLog.push(`🏆 VICTOIRE DE "${validatedTeam1.teamName}" !`);
+      } else if (team2RemainingHP > team1RemainingHP) {
+        winner = 'team2';
+        battleLog.push(`🏆 VICTOIRE DE "${validatedTeam2.teamName}" !`);
+      } else {
+        winner = 'draw';
+        battleLog.push(`🤝 MATCH NUL !`);
+      }
+      
+      return {
+        winner,
+        team1Stats,
+        team2Stats,
+        battleLog,
+        weatherEffects,
+        damage: {
+          team1Damage,
+          team2Damage
+        }
+      };
+    });
   }
   
   /**

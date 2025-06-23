@@ -5,7 +5,7 @@ export * from './authService/userService.js';
 
 // Team Services  
 export { TeamService } from './createTeamService/teamService.js';
-export * from './createTeamService/teamService.js'; // Pour les exports individuels
+export * from './createTeamService/teamService.js';
 
 // Pokemon Team Services
 export { PokemonTeamService } from './pokemonTeamService/pokemonTeamService.js';
@@ -20,5 +20,8 @@ export * from './friendshipService/friendshipService.js';
 // ✅ Ajouter le service de combat
 export { TeamBattleService } from './battle/teamBattleService.js';
 export { TurnBasedBattleService } from './battle/turnBasedBattleService.js';
+
+// Weather Services
 export { WeatherService } from './weatherService/weatherService.js';
+export { WeatherDetectionService } from './weatherService/weatherDetectionService.js';
 export { WeatherEffectService } from './weatherEffectService/weatherEffectService.js';
