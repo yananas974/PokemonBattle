@@ -7,7 +7,7 @@ const API_BASE_URL = config.apiUrl;
 export const apiCall = async (
   endpoint: string, 
   options: RequestInit = {},
-  token?: string // ✅ Le token est maintenant passé en paramètre
+  token?: string
 ): Promise<Response> => {
   const url = `${API_BASE_URL}${endpoint}`;
   
@@ -15,7 +15,11 @@ export const apiCall = async (
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
+      // ✅ Essayer les deux méthodes
+      ...(token && { 
+        'Authorization': `Bearer ${token}`,
+        'X-Auth-Token': token // Header alternatif
+      }),
       ...options.headers,
     },
     ...options,
@@ -27,6 +31,7 @@ export const apiCall = async (
   } else {
     console.log('❌ Aucun token disponible');
   }
+  
   const response = await fetch(url, defaultOptions);
   console.log('API Response status:', response.status);
   return response;

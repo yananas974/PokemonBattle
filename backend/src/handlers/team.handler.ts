@@ -6,7 +6,7 @@ import { Delete, Get } from "../db/crud/crud.js";
 import { Team, pokemon } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { asyncHandler, authAsyncHandler } from "../utils/asyncWrapper.js";
-import { NotFoundError, ValidationError } from "../middlewares/errorHandler.middleware.js";
+import { NotFoundError, ValidationError, UnauthorizedError } from "../models/errors.js";
 
 export const getTeamsHandler = authAsyncHandler(async (c: Context) => {
   const user = c.get('user');
@@ -19,31 +19,18 @@ export const getTeamsHandler = authAsyncHandler(async (c: Context) => {
   });
 });
 
-export const createTeamHandler = async (c: Context) => {
+export const createTeamHandler = authAsyncHandler(async (c: Context) => {
+  const user = c.get('user');
+  const data = await c.req.json();
   
-  try {
-    const user = c.get('user') as any;
-    const data = await c.req.json();
-    
-    if (!user?.id) {
-      return c.json({ success: false, error: 'User not authenticated' }, 401);
-    }
-   
-    const team = await TeamService.createTeam(data, user.id);
-    
-    return c.json({
-      success: true,
-      message: 'Team created successfully',
-      team
-    });
-  } catch (error: any) {
-    console.error('❌ Erreur dans createTeamHandler:', error);
-    return c.json({ 
-      success: false, 
-      error: error.message || 'Failed to create team' 
-    }, 500);
-  }
-};
+  const team = await TeamService.createTeam(data, user.id);
+  
+  return c.json({
+    success: true,
+    message: 'Team created successfully',
+    team
+  });
+});
 
 export const deleteTeamHandler = authAsyncHandler(async (c: Context) => {
   const user = c.get('user');
@@ -66,48 +53,29 @@ export const deleteTeamHandler = authAsyncHandler(async (c: Context) => {
   });
 });
 
-export const addPokemonToTeamHandler = async (c: Context) => {
+export const addPokemonToTeamHandler = authAsyncHandler(async (c: Context) => {
+  const user = c.get('user');
+  const data = await c.req.json();
   
-  try {
-    const user = c.get('user') as any;
-    const data = await c.req.json();
-    
-    if (!user?.id) {
-      return c.json({ success: false, error: 'User not authenticated' }, 401);
-    }
+  const teamId = c.req.param('teamId');
+  const pokemonId = data.pokemonId;
 
-    const teamId = c.req.param('teamId');
-    const pokemonId = data.pokemonId;
-
-    console.log('🔍 TeamId depuis URL:', teamId);
-    console.log('🔍 PokemonId depuis body:', pokemonId);
-
-    if (!teamId || !pokemonId) {
-      return c.json({ 
-        success: false, 
-        error: 'TeamId et PokemonId sont requis' 
-      }, 400);
-    }
-
-    const result = await PokemonTeamService.addPokemonToTeam(
-      Number(teamId), 
-      Number(pokemonId), 
-      user.id
-    );
-    
-    return c.json({
-      success: true,
-      message: 'Pokémon ajouté à l\'équipe avec succès',
-      pokemon: result
-    });
-  } catch (error: any) {
-    console.error('❌ Erreur dans addPokemonToTeamHandler:', error);
-    return c.json({ 
-      success: false, 
-      error: error.message || 'Failed to add pokemon' 
-    }, 500);
+  if (!teamId || !pokemonId) {
+    throw new ValidationError('TeamId et PokemonId sont requis');
   }
-};
+
+  const result = await PokemonTeamService.addPokemonToTeam(
+    Number(teamId), 
+    Number(pokemonId), 
+    user.id
+  );
+  
+  return c.json({
+    success: true,
+    message: 'Pokémon ajouté à l\'équipe avec succès',
+    pokemon: result
+  });
+});
 
 export const removePokemonFromTeamHandler = authAsyncHandler(async (c: Context) => {
   const user = c.get('user');

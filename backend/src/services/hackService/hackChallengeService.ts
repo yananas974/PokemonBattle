@@ -1,6 +1,8 @@
 import { db } from '../../config/drizzle.config.js';
 import { hacks } from '../../db/schema.js';
 import { sql } from 'drizzle-orm';
+import { serviceWrapper } from '../../utils/asyncWrapper.js';
+import { NotFoundError } from '../../models/errors.js';
 
 export interface HackChallenge {
   id: string;
@@ -18,10 +20,12 @@ export class HackChallengeService {
    * 🎲 Générer un défi aléatoire complet
    */
   static async generateRandomChallenge(): Promise<HackChallenge | null> {
-    try {
+    return serviceWrapper(async () => {
       // 1. Récupérer un mot aléatoire en BDD
       const randomWord = await this.getRandomWord();
-      if (!randomWord) return null;
+      if (!randomWord) {
+        throw new NotFoundError('Aucun mot disponible pour le défi');
+      }
 
       // 2. Choisir une difficulté aléatoire
       const difficulty = this.getRandomDifficulty();
@@ -44,24 +48,22 @@ export class HackChallengeService {
         explanation: this.getExplanation(algorithm),
         time_limit: timeLimit
       };
-
-    } catch (error) {
-      console.error('❌ Erreur génération défi:', error);
-      return null;
-    }
+    });
   }
 
   /**
    * 🎯 Récupérer un mot aléatoire de la BDD
    */
   private static async getRandomWord() {
-    const words = await db
-      .select()
-      .from(hacks)
-      .orderBy(sql`RANDOM()`)
-      .limit(1);
-    
-    return words.length > 0 ? words[0] : null;
+    return serviceWrapper(async () => {
+      const words = await db
+        .select()
+        .from(hacks)
+        .orderBy(sql`RANDOM()`)
+        .limit(1);
+      
+      return words.length > 0 ? words[0] : null;
+    });
   }
 
   /**

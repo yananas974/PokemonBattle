@@ -1087,8 +1087,8 @@ export default function Dashboard() {
 
 // Composant Combat Simplifié
 function TeamBattleComponent({ teams, friendsTeams, token }: { teams: any[], friendsTeams: any, token?: string }) {
-  const [selectedTeam1, setSelectedTeam1] = useState('');
-  const [selectedTeam2, setSelectedTeam2] = useState('');
+  const [selectedPlayerTeam, setSelectedPlayerTeam] = useState('');
+  const [selectedEnemyTeam, setSelectedEnemyTeam] = useState('');
   const [battleResult, setBattleResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
@@ -1096,140 +1096,57 @@ function TeamBattleComponent({ teams, friendsTeams, token }: { teams: any[], fri
   const safeTeams = Array.isArray(teams) ? teams : [];
   const safeFriendsTeams = friendsTeams || {};
   
-  // ✅ Convertir friendsTeams objet en tableau de façon sécurisée
   const friendTeamsArray = Object.values(safeFriendsTeams).flat().filter(team => team && team.id);
   const allTeams = [...safeTeams, ...friendTeamsArray];
 
-  const simulateBattle = async () => {
-    if (!selectedTeam1 || !selectedTeam2) {
-      alert('Sélectionnez deux équipes !');
-      return;
-    }
+  // Combat interactif
+  const startInteractiveBattle = (playerTeamId: number, enemyTeamId: number) => {
+    const url = `/battle/interactive?playerTeamId=${playerTeamId}&enemyTeamId=${enemyTeamId}`;
+    window.location.href = url;
+  };
 
-    if (!token) {
-      alert('Token d\'authentification manquant !');
-      return;
-    }
-
-    const team1 = allTeams.find(t => String(t.id) === String(selectedTeam1));
-    const team2 = allTeams.find(t => String(t.id) === String(selectedTeam2));
-
-    if (!team1 || !team2) {
-      alert(`Équipes non trouvées !`);
-      return;
-    }
-
-    // ✅ Vérifier que les équipes ont des Pokémon
-    if (!team1.pokemon || team1.pokemon.length === 0) {
-      alert(`L'équipe "${team1.teamName}" n'a pas de Pokémon !`);
-      return;
-    }
-
-    if (!team2.pokemon || team2.pokemon.length === 0) {
-      alert(`L'équipe "${team2.teamName}" n'a pas de Pokémon !`);
-      return;
-    }
-
-    console.log('🚀 Lancement du combat:', {
-      team1: { name: team1.teamName, pokemon: team1.pokemon.length },
-      team2: { name: team2.teamName, pokemon: team2.pokemon.length }
-    });
-
+  // ✅ Combat simulé (automatique)
+  const simulateBattle = async (playerTeamId: number, enemyTeamId: number) => {
     setLoading(true);
+    setBattleResult(null);
+    
     try {
-      // ✅ Préparer les données de combat
-      const combatData = {
-        team1: {
-          id: String(team1.id),
-          teamName: team1.teamName,
-          pokemon: team1.pokemon.map((p: any) => ({
-            pokemon_id: p.pokemon_id,
-            name_fr: p.name,
-            type: p.type,
-            base_hp: p.hp,
-            base_attack: p.attack,
-            base_defense: p.defense,
-            base_speed: p.speed,
-            sprite_url: p.sprite_url
-          }))
-        },
-        team2: {
-          id: String(team2.id),
-          teamName: team2.teamName,
-          pokemon: team2.pokemon.map((p: any) => ({
-            pokemon_id: p.pokemon_id,
-            name_fr: p.name,
-            type: p.type,
-            base_hp: p.hp,
-            base_attack: p.attack,
-            base_defense: p.defense,
-            base_speed: p.speed,
-            sprite_url: p.sprite_url
-          }))
-        },
-        lat: 48.8566,
-        lon: 2.3522,
-        mode: 'full'
-      };
-
-      console.log('📤 Données envoyées:', combatData);
-
-      // ✅ Appel API
-      const { apiCall } = await import('~/utils/api');
-      const response = await apiCall('/api/battle/turn-based', {
+      const response = await fetch('/api/battle/simulate', {
         method: 'POST',
-        body: JSON.stringify(combatData)
-      }, token);
-
-      console.log('📡 Réponse serveur status:', response.status);
-      const data = await response.json();
-      console.log('📡 Réponse serveur data:', data);
-
-      if (data.success) {
-        // ✅ Récupérer toutes les données détaillées
-        const team1Pokemon = data.battleState.team1Pokemon;
-        const team2Pokemon = data.battleState.team2Pokemon;
-        const battleLog = data.battleState.battleLog;
-        const weatherEffects = data.battleState.weatherEffects;
-        
-        setBattleResult({
-          winner: data.battleState.winner,
-          battleLog: battleLog,
-          weatherEffects: weatherEffects,
-          turns: data.battleState.turn - 1,
-          fullBattleState: data.battleState,
-          team1Stats: { 
-            teamName: combatData.team1.teamName,
-            pokemon: team1Pokemon,
-            survivingPokemon: team1Pokemon.filter((p: any) => !p.is_ko).length,
-            totalPokemon: team1Pokemon.length
-          },
-          team2Stats: { 
-            teamName: combatData.team2.teamName,
-            pokemon: team2Pokemon,
-            survivingPokemon: team2Pokemon.filter((p: any) => !p.is_ko).length,
-            totalPokemon: team2Pokemon.length
-          }
-        });
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          playerTeamId,
+          enemyTeamId,
+          lat: 48.8566, // Paris par défaut
+          lon: 2.3522
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setBattleResult(result.battle);
       } else {
-        alert('Erreur serveur: ' + (data.error || 'Erreur inconnue'));
+        console.error('Erreur simulation:', result.error);
       }
     } catch (error) {
-      console.error('❌ Erreur combat:', error);
-      alert('Erreur de connexion: ' + error);
+      console.error('Erreur réseau:', error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Debug Panel */}
       <div className="bg-yellow-50 p-3 rounded text-xs">
         <div><strong>Debug Info:</strong></div>
         <div>Équipes perso: {safeTeams.length} | Équipes amis: {friendTeamsArray.length}</div>
         <div>Total équipes: {allTeams.length}</div>
-        <div>Selected: {selectedTeam1} & {selectedTeam2}</div>
+        <div>Selected: {selectedPlayerTeam} & {selectedEnemyTeam}</div>
         {allTeams.length > 0 && (
           <details className="mt-2">
             <summary>Voir toutes les équipes</summary>
@@ -1244,200 +1161,87 @@ function TeamBattleComponent({ teams, friendsTeams, token }: { teams: any[], fri
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-2">Équipe 1</label>
+          <label className="block text-purple-200 mb-2">Votre équipe :</label>
           <select 
-            value={selectedTeam1} 
-            onChange={(e) => setSelectedTeam1(e.target.value)}
-            className="w-full p-2 border rounded"
+            value={selectedPlayerTeam} 
+            onChange={(e) => setSelectedPlayerTeam(e.target.value)}
+            className="w-full p-2 bg-purple-800 text-white rounded border border-purple-600"
           >
-            <option value="">Choisir une équipe...</option>
-            {safeTeams.map(team => (
+            <option value="">Sélectionnez votre équipe</option>
+            {teams.map(team => (
               <option key={team.id} value={team.id}>
-                🔵 {team.teamName} ({team.pokemon?.length || 0} Pokémon)
-              </option>
-            ))}
-            {friendTeamsArray.map(team => (
-              <option key={team.id} value={team.id}>
-                👥 {team.teamName} ({team.pokemon?.length || 0} Pokémon)
+                {team.teamName} ({team.pokemon?.length || 0} Pokémon)
               </option>
             ))}
           </select>
         </div>
         
         <div>
-          <label className="block text-sm font-medium mb-2">Équipe 2</label>
+          <label className="block text-purple-200 mb-2">Équipe adverse :</label>
           <select 
-            value={selectedTeam2} 
-            onChange={(e) => setSelectedTeam2(e.target.value)}
-            className="w-full p-2 border rounded"
+            value={selectedEnemyTeam} 
+            onChange={(e) => setSelectedEnemyTeam(e.target.value)}
+            className="w-full p-2 bg-purple-800 text-white rounded border border-purple-600"
           >
-            <option value="">Choisir une équipe...</option>
-            {safeTeams.map(team => (
+            <option value="">Sélectionnez l'équipe adverse</option>
+            {teams.map(team => (
               <option key={team.id} value={team.id}>
-                🔵 {team.teamName} ({team.pokemon?.length || 0} Pokémon)
+                {team.teamName} ({team.pokemon?.length || 0} Pokémon)
               </option>
             ))}
-            {friendTeamsArray.map(team => (
-              <option key={team.id} value={team.id}>
-                👥 {team.teamName} ({team.pokemon?.length || 0} Pokémon)
-              </option>
-            ))}
+            {Object.entries(friendsTeams).map(([friendId, friendTeams]) => {
+              const friend = friends.find(f => f.friend?.id === parseInt(friendId));
+              return (friendTeams as any[]).map(team => (
+                <option key={`friend-${team.id}`} value={team.id}>
+                  {team.teamName} - {friend?.friend?.username} ({team.pokemon?.length || 0} Pokémon)
+                </option>
+              ));
+            })}
           </select>
         </div>
       </div>
 
-      <button
-        onClick={simulateBattle}
-        disabled={loading || !selectedTeam1 || !selectedTeam2}
-        className="w-full bg-red-600 text-white py-3 rounded-lg font-bold hover:bg-red-700 disabled:opacity-50"
-      >
-        {loading ? '⚔️ Combat en cours...' : '⚔️ LANCER LE COMBAT !'}
-      </button>
+      <div className="mt-4 text-center space-y-3">
+        {/* ✅ Bouton Combat Interactif */}
+        <button
+          onClick={() => {
+            if (selectedPlayerTeam && selectedEnemyTeam) {
+              startInteractiveBattle(parseInt(selectedPlayerTeam), parseInt(selectedEnemyTeam));
+            }
+          }}
+          disabled={!selectedPlayerTeam || !selectedEnemyTeam}
+          className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-bold text-white text-lg transition-colors mr-4"
+        >
+          🎮 Combat Interactif
+        </button>
 
+        {/* ✅ Nouveau bouton Combat Simulé */}
+        <button
+          onClick={() => {
+            if (selectedPlayerTeam && selectedEnemyTeam) {
+              simulateBattle(parseInt(selectedPlayerTeam), parseInt(selectedEnemyTeam));
+            }
+          }}
+          disabled={!selectedPlayerTeam || !selectedEnemyTeam || loading}
+          className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-bold text-white text-lg transition-colors"
+        >
+          {loading ? '⚔️ Combat en cours...' : '⚡ Combat Simulé'}
+        </button>
+      </div>
+
+      {/* ✅ Résultats du combat simulé */}
       {battleResult && (
-        <div className="mt-6 space-y-6">
-          {/* ✅ NOUVEAU : Conditions météo du combat */}
-          {battleResult.weatherEffects && (
-            <div className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white p-4 rounded-lg shadow-lg">
-              <h4 className="font-bold text-lg mb-2 flex items-center">
-                🌤️ Conditions Météorologiques
-              </h4>
-              <p className="text-blue-100 mb-3">
-                {battleResult.weatherEffects.description}
-              </p>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="bg-white bg-opacity-20 p-3 rounded">
-                  <h5 className="font-semibold mb-2">🔵 Effets sur {battleResult.team1Stats?.teamName}</h5>
-                  <div className="space-y-1">
-                    {battleResult.team1Stats?.pokemon?.map((pokemon: any, index: number) => (
-                      <div key={index} className="flex justify-between">
-                        <span>{pokemon.name_fr}</span>
-                        <span className={`font-bold ${
-                          pokemon.weatherMultiplier > 1.05 ? 'text-green-200' : 
-                          pokemon.weatherMultiplier < 0.95 ? 'text-red-200' : 'text-gray-200'
-                        }`}>
-                          {pokemon.weatherStatus}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="bg-white bg-opacity-20 p-3 rounded">
-                  <h5 className="font-semibold mb-2">🔴 Effets sur {battleResult.team2Stats?.teamName}</h5>
-                  <div className="space-y-1">
-                    {battleResult.team2Stats?.pokemon?.map((pokemon: any, index: number) => (
-                      <div key={index} className="flex justify-between">
-                        <span>{pokemon.name_fr}</span>
-                        <span className={`font-bold ${
-                          pokemon.weatherMultiplier > 1.05 ? 'text-green-200' : 
-                          pokemon.weatherMultiplier < 0.95 ? 'text-red-200' : 'text-gray-200'
-                        }`}>
-                          {pokemon.weatherStatus}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+        <div className="mt-6 bg-gray-800 p-4 rounded-lg">
+          <h3 className="text-xl font-bold text-white mb-4">
+            🏆 Résultat: {battleResult.winner === 'team1' ? 'Victoire!' : battleResult.winner === 'team2' ? 'Défaite' : 'Match nul'}
+          </h3>
+          
+          <div className="space-y-2 text-white">
+            {battleResult.battleLog.slice(-5).map((log: string, index: number) => (
+              <div key={index} className="text-sm bg-gray-700 p-2 rounded">
+                {log}
               </div>
-            </div>
-          )}
-
-          {/* ✅ Résultat principal */}
-          <div className="text-center bg-gradient-to-r from-yellow-400 to-orange-500 text-white p-6 rounded-lg shadow-lg">
-            <h3 className="text-2xl font-bold mb-2">
-              🏆 {battleResult.winner === 'team1' ? battleResult.team1Stats?.teamName : 
-                   battleResult.winner === 'team2' ? battleResult.team2Stats?.teamName : 
-                   'MATCH NUL'} REMPORTE LE COMBAT !
-            </h3>
-            <p className="text-yellow-100">Combat terminé en {battleResult.turns} tours</p>
-          </div>
-
-          {/* ✅ État final des équipes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Équipe 1 */}
-            <div className={`p-4 rounded-lg border-2 ${battleResult.winner === 'team1' ? 'bg-green-50 border-green-300' : 'bg-gray-50 border-gray-300'}`}>
-              <h4 className={`font-bold text-lg mb-3 ${battleResult.winner === 'team1' ? 'text-green-700' : 'text-gray-700'}`}>
-                🔵 {battleResult.team1Stats?.teamName}
-                {battleResult.winner === 'team1' && ' 👑'}
-              </h4>
-              <p className="text-sm mb-3">
-                <span className="font-semibold">{battleResult.team1Stats?.survivingPokemon}</span>/{battleResult.team1Stats?.totalPokemon} Pokémon survivants
-              </p>
-              
-              <div className="space-y-2">
-                {battleResult.team1Stats?.pokemon?.map((pokemon: any, index: number) => (
-                  <div key={index} className={`p-2 rounded text-sm ${pokemon.is_ko ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <img src={pokemon.sprite_url} alt={pokemon.name_fr} className="w-6 h-6" />
-                        <span className="font-medium">{pokemon.name_fr}</span>
-                        <span className="text-xs bg-gray-200 px-1 rounded">{pokemon.type}</span>
-                      </div>
-                      <div className="text-right">
-                        {pokemon.is_ko ? (
-                          <span className="font-bold text-red-600">💀 K.O.</span>
-                        ) : (
-                          <span className="font-bold text-green-600">❤️ {pokemon.current_hp} HP</span>
-                        )}
-                      </div>
-                    </div>
-                    {/* ✅ NOUVEAU : Affichage de l'effet météo */}
-                    <div className="text-xs mt-1 text-center">
-                      <span className={`px-2 py-1 rounded ${
-                        pokemon.weatherMultiplier > 1.05 ? 'bg-green-200 text-green-800' :
-                        pokemon.weatherMultiplier < 0.95 ? 'bg-red-200 text-red-800' :
-                        'bg-gray-200 text-gray-600'
-                      }`}>
-                        🌤️ {pokemon.weatherStatus}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Équipe 2 */}
-            <div className={`p-4 rounded-lg border-2 ${battleResult.winner === 'team2' ? 'bg-green-50 border-green-300' : 'bg-gray-50 border-gray-300'}`}>
-              <h4 className={`font-bold text-lg mb-3 ${battleResult.winner === 'team2' ? 'text-green-700' : 'text-gray-700'}`}>
-                🔴 {battleResult.team2Stats?.teamName}
-                {battleResult.winner === 'team2' && ' 👑'}
-              </h4>
-              <p className="text-sm mb-3">
-                <span className="font-semibold">{battleResult.team2Stats?.survivingPokemon}</span>/{battleResult.team2Stats?.totalPokemon} Pokémon survivants
-              </p>
-              
-              <div className="space-y-2">
-                {battleResult.team2Stats?.pokemon?.map((pokemon: any, index: number) => (
-                  <div key={index} className={`p-2 rounded text-sm ${pokemon.is_ko ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <img src={pokemon.sprite_url} alt={pokemon.name_fr} className="w-6 h-6" />
-                        <span className="font-medium">{pokemon.name_fr}</span>
-                        <span className="text-xs bg-gray-200 px-1 rounded">{pokemon.type}</span>
-                      </div>
-                      <div className="text-right">
-                        {pokemon.is_ko ? (
-                          <span className="font-bold text-red-600">💀 K.O.</span>
-                        ) : (
-                          <span className="font-bold text-green-600">❤️ {pokemon.current_hp} HP</span>
-                        )}
-                      </div>
-                    </div>
-                    {/* ✅ NOUVEAU : Affichage de l'effet météo */}
-                    <div className="text-xs mt-1 text-center">
-                      <span className={`px-2 py-1 rounded ${
-                        pokemon.weatherMultiplier > 1.05 ? 'bg-green-200 text-green-800' :
-                        pokemon.weatherMultiplier < 0.95 ? 'bg-red-200 text-red-800' :
-                        'bg-gray-200 text-gray-600'
-                      }`}>
-                        🌤️ {pokemon.weatherStatus}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       )}

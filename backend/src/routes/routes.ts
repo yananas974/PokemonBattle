@@ -6,6 +6,7 @@ import { teamRoutes } from './team.route.js';
 import { weatherRoutes } from './weather.route.js';
 import { battleRoutes } from './battle.route.js';
 import { hackChallengeRoutes } from './hackChallenge.route.js';
+import { interactiveBattleRoutes } from './interactiveBattle.route.js';
 
 const routes = new Hono();
 
@@ -16,6 +17,7 @@ routes.route('/teams', teamRoutes);
 routes.route('/weather', weatherRoutes);
 routes.route('/battle', battleRoutes);
 routes.route('/hack-challenge', hackChallengeRoutes);
+routes.route('/interactive-battle', interactiveBattleRoutes);
 
 export default routes;
 

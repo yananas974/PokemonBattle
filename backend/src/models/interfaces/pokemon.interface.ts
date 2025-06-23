@@ -1,4 +1,5 @@
 import type { PokemonType } from '../../services/weatherEffectService/weatherEffectService.js';
+export type { PokemonType };
 
 export interface Pokemon {
   id: number; 
