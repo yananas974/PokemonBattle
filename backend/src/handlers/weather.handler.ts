@@ -1,16 +1,21 @@
 import type { Context } from "hono";    
 import { WeatherEffectService, WEATHER_EFFECTS } from "../services/weatherEffectService/weatherEffectService.js";
+import { PokemonTypeService } from "../services/pokemonTypeService/pokemonTypeService.js";
 import { asyncHandler } from '../utils/asyncWrapper.js';
 import { ValidationError, ExternalServiceError } from '../models/errors.js';
+import { 
+  weatherQuerySchema,
+  simulateBattleWithWeatherSchema
+} from '../schemas/index.js';
 
 // ✅ Handlers refactorisés sans try/catch
 export const getWeatherEffectsHandler = asyncHandler(async (c: Context) => {
-  const lat = parseFloat(c.req.query('lat') || '48.8566');
-  const lon = parseFloat(c.req.query('lon') || '2.3522');
+  const query = weatherQuerySchema.parse({
+    lat: c.req.query('lat') ? parseFloat(c.req.query('lat')!) : undefined,
+    lon: c.req.query('lon') ? parseFloat(c.req.query('lon')!) : undefined
+  });
   
-  if (isNaN(lat) || isNaN(lon)) {
-    throw new ValidationError('Coordonnées invalides');
-  }
+  const { lat, lon } = query;
   
   console.log(`🌍 Récupération météo pour coordonnées: ${lat}, ${lon}`);
   
@@ -77,11 +82,22 @@ export const getWeatherEffectsHandler = asyncHandler(async (c: Context) => {
 });
 
 export const simulateBattleHandler = asyncHandler(async (c: Context) => {
-  const { attacker, defender, lat, lon } = await c.req.json();
+  const body = await c.req.json();
+  const { attacker, defender, lat, lon } = simulateBattleWithWeatherSchema.parse(body);
   
-  if (!attacker || !defender) {
-    throw new ValidationError('Attaquant et défenseur requis');
+  // ✅ Validation des types Pokemon avec la base de données
+  console.log('🔍 Validation des types Pokemon...');
+  const typeValidation = await PokemonTypeService.areValidTypes([attacker.type, defender.type]);
+  
+  if (!typeValidation.valid) {
+    const validTypes = await PokemonTypeService.getUniqueTypes();
+    throw new ValidationError(
+      `Types Pokemon invalides: ${typeValidation.invalidTypes.join(', ')}. ` +
+      `Types valides: ${validTypes.join(', ')}`
+    );
   }
+  
+  console.log('✅ Types Pokemon validés:', attacker.type, 'vs', defender.type);
   
   // ✅ Récupérer les effets météo
   const mockWeatherCondition = 'Rain'; // À remplacer par votre API
@@ -91,7 +107,12 @@ export const simulateBattleHandler = asyncHandler(async (c: Context) => {
   // ✅ Calculer les stats avec météo
   const finalAttacker = WeatherEffectService.calculatePokemonStats(attacker, effects, timeBonus);
   const finalDefender = WeatherEffectService.calculatePokemonStats(defender, effects, timeBonus);
-  const typeEffectiveness = WeatherEffectService.calculateTypeEffectiveness(attacker.type, defender.type);
+  
+  // ✅ Plus besoin de 'as any' - les types sont validés !
+  const typeEffectiveness = WeatherEffectService.calculateTypeEffectiveness(
+    attacker.type as any, // ✅ Temporaire jusqu'à synchronisation complète des types
+    defender.type as any
+  );
   
   // ✅ Logique de combat simple
   const attackerScore = finalAttacker.effective_attack + finalAttacker.effective_speed;

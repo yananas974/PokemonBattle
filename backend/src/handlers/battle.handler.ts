@@ -2,46 +2,13 @@ import type { Context } from "hono";
 import { TeamBattleService, TurnBasedBattleService } from "../services/services.js";
 import { mapBattleResultToApi, mapBattleErrorToApi } from '../mapper/battle.mapper.js';
 import { Team } from "../models/interfaces/team.interface.js";
-import { z } from 'zod';
 import { asyncHandler } from '../utils/asyncWrapper.js';
 import { ValidationError } from '../models/errors.js';
 import { WeatherDetectionService } from '../services/weatherService/weatherDetectionService.js';
-
-// ✅ Schémas Zod centralisés
-const pokemonSchema = z.object({
-  pokemon_id: z.number().min(1, "Pokemon ID must be positive"),
-  name_fr: z.string().min(1, "Pokemon name is required"),
-  type: z.string().min(1, "Pokemon type is required"),
-  hp: z.number().min(1, "HP must be positive"),
-  attack: z.number().min(1, "Attack must be positive"),
-  defense: z.number().min(1, "Defense must be positive"),
-  speed: z.number().min(1, "Speed must be positive"),
-  sprite_url: z.string().optional()
-});
-
-const teamSchema = z.object({
-  id: z.string().min(1, "Team ID is required"),
-  teamName: z.string().min(1, "Team name is required"),
-  pokemon: z.array(pokemonSchema).min(1, "Team must have at least one Pokemon")
-});
-
-const coordinatesSchema = z.object({
-  lat: z.number().min(-90).max(90).optional().default(48.8566),
-  lon: z.number().min(-180).max(180).optional().default(2.3522)
-});
-
-const teamBattleSchema = z.object({
-  team1: teamSchema,
-  team2: teamSchema,
-  ...coordinatesSchema.shape
-});
-
-const turnBasedBattleSchema = z.object({
-  team1: teamSchema,
-  team2: teamSchema,
-  mode: z.enum(['init', 'turn', 'full']).optional().default('full'),
-  ...coordinatesSchema.shape
-});
+import { 
+  teamBattleRequestSchema as teamBattleSchema, 
+  turnBasedBattleRequestSchema as turnBasedBattleSchema 
+} from '../schemas/index.js';
 
 // ✅ CORRIGÉ : Plus de try/catch manuel
 export const simulateTeamBattleHandler = asyncHandler(async (c: Context) => {

@@ -2,7 +2,9 @@ import { Hono } from 'hono';
 import { authMiddleware } from '../middlewares/authMiddleware/auth.middleware.js';
 import { 
   getAllPokemonHandler,
-  getPokemonByIdHandler
+  getPokemonByIdHandler,
+  getTypesDebugHandler,
+  invalidateTypeCacheHandler
 } from '../handlers/pokemon.handler.js';
 import { 
   createTeamHandler,
@@ -19,6 +21,10 @@ const protectedRoutes = new Hono();
 
 protectedRoutes.get('/all', authMiddleware, getAllPokemonHandler);
 protectedRoutes.get('/:id', authMiddleware, getPokemonByIdHandler);
+
+// ✅ Routes de debug pour les types Pokemon
+protectedRoutes.get('/types/debug', authMiddleware, getTypesDebugHandler);
+protectedRoutes.post('/types/invalidate-cache', authMiddleware, invalidateTypeCacheHandler);
 
 protectedRoutes.post('/teams', authMiddleware, createTeamHandler);
 protectedRoutes.get('/teams', authMiddleware, getTeamsHandler);

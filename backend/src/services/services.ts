@@ -25,3 +25,5 @@ export { TurnBasedBattleService } from './battle/turnBasedBattleService.js';
 export { WeatherService } from './weatherService/weatherService.js';
 export { WeatherDetectionService } from './weatherService/weatherDetectionService.js';
 export { WeatherEffectService } from './weatherEffectService/weatherEffectService.js';
+
+export { PokemonTypeService } from './pokemonTypeService/pokemonTypeService.js';

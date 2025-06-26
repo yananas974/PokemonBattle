@@ -230,7 +230,7 @@ export default function InteractiveBattlePage() {
       </div>
       
       {/* ✅ Musique de combat */}
-      <PokemonAudioPlayer track="battle" autoPlay={true} />
+      <PokemonAudioPlayer />
     </div>
   );
 } 

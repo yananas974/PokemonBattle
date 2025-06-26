@@ -78,5 +78,5 @@ export const audioManager = new AudioManager();
 // Pistes audio
 export const AUDIO_TRACKS = {
   dashboard: '/audio/02 Opening (part 2).mp3',
-  battle: '/audio/23 Battle (VS Trainer).mp3', // Mis à jour avec le nouveau fichier
+  battle: '/audio/battle23.mp3', // Mis à jour avec le nouveau fichier
 } as const; 
