@@ -14,28 +14,19 @@ import {
 
 const pokemonRoutes = new Hono();
 
-// ✅ Routes publiques AVANT le middleware d'authentification
-pokemonRoutes.get('/public/all', getAllPokemonHandler);
-pokemonRoutes.get('/public/:id', getPokemonByIdHandler);
 
-// ✅ Appliquer le middleware d'authentification SEULEMENT aux routes protégées
 const protectedRoutes = new Hono();
-protectedRoutes.use(authMiddleware);
 
-// Routes protégées
-protectedRoutes.get('/all', getAllPokemonHandler);
-protectedRoutes.get('/:id', getPokemonByIdHandler);
+protectedRoutes.get('/all', authMiddleware, getAllPokemonHandler);
+protectedRoutes.get('/:id', authMiddleware, getPokemonByIdHandler);
 
-// Routes Équipes (protégées)
-protectedRoutes.post('/teams', createTeamHandler);
-protectedRoutes.get('/teams', getTeamsHandler);
-protectedRoutes.delete('/teams/:id', deleteTeamHandler);
+protectedRoutes.post('/teams', authMiddleware, createTeamHandler);
+protectedRoutes.get('/teams', authMiddleware, getTeamsHandler);
+protectedRoutes.delete('/teams/:id', authMiddleware, deleteTeamHandler);
   
-//Routes Pokémon dans équipes (protégées)
-protectedRoutes.post('/teams/add-pokemon', addPokemonToTeamHandler);
-protectedRoutes.delete('/teams/remove-pokemon/:teamId/:pokemonId', removePokemonFromTeamHandler);
+protectedRoutes.post('/teams/add-pokemon', authMiddleware, addPokemonToTeamHandler);
+protectedRoutes.delete('/teams/remove-pokemon/:teamId/:pokemonId', authMiddleware, removePokemonFromTeamHandler);
 
-// ✅ Combiner les routes publiques et protégées
 pokemonRoutes.route('/', protectedRoutes);
 
 export { pokemonRoutes };

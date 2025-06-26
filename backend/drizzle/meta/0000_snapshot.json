@@ -1,5 +1,5 @@
 {
-  "id": "8e0fad96-e7b3-49e7-a70d-f0c4b2aea119",
+  "id": "4a4f2834-1e2c-4c11-9218-df1eb2fc1f2a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -643,6 +643,12 @@
         },
         "sprite_url": {
           "name": "sprite_url",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "back_sprite_url": {
+          "name": "back_sprite_url",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false

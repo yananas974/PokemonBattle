@@ -1,5 +1,5 @@
-import type { BattleResult, BattleResponse, TeamStats } from "../models/interfaces/battle.interface.js";
-import { Pokemon, BattlePokemon } from "../models/interfaces/pokemon.interface.js";
+import type { BattleResult, BattleResponse, TeamStats, BattlePokemon } from "../models/interfaces/battle.interface.js";
+import { Pokemon } from "../models/interfaces/pokemon.interface.js";
 import { PokemonType } from "../services/weatherEffectService/weatherEffectService.js";
 
 // ✅ Mapper RESPONSE : Service → API

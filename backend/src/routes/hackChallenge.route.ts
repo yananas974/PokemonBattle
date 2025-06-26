@@ -4,16 +4,13 @@ import {
   submitHackAnswerHandler,
   getAllWordsHandler
 } from '../handlers/hackChallenge.handler.js';
+import { authMiddleware } from '../middlewares/authMiddleware/auth.middleware.js';
 
 const hackChallengeRoutes = new Hono();
 
-// Déclencher un hack aléatoire
-hackChallengeRoutes.post('/trigger', triggerHackChallengeHandler);
 
-// Soumettre une réponse
-hackChallengeRoutes.post('/submit', submitHackAnswerHandler);
-
-// Récupérer tous les mots disponibles
-hackChallengeRoutes.get('/words', getAllWordsHandler);
+hackChallengeRoutes.post('/trigger',authMiddleware, triggerHackChallengeHandler);
+hackChallengeRoutes.post('/submit', authMiddleware, submitHackAnswerHandler);
+hackChallengeRoutes.get('/words', authMiddleware, getAllWordsHandler);
 
 export { hackChallengeRoutes }; 

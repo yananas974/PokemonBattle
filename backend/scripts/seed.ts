@@ -21,7 +21,8 @@ interface PokemonApiResponse {
     };
   }>;
   sprites: {
-    front_default: string | null;
+    front_default: string;
+    back_default: string;
   };
 }
 
@@ -195,6 +196,7 @@ class PokemonSeeder {
         height: data.height,
         weight: data.weight,
         sprite_url: data.sprites.front_default || '',
+        back_sprite_url: data.sprites.back_default || '',
       });
 
       console.log(`✅ Ajouté ${pokemonName} - Type: ${pokemonType} (id: ${data.id})`);

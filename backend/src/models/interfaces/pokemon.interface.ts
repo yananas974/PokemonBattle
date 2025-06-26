@@ -14,25 +14,10 @@ export interface Pokemon {
   height: number; 
   weight: number; 
   sprite_url: string; 
+  back_sprite_url: string;
   user_id: number; 
   created_at: Date; 
 }
 
-export interface BattlePokemon {
-  id: number;
-  name_fr: string;
-  type: PokemonType;
-  base_hp: number;
-  base_attack: number;
-  base_defense: number;
-  base_speed: number;
-}
+export interface CreatePokemonRequest  extends Omit<Pokemon, 'id' | 'user_id' | 'created_at'> {}
 
-export interface PokemonWithEffects extends BattlePokemon {
-  effective_hp: number;
-  effective_attack: number;
-  effective_defense: number;
-  effective_speed: number;
-  weatherStatus: string;
-  totalMultiplier: number;
-}

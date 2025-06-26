@@ -39,20 +39,11 @@ export interface CreateTeamResponse {
   team: Team;
 }
 
-// ✅ TRANSFORMATEUR (DRY)
-export function transformTeamForAPI(teamDB: TeamDB): Team {
-  return {
-    id: teamDB.id,
-    teamName: teamDB.team_name,
-    userId: teamDB.user_id,
-    createdAt: teamDB.created_at.toISOString(),
-    updatedAt: teamDB.updated_at.toISOString(),
-  };
-}
-
-export function transformTeamForDB(team: CreateTeamData, userId: number): Omit<TeamDB, 'id' | 'created_at' | 'updated_at'> {
-  return {
-    team_name: team.teamName,
-    user_id: userId,
-  };
-}
+// ✅ AJOUTÉ: Fonction de transformation manquante
+export const transformTeamForAPI = (teamDB: TeamDB): Team => ({
+  id: teamDB.id,
+  teamName: teamDB.team_name,
+  userId: teamDB.user_id,
+  createdAt: teamDB.created_at.toISOString(),
+  updatedAt: teamDB.updated_at.toISOString()
+});

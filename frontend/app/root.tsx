@@ -8,8 +8,11 @@ import {
   isRouteErrorResponse,
 } from "@remix-run/react";
 import type { LinksFunction } from "@remix-run/node";
+import { useEffect } from 'react';
+import { globalAudio } from '~/utils/globalAudioManager';
 
 import "./tailwind.css";
+import { AudioProvider } from '~/contexts/AudioContext';
 
 export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -34,9 +37,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
-        <ScrollRestoration />
-        <Scripts />
+        <AudioProvider>
+          {children}
+          <ScrollRestoration />
+          <Scripts />
+        </AudioProvider>
       </body>
     </html>
   );
@@ -69,5 +74,10 @@ export function ErrorBoundary() {
 }
 
 export default function App() {
+  // Initialiser l'audio au chargement de l'app
+  useEffect(() => {
+    globalAudio.initialize();
+  }, []);
+
   return <Outlet />;
 }

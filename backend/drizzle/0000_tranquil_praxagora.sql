@@ -82,6 +82,7 @@ CREATE TABLE "pokemon_reference" (
 	"height" integer,
 	"weight" integer,
 	"sprite_url" varchar(255),
+	"back_sprite_url" varchar(255),
 	"created_at" timestamp DEFAULT now(),
 	CONSTRAINT "pokemon_reference_pokeapi_id_unique" UNIQUE("pokeapi_id")
 );
