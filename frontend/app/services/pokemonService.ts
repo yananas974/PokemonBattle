@@ -1,21 +1,80 @@
-import { apiCall, handleApiError } from '~/utils/api';
 import type { PokemonResponse } from '~/types/pokemon';
+import type { CreateTeamData, TeamsResponse, CreateTeamResponse } from '~/types/team';
 
 export const pokemonService = {
-  // Récupérer tous les Pokémon depuis notre BDD
-  async getAllPokemon(token?: string): Promise<PokemonResponse> {
-    console.log('🔍 Récupération des Pokémon...');
-    const response = await apiCall('/api/pokemon/all', {}, token);
-    await handleApiError(response);
+  // ✅ NOUVEAU: Utilise Resource Route interne
+  async getAllPokemon(): Promise<PokemonResponse> {
+    console.log('🔍 Récupération Pokemon via Resource Route...');
+    
+    const response = await fetch('/api/pokemon', {
+      method: 'GET',
+      credentials: 'include', // Important pour les cookies de session
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Erreur Pokemon: ${response.status}`);
+    }
+    
     const data = await response.json();
-    console.log('✅ Pokémon récupérés:', data);
+    console.log('✅ Pokemon récupérés via Resource Route:', data);
     return data;
   },
 
-  // Récupérer un Pokémon spécifique
-  async getPokemonById(id: number, token?: string) {
-    const response = await apiCall(`/api/pokemon/${id}`, {}, token);
-    await handleApiError(response);
+  async getPokemonById(id: number) {
+    const response = await fetch(`/api/pokemon/${id}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Pokemon ${id} non trouvé`);
+    }
+    
     return response.json();
   },
-}; 
+};
+
+export const teamService = {
+  // ✅ NOUVEAU: Resource Route interne
+  async getMyTeams(): Promise<TeamsResponse> {
+    const response = await fetch('/api/teams', {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Erreur teams: ${response.status}`);
+    }
+    
+    return response.json();
+  },
+
+  async createTeam(data: CreateTeamData): Promise<CreateTeamResponse> {
+    const formData = new FormData();
+    formData.append('teamName', data.teamName);
+    
+    const response = await fetch('/api/teams', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Erreur création équipe');
+    }
+    
+    return response.json();
+  },
+
+  // ✅ BONUS: Avec useFetcher pour optimistic UI
+  createTeamWithFetcher(fetcher: any, teamName: string) {
+    const formData = new FormData();
+    formData.append('teamName', teamName);
+    
+    fetcher.submit(formData, {
+      method: 'POST',
+      action: '/api/teams'
+    });
+  },
+};

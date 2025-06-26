@@ -106,7 +106,7 @@ export const TRACKS = {
 
 export const TRACK_SOURCES = {
   [TRACKS.DASHBOARD]: '/audio/02 Opening (part 2).mp3',
-  [TRACKS.BATTLE]: '/audio/23 Battle (VS Trainer).mp3'
+  [TRACKS.BATTLE]: '/audio/battle23.mp3'
 } as const;
 
 // Fonctions utilitaires

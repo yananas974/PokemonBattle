@@ -29,7 +29,7 @@ export function useGlobalAudio() {
 
   const playBattle = useCallback(() => {
     console.log('🎵 Chargement musique combat: battle.mp3');
-    globalAudio.switchTrack('/audio/23 Battle.mp3', TRACKS.BATTLE);
+    globalAudio.switchTrack('/audio/battle23.mp3', TRACKS.BATTLE);
   }, []);
 
   const pause = useCallback(() => {

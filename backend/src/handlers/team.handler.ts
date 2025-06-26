@@ -7,6 +7,12 @@ import { Team, pokemon } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { asyncHandler, authAsyncHandler } from "../utils/asyncWrapper.js";
 import { NotFoundError, ValidationError, UnauthorizedError } from "../models/errors.js";
+import { 
+  createTeamRequestSchema,
+  deleteTeamParamsSchema,
+  addPokemonToTeamRequestSchema,
+  removePokemonFromTeamParamsSchema
+} from "../schemas/index.js";
 
 export const getTeamsHandler = authAsyncHandler(async (c: Context) => {
   const user = c.get('user');
@@ -21,7 +27,8 @@ export const getTeamsHandler = authAsyncHandler(async (c: Context) => {
 
 export const createTeamHandler = authAsyncHandler(async (c: Context) => {
   const user = c.get('user');
-  const data = await c.req.json();
+  const body = await c.req.json();
+  const data = createTeamRequestSchema.parse(body);
   
   const team = await TeamService.createTeam(data, user.id);
   
@@ -34,11 +41,8 @@ export const createTeamHandler = authAsyncHandler(async (c: Context) => {
 
 export const deleteTeamHandler = authAsyncHandler(async (c: Context) => {
   const user = c.get('user');
-  const teamId = parseInt(c.req.param('id'));
-  
-  if (!teamId || isNaN(teamId)) {
-    throw new ValidationError('ID d\'équipe invalide');
-  }
+  const params = deleteTeamParamsSchema.parse({ id: c.req.param('id') });
+  const teamId = params.id;
 
   const team = await Get(Team, and(eq(Team.id, teamId), eq(Team.user_id, user.id))!);
   if (!team) {
@@ -55,18 +59,17 @@ export const deleteTeamHandler = authAsyncHandler(async (c: Context) => {
 
 export const addPokemonToTeamHandler = authAsyncHandler(async (c: Context) => {
   const user = c.get('user');
-  const data = await c.req.json();
-  
+  const body = await c.req.json();
   const teamId = c.req.param('teamId');
-  const pokemonId = data.pokemonId;
-
-  if (!teamId || !pokemonId) {
-    throw new ValidationError('TeamId et PokemonId sont requis');
-  }
+  
+  const data = addPokemonToTeamRequestSchema.parse({
+    teamId: Number(teamId),
+    pokemonId: body.pokemonId
+  });
 
   const result = await PokemonTeamService.addPokemonToTeam(
-    Number(teamId), 
-    Number(pokemonId), 
+    data.teamId, 
+    data.pokemonId, 
     user.id
   );
   
@@ -79,19 +82,17 @@ export const addPokemonToTeamHandler = authAsyncHandler(async (c: Context) => {
 
 export const removePokemonFromTeamHandler = authAsyncHandler(async (c: Context) => {
   const user = c.get('user');
-  const teamId = parseInt(c.req.param('teamId'));
-  const pokemonId = parseInt(c.req.param('pokemonId'));
-  
-  if (!teamId || !pokemonId || isNaN(teamId) || isNaN(pokemonId)) {
-    throw new ValidationError('ID d\'équipe et ID de Pokémon valides requis');
-  }
+  const params = removePokemonFromTeamParamsSchema.parse({
+    teamId: c.req.param('teamId'),
+    pokemonId: c.req.param('pokemonId')
+  });
 
-  const team = await Get(Team, and(eq(Team.id, teamId), eq(Team.user_id, user.id))!);
+  const team = await Get(Team, and(eq(Team.id, params.teamId), eq(Team.user_id, user.id))!);
   if (!team) {
     throw new NotFoundError('Équipe');
   }
 
-  await Delete(pokemon, and(eq(pokemon.team_id, teamId), eq(pokemon.id, pokemonId))!);
+  await Delete(pokemon, and(eq(pokemon.team_id, params.teamId), eq(pokemon.id, params.pokemonId))!);
   
   return c.json({
     success: true,

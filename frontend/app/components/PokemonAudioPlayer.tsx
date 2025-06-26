@@ -136,7 +136,7 @@ export function PokemonAudioPlayer() {
 
             {/* ✅ NOUVEAU : Affichage du fichier actuel pour debug */}
             <div className="text-xs text-gray-400 text-center">
-              {currentTrack === TRACKS.BATTLE ? '🎵 23 Battle (VS Trainer).mp3' : 
+              {currentTrack === TRACKS.BATTLE ? '🎵 battle23.mp3' : 
                currentTrack === TRACKS.DASHBOARD ? '🎵 02 Opening (part 2).mp3' : 
                '🎵 Aucun fichier'}
             </div>

@@ -4,6 +4,10 @@ import { db } from '../config/drizzle.config.js';
 import { hacks } from '../db/schema.js';
 import { asyncHandler, authAsyncHandler } from '../utils/asyncWrapper.js';
 import { ValidationError, NotFoundError } from '../models/errors.js';
+import { 
+  submitHackAnswerSchema,
+  triggerHackChallengeSchema
+} from '../schemas/index.js';
 
 // Stocker les défis actifs en mémoire (ou Redis en prod)
 const activeChallenges = new Map<string, any>();
@@ -49,11 +53,8 @@ export const triggerHackChallengeHandler = asyncHandler(async (c: Context) => {
 });
 
 export const submitHackAnswerHandler = asyncHandler(async (c: Context) => {
-  const { challengeId, answer } = await c.req.json();
-  
-  if (!challengeId || !answer) {
-    throw new ValidationError('ID du défi et réponse requis');
-  }
+  const body = await c.req.json();
+  const { challengeId, answer } = submitHackAnswerSchema.parse(body);
   
   const challenge = activeChallenges.get(challengeId);
   if (!challenge) {

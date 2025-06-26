@@ -5,21 +5,12 @@ import { PokemonTeamService } from '../services/pokemonTeamService/pokemonTeamSe
 import { authAsyncHandler, asyncHandler } from '../utils/asyncWrapper.js';
 import { ValidationError, NotFoundError, UnauthorizedError } from '../models/errors.js';
 import { WeatherDetectionService } from '../services/weatherService/weatherDetectionService.js';
-import { z } from 'zod';
+import { 
+  initBattleSchema,
+  playerMoveSchema,
+  executePlayerMoveSchema
+} from '../schemas/index.js';
 import jwt from 'jsonwebtoken';
-
-const initBattleSchema = z.object({
-  playerTeamId: z.number(),
-  enemyTeamId: z.number(),
-  token: z.string().optional(),
-  lat: z.number().optional().default(48.8566),
-  lon: z.number().optional().default(2.3522)
-});
-
-const playerMoveSchema = z.object({
-  battleId: z.string(),
-  moveIndex: z.number().min(0).max(3)
-});
 
 // ✅ CORRIGÉ : Plus de try/catch manuel
 export const initInteractiveBattleHandler = asyncHandler(async (c: Context) => {

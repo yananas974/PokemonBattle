@@ -1,26 +1,15 @@
 import type { Context } from 'hono';
 import { FriendshipService } from '../services/services.js';
+import { 
+  sendFriendRequestSchema,
+  acceptFriendRequestSchema,
+  blockFriendRequestSchema,
+  getUserFriendsSchema
+} from '../schemas/index.js';
 import { z } from 'zod';
-import { friendIdSchema, friendshipIdSchema, userIdSchema } from '../schemas/common.schemas.js';
 import { zValidator } from '@hono/zod-validator';
 import { asyncHandler, authAsyncHandler } from '../utils/asyncWrapper.js';
 import { ValidationError, NotFoundError, ConflictError } from '../models/errors.js';
-
-const sendFriendRequestSchema = z.object({
-  friendId: friendIdSchema
-});
-
-const acceptFriendRequestSchema = z.object({
-  friendshipId: friendshipIdSchema
-});
-
-const blockFriendRequestSchema = z.object({
-  friendshipId: friendshipIdSchema
-});
-
-const getUserFriendsSchema = z.object({
-  userId: userIdSchema
-});
 
 // ✅ Créer les validators
 export const sendFriendRequestValidator = zValidator('json', sendFriendRequestSchema);

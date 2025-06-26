@@ -1,19 +1,19 @@
 import type { LoaderFunctionArgs, ActionFunctionArgs, MetaFunction } from '@remix-run/node';
 import { json, redirect } from '@remix-run/node';
-import { useLoaderData, useActionData, Form, Link, useNavigation, useRevalidator } from '@remix-run/react';
+import { useLoaderData, useActionData, Form, Link, useNavigation, useRevalidator, useFetcher } from '@remix-run/react';
 import { teamService } from '~/services/teamService';
 import { authService } from '~/services/authService';
 import { pokemonService } from '~/services/pokemonService';
 import { getUserFromSession, logout, getTokenFromSession } from '~/sessions';
 import { friendshipService } from '~/services/friendshipService';
-import type { Friendship } from '~/services/friendshipService';
 import type { Team } from '~/types/team';
-import type { Pokemon, PokemonInTeam } from '~/types/pokemon';
+import type { Pokemon, PokemonInTeam, PokemonResponse } from '~/types/pokemon';
 import { useState, useEffect } from 'react';
 import SimpleWeatherWidget from '~/components/SimpleWeatherWidget';
 import { weatherEffectService } from '~/services/weatherEffectService';
 import { PokemonAudioPlayer } from '~/components/PokemonAudioPlayer';
 import { useGlobalAudio } from '~/hooks/useGlobalAudio';
+import type { TeamsResponse } from '~/types/team';
 
 export const meta: MetaFunction = () => {
   return [
@@ -55,7 +55,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     console.log('🔍 Récupération des Pokémon...');
-    const pokemonData = await pokemonService.getAllPokemon(token);
+    const pokemonData = await pokemonService.getAllPokemon();
     console.log('✅ Pokémon chargés:', pokemonData.pokemon?.length || 0);
 
     console.log('🔍 Récupération des amis...');
@@ -345,20 +345,20 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Dashboard() {
-  const loaderData = useLoaderData();
+  const loaderData = useLoaderData<typeof loader>();
   const { playDashboard, currentTrack } = useGlobalAudio();
   const [currentTrackLocal, setCurrentTrackLocal] = useState<'dashboard' | 'battle' | null>('dashboard');
   
   // ✅ SÉCURISATION : Valeurs par défaut pour éviter les erreurs
-  const teams = loaderData?.teams || [];
-  const pokemon = loaderData?.pokemon || [];
-  const friends = loaderData?.friends || [];
-  const pendingRequests = loaderData?.pendingRequests || [];
-  const error = loaderData?.error || null;
-  const friendsTeams = loaderData?.friendsTeams || {};
-  const availableUsers = loaderData?.availableUsers || [];
-  const weatherEffects = loaderData?.weatherEffects || null;
-  const user = loaderData?.user || null;
+  const teams = loaderData.teams || [];
+  const pokemon = loaderData.pokemon || [];
+  const friends = loaderData.friends || [];
+  const pendingRequests = loaderData.pendingRequests || [];
+  const error = loaderData.error || null;
+  const friendsTeams = loaderData.friendsTeams || {};
+  const availableUsers = loaderData.availableUsers || [];
+  const weatherEffects = loaderData.weatherEffects || null;
+  const user = loaderData.user || null;
   
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
@@ -393,6 +393,51 @@ export default function Dashboard() {
       playDashboard();
     }
   }, [playDashboard, currentTrack]);
+
+  // ✅ NOUVEAU: useFetcher pour Resource Routes
+  const pokemonFetcher = useFetcher<PokemonResponse>();
+  const teamsFetcher = useFetcher<TeamsResponse>();
+  const createTeamFetcher = useFetcher();
+  
+  const [teamName, setTeamName] = useState('');
+
+  // Charger les données via Resource Routes
+  useEffect(() => {
+    if (pokemonFetcher.state === 'idle' && !pokemonFetcher.data) {
+      pokemonFetcher.load('/api/pokemon');
+    }
+    
+    if (teamsFetcher.state === 'idle' && !teamsFetcher.data) {
+      teamsFetcher.load('/api/teams');
+    }
+  }, [pokemonFetcher, teamsFetcher]);
+
+  // ✅ NOUVEAU: Création d'équipe optimiste
+  const handleCreateTeam = () => {
+    if (!teamName.trim()) return;
+    
+    const formData = new FormData();
+    formData.append('teamName', teamName);
+    
+    createTeamFetcher.submit(formData, {
+      method: 'POST',
+      action: '/api/teams'
+    });
+    
+    setTeamName(''); // Reset optimiste
+  };
+
+  // ✅ États de chargement élégants
+  const isLoadingPokemon = pokemonFetcher.state === 'loading';
+  const isLoadingTeams = teamsFetcher.state === 'loading';
+  const isCreatingTeam = createTeamFetcher.state === 'submitting';
+
+  // ✅ Revalidation automatique après création
+  useEffect(() => {
+    if (createTeamFetcher.state === 'idle' && createTeamFetcher.data?.success) {
+      teamsFetcher.load('/api/teams'); // Recharger les équipes
+    }
+  }, [createTeamFetcher.state, createTeamFetcher.data, teamsFetcher]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -590,20 +635,24 @@ export default function Dashboard() {
                     name="teamName"
                     placeholder="Nom de l'équipe"
                     required
+                    value={teamName}
+                    onChange={(e) => setTeamName(e.target.value)}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   />
                   <button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isCreatingTeam}
                     className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
                   >
-                    {isSubmitting ? 'Création...' : 'Créer une équipe'}
+                    {isCreatingTeam ? 'Création...' : 'Créer une équipe'}
                   </button>
                 </div>
               </Form>
 
               {/* Liste des équipes */}
-              {teams.length > 0 ? (
+              {isLoadingTeams ? (
+                <div>Chargement des équipes...</div>
+              ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
                   {teams.map((team: Team) => (
                     <div key={team.id} className="border border-gray-200 rounded-lg p-6 bg-gray-50">
@@ -696,11 +745,6 @@ export default function Dashboard() {
                       </div>
                     </div>
                   ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                  <p className="text-gray-500 mb-4">Vous n'avez pas encore d'équipe</p>
-                  <p className="text-sm text-gray-400">Créez votre première équipe pour commencer !</p>
                 </div>
               )}
             </div>
@@ -972,7 +1016,9 @@ export default function Dashboard() {
                 Pokémon Disponibles ({pokemon.length})
               </h2>
               
-              {pokemon.length > 0 ? (
+              {isLoadingPokemon ? (
+                <div>Chargement des Pokémon...</div>
+              ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {pokemon.slice(0, 18).map((poke) => (
                     <div
@@ -1006,11 +1052,6 @@ export default function Dashboard() {
                       </div>
                     </div>
                   ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                  <p className="text-gray-500 mb-4">Aucun Pokémon disponible</p>
-                  <p className="text-sm text-gray-400">Vérifiez que le seed a été exécuté</p>
                 </div>
               )}
               
