@@ -1,6 +1,6 @@
 import { WeatherEffectService, type WeatherEffectNew } from '../weatherEffectService/weatherEffectService.js';
-import type { BattleResult, Team, TeamStats } from '../../models/interfaces/battle.interface.js';
-import type { PokemonType } from '../../models/interfaces/pokemon.interface.js';
+import type { BattleResult, TeamStats } from '../../models/interfaces/battle.interface.js';
+import type { Team } from '../../models/interfaces/team.interface.js';
 import { z } from 'zod';
 import { serviceWrapper } from '../../utils/asyncWrapper.js';
 import { ValidationError } from '../../models/errors.js';
@@ -49,18 +49,39 @@ export class TeamBattleService {
       battleLog.push(`🌤️ Conditions météo: ${weatherEffects?.description || 'Temps normal'}`);
       battleLog.push('');
       
-      // ✅ Calculer les stats d'équipe
-      const team1Stats = this.calculateTeamStats(validatedTeam1, weatherEffects, timeBonus, battleLog);
-      const team2Stats = this.calculateTeamStats(validatedTeam2, weatherEffects, timeBonus, battleLog);
+      // ✅ Calculer les stats d'équipe directement
+      const team1Stats = {
+        totalHP: validatedTeam1.pokemon.reduce((sum, p) => sum + p.hp, 0),
+        totalAttack: validatedTeam1.pokemon.reduce((sum, p) => sum + p.attack, 0),
+        totalDefense: validatedTeam1.pokemon.reduce((sum, p) => sum + p.defense, 0),
+        totalSpeed: validatedTeam1.pokemon.reduce((sum, p) => sum + p.speed, 0),
+        weatherMultiplier: 1.0,
+        effectiveHP: validatedTeam1.pokemon.reduce((sum, p) => sum + p.hp, 0),
+        effectiveAttack: validatedTeam1.pokemon.reduce((sum, p) => sum + p.attack, 0),
+        effectiveDefense: validatedTeam1.pokemon.reduce((sum, p) => sum + p.defense, 0),
+        pokemonDetails: []
+      };
+
+      const team2Stats = {
+        totalHP: validatedTeam2.pokemon.reduce((sum, p) => sum + p.hp, 0),
+        totalAttack: validatedTeam2.pokemon.reduce((sum, p) => sum + p.attack, 0),
+        totalDefense: validatedTeam2.pokemon.reduce((sum, p) => sum + p.defense, 0),
+        totalSpeed: validatedTeam2.pokemon.reduce((sum, p) => sum + p.speed, 0),
+        weatherMultiplier: 1.0,
+        effectiveHP: validatedTeam2.pokemon.reduce((sum, p) => sum + p.hp, 0),
+        effectiveAttack: validatedTeam2.pokemon.reduce((sum, p) => sum + p.attack, 0),
+        effectiveDefense: validatedTeam2.pokemon.reduce((sum, p) => sum + p.defense, 0),
+        pokemonDetails: []
+      };
       
       battleLog.push('📊 RÉSUMÉ DES ÉQUIPES:');
       battleLog.push(`🔵 ${validatedTeam1.teamName}: ${team1Stats.effectiveAttack} ATK vs ${team1Stats.effectiveHP} HP`);
       battleLog.push(`🔴 ${validatedTeam2.teamName}: ${team2Stats.effectiveAttack} ATK vs ${team2Stats.effectiveHP} HP`);
       battleLog.push('');
       
-      // ✅ Calculer les dégâts infligés
-      const team1Damage = this.calculateTeamDamage(team1Stats, team2Stats, battleLog, validatedTeam1.teamName);
-      const team2Damage = this.calculateTeamDamage(team2Stats, team1Stats, battleLog, validatedTeam2.teamName);
+      // ✅ Calculer les dégâts directement
+      const team1Damage = Math.max(1, team1Stats.effectiveAttack - team2Stats.effectiveDefense);
+      const team2Damage = Math.max(1, team2Stats.effectiveAttack - team1Stats.effectiveDefense);
       
       // ✅ Calculer les HP restants
       const team1RemainingHP = Math.max(0, team1Stats.effectiveHP - team2Damage);
@@ -83,6 +104,7 @@ export class TeamBattleService {
         battleLog.push(`🤝 MATCH NUL !`);
       }
       
+      // ✅ AJOUTÉ: Return explicite du BattleResult
       return {
         winner,
         team1Stats,
@@ -96,110 +118,4 @@ export class TeamBattleService {
       };
     });
   }
-  
-  /**
-   * Calculer les stats totales d'une équipe avec effets météo
-   */
-  private static calculateTeamStats(
-    team: Team,
-    weatherEffects: WeatherEffectNew | null,
-    timeBonus: number,
-    battleLog: string[]
-  ): TeamStats {
-    let totalHP = 0;
-    let totalAttack = 0;
-    let totalDefense = 0;
-    let totalSpeed = 0;
-    let weatherMultiplier = 0;
-    const pokemonDetails = [];
-    
-    battleLog.push(`🔍 Analyse de l'équipe "${team.teamName}":`);
-    
-    for (const pokemon of team.pokemon) {
-      // ✅ Debug des stats de base
-      console.log(`🐛 ${pokemon.name_fr} stats:`, {
-        hp: pokemon.hp,
-        attack: pokemon.attack,
-        defense: pokemon.defense,
-        speed: pokemon.speed
-      });
-      
-      // ✅ Calculer l'effet météo sur ce Pokémon
-      const pokemonMultiplier = weatherEffects?.getMultiplierFor 
-        ? weatherEffects.getMultiplierFor(pokemon.type as PokemonType)
-        : 1.0;
-      
-      const finalMultiplier = pokemonMultiplier * timeBonus;
-      weatherMultiplier += pokemonMultiplier;
-      
-      // ✅ Appliquer les multiplicateurs avec les bons noms de propriétés
-      const effectiveHP = Math.round((pokemon.hp || 0) * finalMultiplier);
-      const effectiveAttack = Math.round((pokemon.attack || 0) * finalMultiplier);
-      const effectiveDefense = Math.round((pokemon.defense || 0) * finalMultiplier);
-      const effectiveSpeed = Math.round((pokemon.speed || 0) * finalMultiplier);
-      
-      totalHP += effectiveHP;
-      totalAttack += effectiveAttack;
-      totalDefense += effectiveDefense;
-      totalSpeed += effectiveSpeed;
-      
-      // ✅ Status météo
-      let weatherStatus = 'Non affecté';
-      if (pokemonMultiplier > 1.05) {
-        weatherStatus = `Renforcé (+${Math.round((pokemonMultiplier - 1) * 100)}%)`;
-      } else if (pokemonMultiplier < 0.95) {
-        weatherStatus = `Affaibli (-${Math.round((1 - pokemonMultiplier) * 100)}%)`;
-      }
-      
-      pokemonDetails.push({
-        name: pokemon.name_fr,
-        type: pokemon.type,
-        weatherStatus,
-        multiplier: pokemonMultiplier
-      });
-      
-      battleLog.push(`  • ${pokemon.name_fr} (${pokemon.type}): ${weatherStatus}`);
-    }
-    
-    const avgMultiplier = weatherMultiplier / team.pokemon.length;
-    battleLog.push(`  📈 Stats totales: ${totalAttack} ATK, ${totalDefense} DEF, ${totalHP} HP`);
-    battleLog.push('');
-    
-    return {
-      totalHP: totalHP / timeBonus, // Stats de base
-      totalAttack: totalAttack / timeBonus,
-      totalDefense: totalDefense / timeBonus,
-      totalSpeed: totalSpeed / timeBonus,
-      weatherMultiplier: avgMultiplier,
-      effectiveHP: totalHP, // Stats avec météo
-      effectiveAttack: totalAttack,
-      effectiveDefense: totalDefense,
-      pokemonDetails
-    };
-  }
-  
-  /**
-   * Calculer les dégâts qu'une équipe inflige à l'autre
-   */
-  private static calculateTeamDamage(
-    attackingTeam: TeamStats,
-    defendingTeam: TeamStats,
-    battleLog: string[],
-    teamName: string
-  ): number {
-    // ✅ Formule de dégâts simplifiée
-    const baseDamage = Math.max(1, attackingTeam.effectiveAttack - defendingTeam.effectiveDefense);
-    
-    // ✅ Bonus de vitesse (équipe plus rapide fait +10% de dégâts)
-    const speedBonus = attackingTeam.totalSpeed > defendingTeam.totalSpeed ? 1.1 : 1.0;
-    
-    // ✅ Bonus météo moyen de l'équipe
-    const weatherBonus = attackingTeam.weatherMultiplier;
-    
-    const finalDamage = Math.round(baseDamage * speedBonus * weatherBonus);
-    
-    battleLog.push(`⚡ ${teamName} inflige ${finalDamage} dégâts (base: ${baseDamage}, vitesse: x${speedBonus}, météo: x${weatherBonus.toFixed(2)})`);
-    
-    return finalDamage;
-  }
-} 
+}

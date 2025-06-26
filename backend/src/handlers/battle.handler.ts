@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { TeamBattleService, TurnBasedBattleService } from "../services/services.js";
 import { mapBattleResultToApi, mapBattleErrorToApi } from '../mapper/battle.mapper.js';
-import { Team } from "../models/interfaces/battle.interface.js";
+import { Team } from "../models/interfaces/team.interface.js";
 import { z } from 'zod';
 import { asyncHandler } from '../utils/asyncWrapper.js';
 import { ValidationError } from '../models/errors.js';
@@ -62,8 +62,8 @@ export const simulateTeamBattleHandler = asyncHandler(async (c: Context) => {
   const { weatherEffects, timeBonus } = await WeatherDetectionService.detectWeatherEffects(lat, lon);
 
   const battleResult = await TeamBattleService.simulateTeamBattle(
-    team1 as Team,
-    team2 as Team,
+    team1 as unknown as Team,
+    team2 as unknown as Team,
     weatherEffects,
     timeBonus
   );

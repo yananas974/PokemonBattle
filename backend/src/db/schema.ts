@@ -82,6 +82,7 @@ export const pokemonReference = pgTable("pokemon_reference", {
   height: integer("height"),
   weight: integer("weight"),
   sprite_url: varchar("sprite_url", { length: 255 }),
+  back_sprite_url: varchar("back_sprite_url", { length: 255 }),
   created_at: timestamp("created_at").defaultNow()
 });
 

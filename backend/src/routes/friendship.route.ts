@@ -17,15 +17,14 @@ import {
 
 const friendshipRoutes = new Hono();
 
-friendshipRoutes.use(authMiddleware);
-friendshipRoutes.post('/send', sendFriendRequestValidator, sendFriendRequestHandler);
-friendshipRoutes.post('/accept/:id', acceptFriendRequestValidator, acceptFriendRequestHandler);
-friendshipRoutes.post('/block/:id', blockFriendRequestValidator, blockFriendRequestHandler);
-friendshipRoutes.get('/friends', getUserFriendsHandler);
-friendshipRoutes.get('/requests/received', getPendingFriendRequestsHandler);
-friendshipRoutes.get('/requests/sent', getSentFriendRequestsHandler);
-friendshipRoutes.delete('/:id', removeFriendHandler);
-friendshipRoutes.get('/available-users', getAvailableUsersHandler);
-friendshipRoutes.get('/teams/:friendId', getFriendTeamsHandler);
+friendshipRoutes.post('/send', authMiddleware, sendFriendRequestValidator, sendFriendRequestHandler);
+friendshipRoutes.post('/accept/:id', authMiddleware, acceptFriendRequestValidator, acceptFriendRequestHandler);
+friendshipRoutes.post('/block/:id', authMiddleware, blockFriendRequestValidator, blockFriendRequestHandler);
+friendshipRoutes.get('/friends', authMiddleware, getUserFriendsHandler);
+friendshipRoutes.get('/requests/received', authMiddleware, getPendingFriendRequestsHandler);
+friendshipRoutes.get('/requests/sent', authMiddleware, getSentFriendRequestsHandler);
+friendshipRoutes.delete('/:id', authMiddleware, removeFriendHandler);
+friendshipRoutes.get('/available-users', authMiddleware, getAvailableUsersHandler);
+friendshipRoutes.get('/teams/:friendId', authMiddleware, getFriendTeamsHandler);
 
 export { friendshipRoutes };

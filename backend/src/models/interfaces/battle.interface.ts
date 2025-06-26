@@ -1,22 +1,24 @@
 import { WeatherEffectNew } from "../../services/weatherEffectService/weatherEffectService.js";
+import { BattleTeam} from "../type/battle.type.js"; 
+import { PokemonType } from "./pokemon.interface.js";
 
-
-export interface Pokemon {
-  pokemon_id: number;
-  name_fr: string;
+export interface BattlePokemonDetails {
+  name: string;
   type: string;
-  hp: number;
-  attack: number;
-  defense: number;
-  speed: number;
-  sprite_url: string;
+  weatherStatus: string;
+  multiplier: number;
 }
 
-export interface Team {
-  id: string;
-  teamName: string;
-  pokemon: Pokemon[];
-  owner?: string;
+export interface TeamStats {
+  totalHP: number;
+  totalAttack: number;
+  totalDefense: number;
+  totalSpeed: number;
+  weatherMultiplier: number;
+  effectiveHP: number;
+  effectiveAttack: number;
+  effectiveDefense: number;
+  pokemonDetails: BattlePokemonDetails[];
 }
 
 export interface BattleResult {
@@ -30,28 +32,10 @@ export interface BattleResult {
     team2Damage: number;
   };
 }
-
-export interface TeamStats {
-  totalHP: number;
-  totalAttack: number;
-  totalDefense: number;
-  totalSpeed: number;
-  weatherMultiplier: number;
-  effectiveHP: number;
-  effectiveAttack: number;
-  effectiveDefense: number;
-  pokemonDetails: Array<{
-    name: string;
-    type: string;
-    weatherStatus: string;
-    multiplier: number;
-  }>;
-}
-
-// ✅ Interfaces pour les données d'entrée (API)
+        
 export interface BattleRequest {
-  team1: Team;
-  team2: Team;
+  team1: BattleTeam;
+  team2: BattleTeam;
   lat?: number;
   lon?: number;
 }
@@ -61,3 +45,22 @@ export interface BattleResponse {
   result?: BattleResult;
   error?: string;
 } 
+
+export interface BattlePokemon {
+  id: number;
+  name_fr: string;
+  type: PokemonType;
+  base_hp: number;
+  base_attack: number;
+  base_defense: number;
+  base_speed: number;
+}
+
+export interface PokemonWithEffects extends Omit<BattlePokemon, 'base_hp' | 'base_attack' | 'base_defense' | 'base_speed'> {
+  effective_hp: number;
+  effective_attack: number;
+  effective_defense: number;
+  effective_speed: number;
+  weatherStatus: string;
+  totalMultiplier: number;
+}

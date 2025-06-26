@@ -7,6 +7,10 @@ import { interactiveBattleService } from '~/services/interactiveBattleService';
 import { teamService } from '~/services/teamService';
 import { InteractiveBattle } from '~/components/InteractiveBattle';
 import type { BattleState, BattleAction } from '~/types/battle';
+import { useAudioContext } from '~/contexts/AudioContext';
+import { PokemonAudioPlayer } from '~/components/PokemonAudioPlayer';
+import { useAudioManager } from '~/hooks/useAudioManager';
+import { useGlobalAudio } from '~/hooks/useGlobalAudio';
 
 export const meta: MetaFunction = () => {
   return [
@@ -141,6 +145,8 @@ export default function InteractiveBattlePage() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const submit = useSubmit();
+  const { playTrack } = useAudioContext();
+  const { playBattle } = useGlobalAudio();
 
   const [currentBattle, setCurrentBattle] = useState<BattleState | null>(loaderData.battle);
 
@@ -178,6 +184,12 @@ export default function InteractiveBattlePage() {
     submit(formData, { method: 'post' });
   };
 
+  // S'assurer que la musique de combat joue
+  useEffect(() => {
+    console.log('🎵 Page de combat - s\'assurer que la musique de combat joue');
+    playBattle();
+  }, [playBattle]);
+
   // Affichage d'erreur
   if (loaderData.mode === 'error' || !currentBattle) {
     return (
@@ -200,7 +212,7 @@ export default function InteractiveBattlePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-900 text-white">
       <div className="container mx-auto px-4">
         <InteractiveBattle
           initialBattle={currentBattle}
@@ -216,6 +228,9 @@ export default function InteractiveBattlePage() {
           </div>
         )}
       </div>
+      
+      {/* ✅ Musique de combat */}
+      <PokemonAudioPlayer track="battle" autoPlay={true} />
     </div>
   );
 } 

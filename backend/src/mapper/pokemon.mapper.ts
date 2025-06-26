@@ -1,4 +1,5 @@
-import { Pokemon, BattlePokemon, PokemonWithEffects } from "../models/interfaces/pokemon.interface.js";
+import { Pokemon } from "../models/interfaces/pokemon.interface.js";
+import { BattlePokemon, PokemonWithEffects } from "../models/interfaces/battle.interface.js";
 import { PokemonType } from "../services/weatherEffectService/weatherEffectService.js";
 
 // ✅ Types de base de données (basés sur le schéma Drizzle)
@@ -26,6 +27,7 @@ export interface PokemonReferenceDB {
   height: number | null;
   weight: number | null;
   sprite_url: string | null;
+  back_sprite_url: string | null;
   created_at: Date;
 }
 
@@ -55,6 +57,7 @@ export const mapPokemonToApi = (pokemonDB: PokemonWithReferenceDB): Pokemon => (
   height: pokemonDB.pokemon_reference.height || 0,
   weight: pokemonDB.pokemon_reference.weight || 0,
   sprite_url: pokemonDB.pokemon_reference.sprite_url || '',
+  back_sprite_url: pokemonDB.pokemon_reference.back_sprite_url || '',
   user_id: pokemonDB.team_id || 0,
   created_at: pokemonDB.created_at
 });
@@ -72,7 +75,8 @@ export const mapPokemonReferenceToApi = (pokemonRef: PokemonReferenceDB): Omit<P
   speed: pokemonRef.base_speed || 50,
   height: pokemonRef.height || 0,
   weight: pokemonRef.weight || 0,
-  sprite_url: pokemonRef.sprite_url || ''
+  sprite_url: pokemonRef.sprite_url || '',
+  back_sprite_url: pokemonRef.back_sprite_url || ''
 });
 
 /**
@@ -106,6 +110,7 @@ export const mapJoinedPokemonToApi = (joinedData: {
   pokemon_id: number;
   name_fr: string;
   sprite_url: string | null;
+  back_sprite_url?: string | null;
   type: string;
   height?: number | null;
   weight?: number | null;
@@ -123,6 +128,7 @@ export const mapJoinedPokemonToApi = (joinedData: {
   height: joinedData.height || 0,
   weight: joinedData.weight || 0,
   sprite_url: joinedData.sprite_url || '',
+  back_sprite_url: joinedData.back_sprite_url || '',
   user_id: joinedData.team_id || 0,
   created_at: joinedData.created_at || new Date()
 });
@@ -143,7 +149,8 @@ export const mapPokemonToFrontend = (pokemon: Pokemon) => ({
   height: pokemon.height,
   weight: pokemon.weight,
   sprite_url: pokemon.sprite_url,
-  userId: pokemon.user_id,
+  back_sprite_url: pokemon.back_sprite_url,
+    userId: pokemon.user_id,
   createdAt: pokemon.created_at.toISOString()
 });
 

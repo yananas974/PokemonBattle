@@ -12,7 +12,7 @@ import { asyncHandler } from '../utils/asyncWrapper.js';
 import { ValidationError, UnauthorizedError, ConflictError } from '../models/errors.js';
 import { TeamBattleService, TurnBasedBattleService, WeatherEffectService } from "../services/services.js";
 import { mapBattleResultToApi, mapBattleErrorToApi } from '../mapper/battle.mapper.js';
-import { Team } from "../models/interfaces/battle.interface.js";
+import { Team } from "../models/interfaces/team.interface.js";
 
 const loginSchema = z.object({
   email: emailSchema,
@@ -171,8 +171,8 @@ export const simulateTeamBattleHandler = asyncHandler(async (c: Context) => {
   const timeBonus = WeatherEffectService.calculateTimeBonus();
 
   const battleResult = await TeamBattleService.simulateTeamBattle(
-    team1 as Team,
-    team2 as Team,
+    team1 as unknown as Team,
+    team2 as unknown as Team,
     weatherEffects,
     timeBonus
   );

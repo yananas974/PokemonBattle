@@ -12,6 +12,8 @@ import type { Pokemon, PokemonInTeam } from '~/types/pokemon';
 import { useState, useEffect } from 'react';
 import SimpleWeatherWidget from '~/components/SimpleWeatherWidget';
 import { weatherEffectService } from '~/services/weatherEffectService';
+import { PokemonAudioPlayer } from '~/components/PokemonAudioPlayer';
+import { useGlobalAudio } from '~/hooks/useGlobalAudio';
 
 export const meta: MetaFunction = () => {
   return [
@@ -344,6 +346,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function Dashboard() {
   const loaderData = useLoaderData();
+  const { playDashboard, currentTrack } = useGlobalAudio();
+  const [currentTrackLocal, setCurrentTrackLocal] = useState<'dashboard' | 'battle' | null>('dashboard');
   
   // ✅ SÉCURISATION : Valeurs par défaut pour éviter les erreurs
   const teams = loaderData?.teams || [];
@@ -381,6 +385,14 @@ export default function Dashboard() {
       }, 100);
     }
   }, [actionData?.success, isSubmitting, revalidator]);
+
+  // Lancer la musique du dashboard au chargement (seulement si aucune musique)
+  useEffect(() => {
+    if (!currentTrack) {
+      console.log('🎵 Lancement musique dashboard');
+      playDashboard();
+    }
+  }, [playDashboard, currentTrack]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -947,12 +959,11 @@ export default function Dashboard() {
           )}
 
           {activeTab === 'combat' && (
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">⚔️ Combat</h2>
-              <div className="space-y-6">
-                <TeamBattleComponent teams={teams} friendsTeams={friendsTeams} token={user?.backendToken} />
-              </div>
-            </div>
+            <TeamBattleComponent 
+              teams={teams} 
+              friendsTeams={friendsTeams} 
+              token={user?.backendToken}
+            />
           )}
 
           {activeTab === 'pokemon' && (
@@ -1017,6 +1028,9 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
+      {/* ✅ Player audio persistant */}
+      <PokemonAudioPlayer />
 
       {/* Modal détails Pokémon */}
       {selectedPokemon && (
@@ -1087,28 +1101,20 @@ export default function Dashboard() {
 
 // Composant Combat Simplifié
 function TeamBattleComponent({ teams, friendsTeams, token }: { teams: any[], friendsTeams: any, token?: string }) {
+  const { playBattle, playDashboard } = useGlobalAudio();
   const [selectedPlayerTeam, setSelectedPlayerTeam] = useState('');
   const [selectedEnemyTeam, setSelectedEnemyTeam] = useState('');
   const [battleResult, setBattleResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  // ✅ Sécurisation complète des données
-  const safeTeams = Array.isArray(teams) ? teams : [];
-  const safeFriendsTeams = friendsTeams || {};
-  
-  const friendTeamsArray = Object.values(safeFriendsTeams).flat().filter(team => team && team.id);
-  const allTeams = [...safeTeams, ...friendTeamsArray];
-
-  // Combat interactif
-  const startInteractiveBattle = (playerTeamId: number, enemyTeamId: number) => {
-    const url = `/battle/interactive?playerTeamId=${playerTeamId}&enemyTeamId=${enemyTeamId}`;
-    window.location.href = url;
-  };
-
-  // ✅ Combat simulé (automatique)
+  // Combat simulé avec logs détaillés
   const simulateBattle = async (playerTeamId: number, enemyTeamId: number) => {
     setLoading(true);
     setBattleResult(null);
+    
+    console.log('🎵 === DÉMARRAGE COMBAT SIMULÉ ===');
+    console.log('🎵 Tentative de lecture: battle.mp3');
+    playBattle(); // ✅ Devrait maintenant jouer battle.mp3
     
     try {
       const response = await fetch('/api/battle/simulate', {
@@ -1120,7 +1126,7 @@ function TeamBattleComponent({ teams, friendsTeams, token }: { teams: any[], fri
         body: JSON.stringify({
           playerTeamId,
           enemyTeamId,
-          lat: 48.8566, // Paris par défaut
+          lat: 48.8566,
           lon: 2.3522
         })
       });
@@ -1129,14 +1135,30 @@ function TeamBattleComponent({ teams, friendsTeams, token }: { teams: any[], fri
       
       if (result.success) {
         setBattleResult(result.battle);
-      } else {
-        console.error('Erreur simulation:', result.error);
+        
+        // ✅ Retourner à la musique du dashboard après 5 secondes
+        setTimeout(() => {
+          console.log('🎵 === FIN DU COMBAT ===');
+          console.log('🎵 Retour à: 02 Opening (part 2).mp3');
+          playDashboard();
+        }, 5000);
       }
     } catch (error) {
       console.error('Erreur réseau:', error);
+      playDashboard();
     } finally {
       setLoading(false);
     }
+  };
+
+  // Combat interactif avec logs
+  const startInteractiveBattle = (playerTeamId: number, enemyTeamId: number) => {
+    console.log('🎵 === DÉMARRAGE COMBAT INTERACTIF ===');
+    console.log('🎵 Tentative de lecture: battle.mp3');
+    playBattle(); // ✅ Devrait maintenant jouer battle.mp3
+    
+    const url = `/battle/interactive?playerTeamId=${playerTeamId}&enemyTeamId=${enemyTeamId}`;
+    window.location.href = url;
   };
 
   return (
@@ -1144,14 +1166,17 @@ function TeamBattleComponent({ teams, friendsTeams, token }: { teams: any[], fri
       {/* Debug Panel */}
       <div className="bg-yellow-50 p-3 rounded text-xs">
         <div><strong>Debug Info:</strong></div>
-        <div>Équipes perso: {safeTeams.length} | Équipes amis: {friendTeamsArray.length}</div>
-        <div>Total équipes: {allTeams.length}</div>
+        <div>Équipes perso: {teams.length} | Équipes amis: {Object.values(friendsTeams).flat().length}</div>
+        <div>Total équipes: {teams.length + Object.values(friendsTeams).flat().length}</div>
         <div>Selected: {selectedPlayerTeam} & {selectedEnemyTeam}</div>
-        {allTeams.length > 0 && (
+        {teams.length + Object.values(friendsTeams).flat().length > 0 && (
           <details className="mt-2">
             <summary>Voir toutes les équipes</summary>
             <div className="mt-1 text-xs">
-              {allTeams.map(team => (
+              {teams.map(team => (
+                <div key={team.id}>ID: {team.id} | Nom: {team.teamName} | Pokémon: {team.pokemon?.length || 0}</div>
+              ))}
+              {Object.values(friendsTeams).flat().map(team => (
                 <div key={team.id}>ID: {team.id} | Nom: {team.teamName} | Pokémon: {team.pokemon?.length || 0}</div>
               ))}
             </div>
@@ -1189,14 +1214,11 @@ function TeamBattleComponent({ teams, friendsTeams, token }: { teams: any[], fri
                 {team.teamName} ({team.pokemon?.length || 0} Pokémon)
               </option>
             ))}
-            {Object.entries(friendsTeams).map(([friendId, friendTeams]) => {
-              const friend = friends.find(f => f.friend?.id === parseInt(friendId));
-              return (friendTeams as any[]).map(team => (
-                <option key={`friend-${team.id}`} value={team.id}>
-                  {team.teamName} - {friend?.friend?.username} ({team.pokemon?.length || 0} Pokémon)
-                </option>
-              ));
-            })}
+            {Object.values(friendsTeams).flat().map(team => (
+              <option key={team.id} value={team.id}>
+                {team.teamName} - {friends.find(f => f.friend?.id === team.id)?.friend?.username} ({team.pokemon?.length || 0} Pokémon)
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -1215,7 +1237,7 @@ function TeamBattleComponent({ teams, friendsTeams, token }: { teams: any[], fri
           🎮 Combat Interactif
         </button>
 
-        {/* ✅ Nouveau bouton Combat Simulé */}
+        {/* ✅ Bouton Combat Simulé */}
         <button
           onClick={() => {
             if (selectedPlayerTeam && selectedEnemyTeam) {

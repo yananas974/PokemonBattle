@@ -7,8 +7,6 @@ import { logger } from 'hono/logger';
 import { errorHandler } from './middlewares/errorHandler.middleware.js';
 import { corsMiddleware } from './config/cors.Config.js';
 import routes from './routes/routes.js';
-import { interactiveBattleRoutes } from './routes/interactiveBattle.route.js';
-
 
 
 const app = new Hono()
@@ -22,7 +20,7 @@ app.use('*', corsMiddleware);
 
 // Routes
 app.route('/api', routes);
-app.route('/api/interactive-battle', interactiveBattleRoutes);
+
 
 // Route de santé
 app.get('/health', (c) => {
