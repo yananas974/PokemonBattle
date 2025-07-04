@@ -97,7 +97,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       types: [] as string[],
       generations: [] as number[],
       currentFilters: { search: '', type: '', generation: '' },
-      error: 'Impossible de charger les Pokémon',
+      error: 'Impossible de charger les Pokémon' as string,
       success: false
     });
   }
@@ -116,7 +116,7 @@ export default function PokemonIndex() {
   } = data;
   
   const fallback = false; // Supprimé car fallback n'existe plus dans PokemonResponse
-  const error = 'error' in data ? data.error : undefined;
+  const error = 'error' in data ? data.error as string : undefined;
   
   const navigation = useNavigation();
   const isLoading = navigation.state === 'loading';
