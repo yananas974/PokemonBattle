@@ -24,8 +24,8 @@ services:
   backend:
     container_name: pokemon-backend
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile.monorepo
     ports:
       - "3001:3001"
     environment:
@@ -46,9 +46,11 @@ services:
     networks:
       - pokemon-network
     volumes:
-      - ./backend:/app
-      - /app/node_modules
-    command: sh -c "npm run build && npm start"
+      - ./backend:/app/backend
+      - ./shared:/app/shared
+      - /app/backend/node_modules
+      - /app/shared/node_modules
+    command: sh -c "cd /app/backend && npm run build && npm start"
 
   frontend:
     container_name: pokemon-frontend

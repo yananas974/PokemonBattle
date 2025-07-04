@@ -16,8 +16,10 @@ export interface LoginData {
 }
 
 export interface AuthResponse {
+  success: boolean;
   message: string;
   user: User;
+  token: string;
 }
 
 export interface AuthError {

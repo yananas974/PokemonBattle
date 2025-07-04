@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Navigation Amis - Pokemon Battle</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #f0f0f0;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-card {
+            background: white;
+            border: 3px solid #2563eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-family: inherit;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin: 10px;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .test-button:hover {
+            background: #1d4ed8;
+        }
+        .success { border-color: #16a34a; }
+        .warning { border-color: #ca8a04; }
+        .info { border-color: #0891b2; }
+        h1, h2 { color: #1e40af; text-transform: uppercase; }
+        .step { margin: 15px 0; padding: 10px; background: #f8fafc; border-left: 4px solid #0891b2; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Navigation Amis Pokemon Battle</h1>
+    
+    <div class="test-card info">
+        <h2>🎯 Objectif du Test</h2>
+        <p>Vérifier que le bouton "AJOUTER UN AMI" du dashboard ouvre l'onglet recherche de la page d'amis.</p>
+    </div>
+
+    <div class="test-card">
+        <h2>📋 Instructions de Test</h2>
+        
+        <div class="step">
+            <strong>Étape 1:</strong> Connectez-vous à l'application Pokemon Battle
+            <br>
+            <a href="http://localhost:3005/login" target="_blank" class="test-button">🔑 Se Connecter</a>
+        </div>
+        
+        <div class="step">
+            <strong>Étape 2:</strong> Accédez au dashboard principal
+            <br>
+            <a href="http://localhost:3005/dashboard" target="_blank" class="test-button">🏠 Dashboard</a>
+        </div>
+        
+        <div class="step">
+            <strong>Étape 3:</strong> Cliquez sur le bouton "AJOUTER UN AMI" dans les actions rapides
+            <br>
+            <em>Le bouton devrait ouvrir la page d'amis avec l'onglet "RECHERCHER" activé</em>
+        </div>
+        
+        <div class="step">
+            <strong>Étape 4:</strong> Vérifiez que l'onglet "RECHERCHER" est actif et qu'il y a un message d'accueil
+            <br>
+            <em>Vous devriez voir "BIENVENUE DANS LA RECHERCHE D'AMIS !"</em>
+        </div>
+    </div>
+
+    <div class="test-card">
+        <h2>🔗 Liens de Test Direct</h2>
+        
+        <a href="http://localhost:3005/dashboard/friends" target="_blank" class="test-button">
+            👥 Page Amis (Normal)
+        </a>
+        
+        <a href="http://localhost:3005/dashboard/friends?tab=search" target="_blank" class="test-button">
+            🔍 Page Amis (Onglet Recherche)
+        </a>
+        
+        <a href="http://localhost:3005/dashboard/friends?tab=pending" target="_blank" class="test-button">
+            📥 Page Amis (Demandes Reçues)
+        </a>
+        
+        <a href="http://localhost:3005/dashboard/friends?tab=sent" target="_blank" class="test-button">
+            📤 Page Amis (Demandes Envoyées)
+        </a>
+    </div>
+
+    <div class="test-card success">
+        <h2>✅ Critères de Réussite</h2>
+        <ul>
+            <li>Le bouton "AJOUTER UN AMI" du dashboard pointe vers <code>/dashboard/friends?tab=search</code></li>
+            <li>L'onglet "RECHERCHER" s'ouvre automatiquement</li>
+            <li>Le message d'accueil "BIENVENUE DANS LA RECHERCHE D'AMIS !" s'affiche</li>
+            <li>La barre de recherche est prête à utiliser</li>
+            <li>Les utilisateurs disponibles apparaissent lors de la saisie</li>
+        </ul>
+    </div>
+
+    <div class="test-card warning">
+        <h2>⚠️ Points d'Attention</h2>
+        <ul>
+            <li>Vous devez être connecté pour accéder aux pages</li>
+            <li>L'utilisateur "yan" devrait être disponible pour test</li>
+            <li>Les onglets doivent être cliquables et fonctionnels</li>
+            <li>Le style vintage Pokemon doit être cohérent</li>
+        </ul>
+    </div>
+
+    <div class="test-card">
+        <h2>🔄 Test des API</h2>
+        <p>Pour tester les API d'amitié directement :</p>
+        <pre style="background: #f1f5f9; padding: 10px; border-radius: 4px; overflow-x: auto;">
+# Récupérer les amis
+curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:3001/api/friends/friends
+
+# Récupérer les utilisateurs disponibles  
+curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:3001/api/friends/available-users
+
+# Envoyer une demande d'ami
+curl -X POST -H "Authorization: Bearer YOUR_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"friendId": 2}' \
+     http://localhost:3001/api/friends/send
+        </pre>
+    </div>
+
+    <div class="test-card info">
+        <h2>📊 État des Services</h2>
+        <p><strong>Frontend:</strong> <span id="frontend-status">🔄 Vérification...</span></p>
+        <p><strong>Backend:</strong> <span id="backend-status">🔄 Vérification...</span></p>
+        
+        <script>
+            // Test de connectivité simple
+            fetch('http://localhost:3005/')
+                .then(response => {
+                    document.getElementById('frontend-status').innerHTML = response.ok ? '✅ En ligne' : '❌ Erreur';
+                })
+                .catch(() => {
+                    document.getElementById('frontend-status').innerHTML = '❌ Hors ligne';
+                });
+                
+            fetch('http://localhost:3001/api/health')
+                .then(response => {
+                    document.getElementById('backend-status').innerHTML = response.ok ? '✅ En ligne' : '❌ Erreur';
+                })
+                .catch(() => {
+                    document.getElementById('backend-status').innerHTML = '❌ Hors ligne';
+                });
+        </script>
+    </div>
+</body>
+</html> 
