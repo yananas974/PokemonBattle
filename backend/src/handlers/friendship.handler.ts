@@ -96,6 +96,7 @@ export const getPendingFriendRequestsHandler = authAsyncHandler(async (c: Contex
   });
 });
 
+
 export const getSentFriendRequestsHandler = authAsyncHandler(async (c: Context) => {
   const user = c.get('user');
   
@@ -104,9 +105,10 @@ export const getSentFriendRequestsHandler = authAsyncHandler(async (c: Context) 
   return c.json({
     success: true,
     message: 'Sent friend requests retrieved successfully',
-    requests
+    friends: requests // ✅ Correction: utilise 'friends' comme les autres endpoints
   });
 });
+
 
 export const removeFriendHandler = authAsyncHandler(async (c: Context) => {
   const user = c.get('user');

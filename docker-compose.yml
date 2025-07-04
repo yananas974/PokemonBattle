@@ -52,7 +52,7 @@ services:
       - ./shared:/app/shared
       - /app/backend/node_modules
       - /app/shared/node_modules
-  command: sh -c "cd /app/shared && npm run build && cd /app/backend && npm install && npm run build && npm start"
+    command: sh -c "cd /app/shared && npm run build && cd /app/backend && npm install && npm run build && npm start"
 
   frontend:
     container_name: pokemon-frontend
