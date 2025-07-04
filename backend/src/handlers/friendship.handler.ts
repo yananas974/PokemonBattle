@@ -25,7 +25,7 @@ export const sendFriendRequestHandler = authAsyncHandler(async (c: Context) => {
     throw new ValidationError('Vous ne pouvez pas vous envoyer une demande d\'ami à vous-même');
   }
 
-  const friendship = await FriendshipService.sendFriendRequest(friendId, user.id);
+  const friendship = await FriendshipService.sendFriendRequest({ friendId }, user.id);
 
   return c.json({
     success: true,
