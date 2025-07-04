@@ -58,7 +58,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs): Promise<R
     });
     
     // Importer et appeler directement le loader de notre Resource Route
-    const { loader: pokemonLoader } = await import('./api.pokemon');
+    const { loader: pokemonLoader } = await import('./api/pokemonAPI/api.pokemon');
     const pokemonResponse = await pokemonLoader({ request: pokemonRequest, params: {}, context: {} });
     
     // Vérifier que la réponse est bien une Response
@@ -79,7 +79,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs): Promise<R
     });
     
     // Importer et appeler directement le loader de la Resource Route teams
-    const { loader: teamsLoader } = await import('./api.teams');
+    const { loader: teamsLoader } = await import('./api/teamAPI/api.teams');
     const teamsResponse = await teamsLoader({ request: teamsRequest, params: {}, context: {} });
     
     // Vérifier que la réponse est bien une Response
