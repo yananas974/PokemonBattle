@@ -49,6 +49,12 @@ export const authMiddleware: MiddlewareHandler = async (c, next) => {
     throw new UnauthorizedError('User not authenticated');
   }
 
+  // ✅ NOUVEAU : Validation du format JWT avant décodage
+  if (!token || typeof token !== 'string' || token.split('.').length !== 3) {
+    console.log('❌ Token mal formé:', token ? token.substring(0, 20) + '...' : 'null');
+    throw new UnauthorizedError('Invalid token format');
+  }
+
   // ✅ CORRIGÉ : Plus de try/catch, les erreurs remontent naturellement
   console.log('🔍 Vérification token...');
   const payload = jwt.verify(token, process.env.JWT_SECRET!) as { sub: string };

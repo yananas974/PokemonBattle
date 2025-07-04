@@ -1,0 +1,47 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copier les package.json du workspace racine et des sous-projets
+COPY package*.json ./
+COPY shared/package*.json ./shared/
+COPY backend/package*.json ./backend/
+
+# Installer les dépendances du workspace racine
+RUN npm install
+
+# Installer les dépendances du shared
+WORKDIR /app/shared
+RUN npm install
+
+# Installer les dépendances du backend
+WORKDIR /app/backend
+RUN npm install
+
+# Copier le code source
+WORKDIR /app
+COPY shared/ ./shared/
+COPY backend/ ./backend/
+
+# Construire le package shared
+WORKDIR /app/shared
+RUN npm run build
+
+# Construire le backend
+WORKDIR /app/backend
+
+# Installer les outils requis
+RUN npm install -g wait-on tsx && \
+    apk add --no-cache postgresql-client
+
+# Rendre les scripts exécutables
+RUN chmod +x scripts/*.sh 2>/dev/null || true
+
+# Construire l'application backend
+RUN npm run build
+
+# Exposer le port
+EXPOSE 3001
+
+# Utiliser le script d'initialisation Docker avec auto-seed
+CMD ["sh", "scripts/docker-init.sh"]

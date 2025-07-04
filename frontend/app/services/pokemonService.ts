@@ -1,36 +1,51 @@
 import type { PokemonResponse } from '~/types/pokemon';
 import type { CreateTeamData, TeamsResponse, CreateTeamResponse } from '~/types/team';
+import { apiCallWithRequest, apiCall, handleApiError } from '~/utils/api';
+
+// ✅ HELPER DRY POUR LES APPELS API côté serveur (loaders)
+async function makeApiCallServer<T>(
+  endpoint: string, 
+  request: Request,
+  options: RequestInit = {}
+): Promise<T> {
+  const response = await apiCallWithRequest(endpoint, request, options);
+  await handleApiError(response);
+  return response.json();
+}
+
+// ✅ HELPER DRY POUR LES APPELS API côté client (actions)
+async function makeApiCall<T>(
+  endpoint: string, 
+  options: RequestInit = {}, 
+  token?: string
+): Promise<T> {
+  const response = await apiCall(endpoint, options, token);
+  await handleApiError(response);
+  return response.json();
+}
 
 export const pokemonService = {
-  // ✅ NOUVEAU: Utilise Resource Route interne
-  async getAllPokemon(): Promise<PokemonResponse> {
-    console.log('🔍 Récupération Pokemon via Resource Route...');
+  // ✅ Récupérer tous les Pokémon avec support Request et token
+  async getAllPokemon(requestOrToken?: Request | string): Promise<PokemonResponse> {
+    console.log('🔍 PokemonService: Récupération Pokemon...');
     
-    const response = await fetch('/api/pokemon', {
-      method: 'GET',
-      credentials: 'include', // Important pour les cookies de session
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Erreur Pokemon: ${response.status}`);
+    if (requestOrToken instanceof Request) {
+      // Côté serveur (loaders)
+      console.log('🔍 PokemonService: Utilisation côté serveur avec Request');
+      return makeApiCallServer('/api/pokemon/all', requestOrToken);
+    } else {
+      // Côté client (actions/client-side)
+      console.log('🔍 PokemonService: Utilisation côté client avec token');
+      return makeApiCall('/api/pokemon/all', {}, requestOrToken);
     }
-    
-    const data = await response.json();
-    console.log('✅ Pokemon récupérés via Resource Route:', data);
-    return data;
   },
 
-  async getPokemonById(id: number) {
-    const response = await fetch(`/api/pokemon/${id}`, {
-      method: 'GET',
-      credentials: 'include',
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Pokemon ${id} non trouvé`);
+  async getPokemonById(id: number, requestOrToken?: Request | string) {
+    if (requestOrToken instanceof Request) {
+      return makeApiCallServer(`/api/pokemon/${id}`, requestOrToken);
+    } else {
+      return makeApiCall(`/api/pokemon/${id}`, {}, requestOrToken);
     }
-    
-    return response.json();
   },
 };
 

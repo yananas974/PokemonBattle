@@ -1,223 +1,286 @@
-import type { ActionFunctionArgs, MetaFunction } from '@remix-run/node';
+import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
 import { json, redirect } from '@remix-run/node';
-import { Form, Link, useActionData, useNavigation } from '@remix-run/react';
+import { Form, Link, useActionData, useNavigation, useSearchParams } from '@remix-run/react';
 import { authService } from '~/services/authService';
-import { createUserSession } from '~/sessions';
+import { getUserFromSession, createUserSession } from '~/sessions';
+import { VintageCard } from '~/components/VintageCard';
+import { VintageTitle } from '~/components/VintageTitle';
+import { VintageInput } from '~/components/VintageInput';
+import { VintageButton } from '~/components/VintageButton';
 
 export const meta: MetaFunction = () => {
   return [
     { title: 'Connexion - Pokemon Battle' },
     { name: 'description', content: 'Connectez-vous à votre compte Pokemon Battle' },
+    { name: 'robots', content: 'noindex' }, // SEO: pas d'indexation
   ];
 };
 
+// ✅ Loader pour redirection si déjà connecté
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { user } = await getUserFromSession(request);
+  
+  if (user) {
+    throw redirect('/dashboard');
+  }
+
+  // Récupérer le redirectTo depuis l'URL
+  const url = new URL(request.url);
+  const redirectTo = url.searchParams.get('redirectTo') || '/dashboard';
+  
+  return json({ redirectTo });
+};
+
 export const action = async ({ request }: ActionFunctionArgs) => {
-  console.log('=== ACTION LOGIN APPELÉE ===');
   const formData = await request.formData();
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
-  
-  console.log('Données reçues - Email:', email, 'Password:', password ? 'fourni' : 'manquant');
+  const redirectTo = formData.get('redirectTo') as string || '/dashboard';
 
-  const errors: { [key: string]: string } = {};
+  // ✅ Validation côté serveur robuste
+  const errors: Record<string, string> = {};
 
   if (!email) {
     errors.email = 'L\'email est requis';
-  } else if (!/\S+@\S+\.\S+/.test(email)) {
-    errors.email = 'L\'email n\'est pas valide';
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.email = 'Format d\'email invalide';
   }
 
   if (!password) {
     errors.password = 'Le mot de passe est requis';
+  } else if (password.length < 6) {
+    errors.password = 'Le mot de passe doit contenir au moins 6 caractères';
   }
 
   if (Object.keys(errors).length > 0) {
-    return json({ errors, success: false });
+    return json({ 
+      errors, 
+      success: false,
+      email // ✅ Préserver l'email en cas d'erreur
+    }, { status: 400 });
   }
 
   try {
-    console.log('Appel du service de connexion...');
-    const result = await authService.login({ email, password });
-    console.log('Connexion réussie:', result);
+    // ✅ Authentification
+    const authResponse = await authService.login({ email, password });
     
-    console.log('Création de la session utilisateur avec token...');
-    
-    // ✅ Stocker le token dans la session utilisateur
-    const userData = {
-      ...result.user,
-      backendToken: result.token // ✅ Changé de token à backendToken
+    if (!authResponse.success || !authResponse.user) {
+      return json({
+        errors: { general: 'Identifiants invalides' },
+        success: false,
+        email
+      }, { status: 401 });
+    }
+
+    // ✅ Stocker le token dans l'objet utilisateur
+    const userWithToken = {
+      ...authResponse.user,
+      backendToken: authResponse.token
     };
-    
-    return createUserSession(result.user.id.toString(), userData, '/dashboard');
+
+    // ✅ Créer session et rediriger
+    return createUserSession(
+      authResponse.user.id.toString(),
+      userWithToken,
+      redirectTo
+    );
+
   } catch (error) {
-    console.log('Erreur de connexion:', error);
+    console.error('Login error:', error);
+    
     return json({
-      errors: { general: error instanceof Error ? error.message : 'Erreur de connexion' },
+      errors: { 
+        general: error instanceof Error 
+          ? error.message 
+          : 'Erreur de connexion. Veuillez réessayer.' 
+      },
       success: false,
-    });
+      email
+    }, { status: 500 });
   }
 };
 
 export default function Login() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
+  const [searchParams] = useSearchParams();
+  
+  // ✅ États optimisés
   const isSubmitting = navigation.state === 'submitting';
+  const redirectTo = searchParams.get('redirectTo') || '/dashboard/teams';
+  
+  // ✅ Préserver l'email en cas d'erreur
+  const defaultEmail = actionData?.email || '';
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat"
-         style={{
-           backgroundImage: 'url(/0a7fb6143ad3113e76e1de04a9eaee16.png)',
-           backgroundSize: '20%',
-           backgroundPosition: 'left center',
-           backgroundRepeat: 'no-repeat'
-         }}>
-      {/* Overlay avec dégradé Pokémon */}
-      <div className="absolute inset-0 bg-gradient-to-br from-red-900/40 via-blue-900/40 to-yellow-900/40"></div>
+    <div className="min-h-screen bg-pokemon-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      {/* Effet Game Boy - écran avec scanlines */}
+      <div className="absolute inset-0 bg-pokemon-screen opacity-10 pointer-events-none" 
+           style={{
+             backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)'
+           }} 
+      />
       
-      <div className="relative max-w-md w-full space-y-8 z-10">
-        {/* Logo Pokémon au-dessus */}
-        <div className="text-center mb-8">
-          <img 
-            src="/0f05e7b85a1b3ba4fce9be78fde09861.png" 
-            alt="Pokémon Logo" 
-            className="mx-auto h-120 w-120  drop-shadow-2xl"
-          />
+      <div className="max-w-md w-full space-y-8 relative z-10">
+        {/* ✅ Header vintage style Game Boy */}
+        <div className="text-center">
+          <div className="mx-auto mb-6">
+            <div className="inline-block bg-pokemon-yellow border-4 border-pokemon-blue-dark rounded-full p-4 shadow-lg">
+              <span className="text-2xl">🎮</span>
+            </div>
+          </div>
+          
+          <VintageTitle level={1} animated>
+            Pokemon Battle
+          </VintageTitle>
+          
+          <VintageTitle level={3} className="text-pokemon-blue">
+            Connexion Dresseur
+          </VintageTitle>
+          
+          <div className="mt-4 font-pokemon text-xs text-pokemon-blue-dark">
+            Pas encore de compte ?{' '}
+            <Link
+              to={`/register${redirectTo !== '/dashboard/teams' ? `?redirectTo=${redirectTo}` : ''}`}
+              className="text-pokemon-red hover:text-pokemon-yellow transition-colors font-bold"
+            >
+              S'INSCRIRE ICI
+            </Link>
+          </div>
         </div>
 
-        {/* Container principal style Pokédex */}
-        <div className="bg-gradient-to-br from-red-500 to-red-600 p-1 rounded-3xl shadow-2xl">
-          <div className="bg-gradient-to-br from-gray-100 to-white rounded-3xl p-6 relative overflow-hidden">
+        {/* ✅ Carte principale vintage */}
+        <VintageCard padding="lg" className="bg-pokemon-cream shadow-xl">
+          <Form method="post" className="space-y-6" replace>
+            <input type="hidden" name="redirectTo" value={redirectTo} />
             
-            {/* Éléments décoratifs style Pokédex */}
-            <div className="absolute top-4 left-4 flex space-x-2">
-              <div className="w-4 h-4 bg-blue-500 rounded-full shadow-lg animate-pulse"></div>
-              <div className="w-3 h-3 bg-red-500 rounded-full shadow-lg"></div>
-              <div className="w-3 h-3 bg-yellow-400 rounded-full shadow-lg"></div>
-              <div className="w-2 h-2 bg-green-500 rounded-full shadow-lg"></div>
-            </div>
-
-            {/* Header avec style Pokémon */}
-            <div className="text-center mb-8">
-              <div className="inline-block bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-full text-sm font-bold mb-4 shadow-lg">
-                🔴 POKÉDEX LOGIN
-              </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                Connectez-vous, Dresseur !
-              </h2>
-              <p className="text-sm text-gray-600">
-                Accédez à votre <span className="text-blue-600 font-semibold">Pokédex</span> personnel
-              </p>
-            </div>
-
-            {/* Messages d'erreur avec style Pokémon */}
+            {/* ✅ Message d'erreur général style Game Boy */}
             {actionData?.errors?.general && (
-              <div className="bg-red-100 border-2 border-red-300 rounded-xl p-4 mb-6 relative">
+              <div className="pokemon-card-vintage bg-pokemon-red border-pokemon-red text-white p-4 animate-pokemon-blink">
                 <div className="flex items-center">
-                  <span className="text-2xl mr-3">⚠️</span>
-                  <p className="text-sm text-red-700 font-medium">{actionData.errors.general}</p>
+                  <span className="mr-2 text-lg">⚠️</span>
+                  <p className="font-pokemon text-xs uppercase">
+                    {actionData.errors.general}
+                  </p>
                 </div>
               </div>
             )}
 
-            <Form method="post" className="space-y-6">
-              {/* Input Email style Pokémon */}
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500">
-                  ✉️
+            {/* ✅ Inputs vintage */}
+            <div className="space-y-6">
+              <VintageInput
+                id="email"
+                name="email"
+                type="email"
+                label="Adresse Email"
+                placeholder="DRESSEUR@POKEMON.COM"
+                required
+                autoComplete="email"
+                defaultValue={defaultEmail}
+                icon="📧"
+              />
+              
+              {actionData?.errors?.email && (
+                <div className="text-pokemon-red font-pokemon text-xs uppercase">
+                  {actionData.errors.email}
                 </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  className="w-full pl-12 pr-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/90 backdrop-blur-sm transition-all duration-200 hover:border-blue-300"
-                  placeholder="Votre email de Dresseur"
-                />
-                {actionData?.errors && 'email' in actionData.errors && (
-                  <p className="mt-2 text-sm text-red-600 flex items-center">
-                    <span className="mr-1">🚫</span>
-                    {actionData.errors.email}
-                  </p>
-                )}
-              </div>
+              )}
 
-              {/* Input Password style Pokémon */}
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-red-500">
-                  🔐
+              <VintageInput
+                id="password"
+                name="password"
+                type="password"
+                label="Mot de Passe"
+                placeholder="MOT DE PASSE SECRET"
+                required
+                autoComplete="current-password"
+                icon="🔑"
+              />
+              
+              {actionData?.errors?.password && (
+                <div className="text-pokemon-red font-pokemon text-xs uppercase">
+                  {actionData.errors.password}
                 </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  className="w-full pl-12 pr-4 py-3 border-2 border-red-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white/90 backdrop-blur-sm transition-all duration-200 hover:border-red-300"
-                  placeholder="Mot de passe secret"
-                  style={{
-                    color: '#ef4444', // Texte rouge
-                    WebkitTextSecurity: 'disc',
-                  }}
-                />
-                {actionData?.errors && 'password' in actionData.errors && (
-                  <p className="mt-2 text-sm text-red-600 flex items-center">
-                    <span className="mr-1">🚫</span>
-                    {actionData.errors.password}
-                  </p>
-                )}
-              </div>
+              )}
+            </div>
 
-              {/* Bouton de connexion style Pokéball */}
-              <button
+            {/* ✅ Boutons vintage */}
+            <div className="space-y-4">
+              <VintageButton
                 type="submit"
+                variant="blue"
+                size="lg"
                 disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-4 px-6 rounded-xl font-bold text-lg shadow-lg transform transition-all duration-200 hover:scale-105 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none border-2 border-red-400"
+                className="w-full"
               >
                 {isSubmitting ? (
                   <span className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                    Connexion en cours...
+                    <span className="animate-spin mr-2">⚡</span>
+                    CONNEXION...
                   </span>
                 ) : (
-                  <span className="flex items-center justify-center">
-                    <span className="mr-2">⚡</span>
-                    Se connecter au Pokédex
-                    <span className="ml-2">⚡</span>
-                  </span>
+                  'SE CONNECTER'
                 )}
-              </button>
-
-              {/* Liens avec style Pokémon */}
-              <div className="text-center space-y-3">
-                <p className="text-sm text-gray-600">
-                  Nouveau Dresseur ?{' '}
-                  <Link
-                    to="/signup"
-                    className="font-bold text-blue-600 hover:text-blue-700 transition-colors duration-200 hover:underline"
-                  >
-                    Créer un compte 🎒
-                  </Link>
-                </p>
-                
-                <Link 
-                  to="/" 
-                  className="inline-flex items-center text-sm font-medium text-yellow-600 hover:text-yellow-700 transition-colors duration-200 hover:underline"
+              </VintageButton>
+              
+              <div className="flex space-x-3">
+                <VintageButton
+                  href="/dashboard/pokemon"
+                  variant="yellow"
+                  size="md"
+                  className="flex-1"
                 >
-                  <span className="mr-1">🏠</span>
-                  Retour au Centre Pokémon
-                </Link>
+                  POKEMON
+                </VintageButton>
+                
+                <VintageButton
+                  href="/dashboard/teams"
+                  variant="green"
+                  size="md"
+                  className="flex-1"
+                >
+                  EQUIPES
+                </VintageButton>
               </div>
+            </div>
+          </Form>
+        </VintageCard>
 
-              {/* Éléments décoratifs bottom */}
-              <div className="flex justify-center space-x-4 pt-4 border-t border-gray-200">
-                <span className="text-xl animate-bounce" style={{animationDelay: '0s'}}>⚡</span>
-                <span className="text-xl animate-bounce" style={{animationDelay: '0.1s'}}>🔥</span>
-                <span className="text-xl animate-bounce" style={{animationDelay: '0.2s'}}>💧</span>
-                <span className="text-xl animate-bounce" style={{animationDelay: '0.3s'}}>🌿</span>
-              </div>
-            </Form>
+        {/* ✅ Footer vintage */}
+        <div className="text-center">
+          <div className="font-pokemon text-xs text-pokemon-blue-dark space-y-2">
+            <div className="flex justify-center items-center space-x-4">
+              <span>🎯 BATTLE</span>
+              <span>⚡ POWER</span>
+              <span>🏆 VICTORY</span>
+            </div>
+            <div className="border-t-2 border-pokemon-blue-dark pt-2">
+              © 2024 POKEMON BATTLE VINTAGE
+            </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ✅ Error Boundary spécifique
+export function ErrorBoundary() {
+  return (
+    <div className="min-h-screen bg-pokemon-background flex items-center justify-center">
+      <VintageCard padding="lg" className="max-w-md w-full">
+        <VintageTitle level={2} className="text-pokemon-red text-center">
+          Erreur de Connexion
+        </VintageTitle>
+        <div className="mt-4 text-center">
+          <p className="font-pokemon text-xs text-pokemon-blue-dark mb-4">
+            QUELQUE CHOSE S'EST MAL PASSÉ...
+          </p>
+          <VintageButton href="/auth/login" variant="blue">
+            RÉESSAYER
+          </VintageButton>
+        </div>
+      </VintageCard>
     </div>
   );
 } 

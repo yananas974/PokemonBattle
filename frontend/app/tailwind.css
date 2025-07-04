@@ -399,3 +399,421 @@ input[type="range"]::-moz-range-thumb {
   border: 2px solid #ffffff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
+
+/* ✅ CLASSES POKEMON VINTAGE - STYLE GAME BOY */
+
+/* Couleurs Pokemon */
+:root {
+  --pokemon-blue-dark: #1e3a8a;
+  --pokemon-blue: #3b82f6;
+  --pokemon-blue-light: #93c5fd;
+  --pokemon-yellow: #fbbf24;
+  --pokemon-red: #ef4444;
+  --pokemon-green: #22c55e;
+  --pokemon-cream: #fef3c7;
+  --pokemon-gray: #9ca3af;
+  --pokemon-background: #e0f2fe;
+  --pokemon-screen: #1e293b;
+}
+
+/* Font Pokemon style Game Boy */
+.font-pokemon {
+  font-family: 'Courier New', 'monospace', serif;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+
+/* Background Pokemon */
+.bg-pokemon-background {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #e0f2fe 100%);
+  position: relative;
+}
+
+.bg-pokemon-screen {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(30, 41, 59, 0.1) 0px,
+    rgba(30, 41, 59, 0.1) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+/* Couleurs utilitaires */
+.bg-pokemon-cream { background-color: var(--pokemon-cream); }
+.bg-pokemon-blue { background-color: var(--pokemon-blue); }
+.bg-pokemon-blue-dark { background-color: var(--pokemon-blue-dark); }
+.bg-pokemon-blue-light { background-color: var(--pokemon-blue-light); }
+.bg-pokemon-yellow { background-color: var(--pokemon-yellow); }
+.bg-pokemon-red { background-color: var(--pokemon-red); }
+.bg-pokemon-green { background-color: var(--pokemon-green); }
+.bg-pokemon-gray { background-color: var(--pokemon-gray); }
+
+.text-pokemon-cream { color: var(--pokemon-cream); }
+.text-pokemon-blue { color: var(--pokemon-blue); }
+.text-pokemon-blue-dark { color: var(--pokemon-blue-dark); }
+.text-pokemon-yellow { color: var(--pokemon-yellow); }
+.text-pokemon-red { color: var(--pokemon-red); }
+.text-pokemon-green { color: var(--pokemon-green); }
+
+.border-pokemon-blue { border-color: var(--pokemon-blue); }
+.border-pokemon-blue-dark { border-color: var(--pokemon-blue-dark); }
+.border-pokemon-yellow { border-color: var(--pokemon-yellow); }
+.border-pokemon-red { border-color: var(--pokemon-red); }
+
+/* Cartes vintage Pokemon */
+.pokemon-card-vintage {
+  background: linear-gradient(145deg, #fef3c7 0%, #fed7aa 100%);
+  border: 4px solid var(--pokemon-blue-dark);
+  border-radius: 12px;
+  box-shadow: 
+    inset 2px 2px 4px rgba(255, 255, 255, 0.8),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.1),
+    4px 4px 12px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.pokemon-card-vintage::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.8) 50%, 
+    transparent 100%);
+}
+
+/* Boutons vintage Pokemon */
+.pokemon-btn-vintage {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 3px solid;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  position: relative;
+  box-shadow: 
+    inset 1px 1px 2px rgba(255, 255, 255, 0.8),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.2),
+    2px 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.pokemon-btn-vintage:hover {
+  transform: translateY(-1px);
+  box-shadow: 
+    inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.3),
+    3px 3px 8px rgba(0, 0, 0, 0.4);
+}
+
+.pokemon-btn-vintage:active {
+  transform: translateY(1px);
+  box-shadow: 
+    inset 2px 2px 4px rgba(0, 0, 0, 0.3),
+    1px 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Variantes de boutons */
+.pokemon-btn-blue {
+  background: linear-gradient(145deg, #3b82f6, #1e40af);
+  border-color: #1e3a8a;
+  color: white;
+}
+
+.pokemon-btn-red {
+  background: linear-gradient(145deg, #ef4444, #dc2626);
+  border-color: #b91c1c;
+  color: white;
+}
+
+.pokemon-btn-yellow {
+  background: linear-gradient(145deg, #fbbf24, #f59e0b);
+  border-color: #d97706;
+  color: #1f2937;
+}
+
+.pokemon-btn-green {
+  background: linear-gradient(145deg, #22c55e, #16a34a);
+  border-color: #15803d;
+  color: white;
+}
+
+.pokemon-btn-gray {
+  background: linear-gradient(145deg, #9ca3af, #6b7280);
+  border-color: #4b5563;
+  color: white;
+}
+
+/* Animations Pokemon */
+@keyframes pokemon-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
+@keyframes pokemon-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-pokemon-blink {
+  animation: pokemon-blink 1s ease-in-out infinite;
+}
+
+.animate-pokemon-bounce {
+  animation: pokemon-bounce 1s ease-in-out infinite;
+}
+
+/* Background vintage général */
+.pokemon-vintage-bg {
+  background: 
+    radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(251, 191, 36, 0.1) 0%, transparent 50%),
+    linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+}
+
+/* Effet pixelated pour les sprites */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* ✅ CLASSES POKEMON VINTAGE - STYLE GAME BOY */
+
+/* Couleurs Pokemon */
+:root {
+  --pokemon-blue-dark: #1e3a8a;
+  --pokemon-blue: #3b82f6;
+  --pokemon-blue-light: #93c5fd;
+  --pokemon-yellow: #fbbf24;
+  --pokemon-red: #ef4444;
+  --pokemon-green: #22c55e;
+  --pokemon-cream: #fef3c7;
+  --pokemon-gray: #9ca3af;
+  --pokemon-background: #e0f2fe;
+  --pokemon-screen: #1e293b;
+}
+
+/* Font Pokemon style Game Boy */
+.font-pokemon {
+  font-family: 'Courier New', 'monospace', serif;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+
+/* Background Pokemon */
+.bg-pokemon-background {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #e0f2fe 100%);
+  position: relative;
+}
+
+.bg-pokemon-screen {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(30, 41, 59, 0.1) 0px,
+    rgba(30, 41, 59, 0.1) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+/* Couleurs utilitaires */
+.bg-pokemon-cream { background-color: var(--pokemon-cream); }
+.bg-pokemon-blue { background-color: var(--pokemon-blue); }
+.bg-pokemon-blue-dark { background-color: var(--pokemon-blue-dark); }
+.bg-pokemon-blue-light { background-color: var(--pokemon-blue-light); }
+.bg-pokemon-yellow { background-color: var(--pokemon-yellow); }
+.bg-pokemon-red { background-color: var(--pokemon-red); }
+.bg-pokemon-green { background-color: var(--pokemon-green); }
+.bg-pokemon-gray { background-color: var(--pokemon-gray); }
+
+.text-pokemon-cream { color: var(--pokemon-cream); }
+.text-pokemon-blue { color: var(--pokemon-blue); }
+.text-pokemon-blue-dark { color: var(--pokemon-blue-dark); }
+.text-pokemon-yellow { color: var(--pokemon-yellow); }
+.text-pokemon-red { color: var(--pokemon-red); }
+.text-pokemon-green { color: var(--pokemon-green); }
+
+.border-pokemon-blue { border-color: var(--pokemon-blue); }
+.border-pokemon-blue-dark { border-color: var(--pokemon-blue-dark); }
+.border-pokemon-yellow { border-color: var(--pokemon-yellow); }
+.border-pokemon-red { border-color: var(--pokemon-red); }
+
+/* Cartes vintage Pokemon */
+.pokemon-card-vintage {
+  background: linear-gradient(145deg, #fef3c7 0%, #fed7aa 100%);
+  border: 4px solid var(--pokemon-blue-dark);
+  border-radius: 12px;
+  box-shadow: 
+    inset 2px 2px 4px rgba(255, 255, 255, 0.8),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.1),
+    4px 4px 12px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.pokemon-card-vintage::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.8) 50%, 
+    transparent 100%);
+}
+
+/* Boutons vintage Pokemon */
+.pokemon-btn-vintage {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 3px solid;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  position: relative;
+  box-shadow: 
+    inset 1px 1px 2px rgba(255, 255, 255, 0.8),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.2),
+    2px 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.pokemon-btn-vintage:hover {
+  transform: translateY(-1px);
+  box-shadow: 
+    inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.3),
+    3px 3px 8px rgba(0, 0, 0, 0.4);
+}
+
+.pokemon-btn-vintage:active {
+  transform: translateY(1px);
+  box-shadow: 
+    inset 2px 2px 4px rgba(0, 0, 0, 0.3),
+    1px 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Variantes de boutons */
+.pokemon-btn-blue {
+  background: linear-gradient(145deg, #3b82f6, #1e40af);
+  border-color: #1e3a8a;
+  color: white;
+}
+
+.pokemon-btn-red {
+  background: linear-gradient(145deg, #ef4444, #dc2626);
+  border-color: #b91c1c;
+  color: white;
+}
+
+.pokemon-btn-yellow {
+  background: linear-gradient(145deg, #fbbf24, #f59e0b);
+  border-color: #d97706;
+  color: #1f2937;
+}
+
+.pokemon-btn-green {
+  background: linear-gradient(145deg, #22c55e, #16a34a);
+  border-color: #15803d;
+  color: white;
+}
+
+.pokemon-btn-gray {
+  background: linear-gradient(145deg, #9ca3af, #6b7280);
+  border-color: #4b5563;
+  color: white;
+}
+
+/* Animations Pokemon */
+@keyframes pokemon-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
+@keyframes pokemon-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-pokemon-blink {
+  animation: pokemon-blink 1s ease-in-out infinite;
+}
+
+.animate-pokemon-bounce {
+  animation: pokemon-bounce 1s ease-in-out infinite;
+}
+
+/* Écrans LCD vintage */
+.pokemon-lcd-screen {
+  background: linear-gradient(145deg, #e2e8f0, #cbd5e1);
+  border: 2px solid var(--pokemon-blue-dark);
+  border-radius: 6px;
+  box-shadow: 
+    inset 1px 1px 3px rgba(0, 0, 0, 0.2),
+    1px 1px 3px rgba(255, 255, 255, 0.8);
+}
+
+.pokemon-screen-vintage {
+  background: radial-gradient(circle, #10b981 0%, #059669 100%);
+  border: 3px solid var(--pokemon-blue-dark);
+  border-radius: 8px;
+  box-shadow: 
+    inset 2px 2px 6px rgba(0, 0, 0, 0.4),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+.pokemon-screen-vintage::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.05) 2px,
+    rgba(0, 0, 0, 0.05) 4px
+  );
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* Stats vintage */
+.pokemon-stat-vintage {
+  background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
+  border: 1px solid var(--pokemon-blue);
+  border-radius: 4px;
+  padding: 8px;
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Font digital pour les stats */
+.font-digital {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Background vintage général */
+.pokemon-vintage-bg {
+  background: 
+    radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(251, 191, 36, 0.1) 0%, transparent 50%),
+    linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+}
+
+/* Effet pixelated pour les sprites */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}

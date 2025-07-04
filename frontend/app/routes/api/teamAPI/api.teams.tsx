@@ -1,18 +1,11 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
-import { getUserFromSession } from '~/sessions';
-import { apiCall, handleApiError } from '~/utils/api';
+import { apiCallWithRequest, apiCall, handleApiError } from '~/utils/api';
 
 // GET /api/teams - Récupérer les équipes
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user?.backendToken) {
-    throw new Response('Non authentifié', { status: 401 });
-  }
-  
   try {
-    const response = await apiCall('/api/teams', {}, user.backendToken);
+    const response = await apiCallWithRequest('/api/teams', request);
     await handleApiError(response);
     const data = await response.json();
     
@@ -36,12 +29,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 // POST /api/teams - Créer une équipe
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user?.backendToken) {
-    throw new Response('Non authentifié', { status: 401 });
-  }
-  
   if (request.method !== 'POST') {
     throw new Response('Méthode non supportée', { status: 405 });
   }
@@ -54,10 +41,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       throw new Error('Nom d\'équipe requis');
     }
     
-    const response = await apiCall('/api/teams/createTeam', {
+    const response = await apiCallWithRequest('/api/teams/createTeam', request, {
       method: 'POST',
       body: JSON.stringify({ teamName }),
-    }, user.backendToken);
+    });
     
     await handleApiError(response);
     const data = await response.json();

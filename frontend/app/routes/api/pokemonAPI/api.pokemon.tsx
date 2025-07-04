@@ -1,17 +1,14 @@
 import type { LoaderFunctionArgs } from '@remix-run/node';
 import { json } from '@remix-run/node';
-import { getUserFromSession } from '~/sessions';
-import { apiCall, handleApiError } from '~/utils/api';
+import { apiCallWithRequest, handleApiError } from '~/utils/api';
 import type { PokemonResponse } from '~/types/pokemon';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { user } = await getUserFromSession(request);
-  
   try {
     console.log('🔍 Resource Route: Récupération des Pokémon...');
     
-    // Appel au backend via votre API existante
-    const response = await apiCall('/api/pokemon/all', {}, user?.backendToken);
+    // ✅ Appel au backend avec token automatique
+    const response = await apiCallWithRequest('/api/pokemon/all', request);
     await handleApiError(response);
     const data = await response.json();
     
