@@ -152,7 +152,7 @@ export default function InteractiveBattlePage() {
 
   // Mettre à jour l'état du combat après une action
   useEffect(() => {
-    if (actionData?.success && actionData.battle) {
+    if (actionData?.success && 'battle' in actionData && actionData.battle) {
       setCurrentBattle(actionData.battle);
     }
   }, [actionData]);

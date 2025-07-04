@@ -58,7 +58,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs): Promise<R
     });
     
     // Importer et appeler directement le loader de notre Resource Route
-    const { loader: pokemonLoader } = await import('./api.pokemon');
+    const { loader: pokemonLoader } = await import('./api/pokemonAPI/api.pokemon');
     const pokemonResponse = await pokemonLoader({ request: pokemonRequest, params: {}, context: {} });
     
     // Vérifier que la réponse est bien une Response
@@ -79,7 +79,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs): Promise<R
     });
     
     // Importer et appeler directement le loader de la Resource Route teams
-    const { loader: teamsLoader } = await import('./api.teams');
+    const { loader: teamsLoader } = await import('./api/teamAPI/api.teams');
     const teamsResponse = await teamsLoader({ request: teamsRequest, params: {}, context: {} });
     
     // Vérifier que la réponse est bien une Response
@@ -199,8 +199,7 @@ export default function SelectPokemon() {
   // Filtrage des Pokémon
   const filteredPokemon = pokemon.filter(p => {
     const matchesSearch = !searchFilter || 
-      p.name_fr?.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      p.name_en?.toLowerCase().includes(searchFilter.toLowerCase());
+      p.nameFr?.toLowerCase().includes(searchFilter.toLowerCase())
     
     const matchesType = typeFilter === 'all' || p.type === typeFilter;
     
@@ -435,12 +434,12 @@ export default function SelectPokemon() {
                       <div className="text-center mb-3">
                         <img
                           src={poke.sprite_url || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png`}
-                          alt={poke.name_fr || poke.name_en}
+                          alt={poke.nameFr}
                           className="w-16 h-16 object-contain mx-auto mb-2"
                           style={{ imageRendering: 'pixelated' }}
                         />
                         <div className="font-pokemon text-sm text-pokemon-blue-dark uppercase mb-1">
-                          {poke.name_fr || poke.name_en}
+                          {poke.nameFr}
                         </div>
                         <div className="font-pokemon text-xs text-pokemon-blue">
                           #{poke.id.toString().padStart(3, '0')}
