@@ -2,31 +2,7 @@ import type { LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
 import { json, redirect } from '@remix-run/node';
 import { useLoaderData, Link } from '@remix-run/react';
 import { getUserFromSession } from '~/sessions';
-
-// Interface temporaire pour PokemonDetail
-interface PokemonDetail {
-  id: number;
-  name_fr: string;
-  name_en?: string;
-  type: string;
-  types: string[];
-  generation: number;
-  abilities: string[];
-  stats: {
-    hp: number;
-    attack: number;
-    defense: number;
-    special_attack: number;
-    special_defense: number;
-    speed: number;
-  };
-  description: string;
-  moves: string[];
-  height: number;
-  weight: number;
-  sprite_url: string;
-  back_sprite_url?: string;
-}
+import type { PokemonDetail } from '@pokemon-battle/shared';
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   if (!data?.pokemon) {
@@ -65,28 +41,20 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   }
 
   try {
-    console.log(`🔍 Dashboard Pokemon ${pokemonId} - Appel direct backend`);
-    console.log('🔑 Backend token:', user.token ? 'PRESENT' : 'MISSING');
+    console.log(`🔍 Dashboard Pokemon ${pokemonId} - Appel API`);
     
-    // Utiliser le nom du service Docker pour la communication inter-conteneurs
-    const backendUrl = 'http://backend:3001';
-      
-    const response = await fetch(`${backendUrl}/api/pokemon/${pokemonId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${user.token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    // ✅ Utiliser l'helper apiCall au lieu d'un fetch direct
+    const { apiCallWithRequest } = await import('~/utils/api');
+    const response = await apiCallWithRequest(`/api/pokemon/${pokemonId}`, request);
 
-    console.log(`📡 Backend response status: ${response.status}`);
+    console.log(`📡 API response status: ${response.status}`);
     
     if (!response.ok) {
-      console.error(`❌ Erreur backend Pokemon ${pokemonId}:`, response.status);
+      console.error(`❌ Erreur API Pokemon ${pokemonId}:`, response.status);
       if (response.status === 404) {
         throw new Response('Pokemon non trouvé', { status: 404 });
       }
-      throw new Error(`Backend error: ${response.status}`);
+      throw new Error(`API error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -130,16 +98,19 @@ export default function PokemonDetail() {
   const { pokemon } = useLoaderData<typeof loader>() as { pokemon: PokemonDetail; };
 
   const statNames: Record<string, string> = {
-    hp: 'PV',
-    attack: 'ATTAQUE',
-    defense: 'DEFENSE',
-    special_attack: 'ATT SPE',
-    special_defense: 'DEF SPE',
-    speed: 'VITESSE'
+    base_hp: 'PV',
+    base_attack: 'ATTAQUE',
+    base_defense: 'DEFENSE',
+    base_speed: 'VITESSE'
   };
 
-  // Vérifications de sécurité pour les stats
-  const safeStats = pokemon.stats || {};
+  // Adapter les stats aux données réelles du backend
+  const safeStats = {
+    base_hp: pokemon.base_hp || 0,
+    base_attack: pokemon.base_attack || 0,
+    base_defense: pokemon.base_defense || 0,
+    base_speed: pokemon.base_speed || 0
+  };
   const statsValues = Object.values(safeStats).map(v => Number(v) || 0);
   const maxStat = statsValues.length > 0 ? Math.max(...statsValues) : 100;
   const totalStats = statsValues.reduce((a: number, b: number) => a + b, 0);
@@ -191,29 +162,18 @@ export default function PokemonDetail() {
                 </div>
 
                 <div className="flex flex-wrap gap-1 justify-center md:justify-start mb-2">
-                  {(pokemon.types || []).map((type: string) => (
-                    <span 
-                      key={type}
-                      className={`px-2 py-1 font-pokemon text-xs rounded border-2 ${getTypeColorVintage(type)}`}
-                    >
-                      {type.toUpperCase()}
-                    </span>
-                  ))}
+                  <span 
+                    className={`px-2 py-1 font-pokemon text-xs rounded border-2 ${getTypeColorVintage(pokemon.type)}`}
+                  >
+                    {pokemon.type.toUpperCase()}
+                  </span>
                 </div>
-
-                {pokemon.description && (
-                  <div className="pokemon-text-box">
-                    <p className="font-pokemon text-xs uppercase leading-tight">
-                      {pokemon.description.substring(0, 100)}...
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           </div>
 
           {/* Informations physiques vintage - compactes */}
-          <div className="p-3 grid grid-cols-4 gap-2 bg-cream-100">
+          <div className="p-3 grid grid-cols-3 gap-2 bg-cream-100">
             <div className="pokemon-stat-vintage text-center">
               <div className="font-digital text-lg text-blue-600">{pokemon.height}M</div>
               <div className="font-pokemon text-xs text-gray-700">TAILLE</div>
@@ -223,12 +183,8 @@ export default function PokemonDetail() {
               <div className="font-pokemon text-xs text-gray-700">POIDS</div>
             </div>
             <div className="pokemon-stat-vintage text-center">
-              <div className="font-digital text-lg text-purple-600">G{pokemon.generation}</div>
-              <div className="font-pokemon text-xs text-gray-700">GEN</div>
-            </div>
-            <div className="pokemon-stat-vintage text-center">
-              <div className="font-digital text-lg text-red-600 animate-pokemon-blink">{(pokemon.abilities || []).length}</div>
-              <div className="font-pokemon text-xs text-gray-700">TALENTS</div>
+              <div className="font-digital text-lg text-red-600 animate-pokemon-blink">{pokemon.id}</div>
+              <div className="font-pokemon text-xs text-gray-700">ID</div>
             </div>
           </div>
         </div>
@@ -272,63 +228,38 @@ export default function PokemonDetail() {
               </div>
             </div>
 
-            {/* Talents et attaques vintage - compacts */}
+            {/* Actions et infos supplémentaires vintage - compacts */}
             <div className="space-y-3 h-full flex flex-col">
-              {/* Talents - compacts */}
+              {/* Informations supplémentaires */}
               <div className="pokemon-card-vintage flex-1">
                 <div className="p-3 h-full">
                   <h2 className="font-pokemon text-sm text-gray-700 mb-2 uppercase flex items-center space-x-2">
-                    <span>✨</span>
-                    <span>TALENTS</span>
+                    <span>ℹ️</span>
+                    <span>INFORMATIONS</span>
                   </h2>
                   
-                  <div className="space-y-1">
-                    {(pokemon.abilities || []).slice(0, 3).map((ability: string, index: number) => (
-                      <div key={index} className="pokemon-ability-vintage">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-blue-500 border-2 border-blue-700" />
-                          <span className="font-pokemon text-xs text-gray-800 uppercase">
-                            {ability.replace('-', ' ')}
-                          </span>
-                        </div>
+                  <div className="space-y-2">
+                    <div className="pokemon-ability-vintage">
+                      <div className="flex items-center justify-between">
+                        <span className="font-pokemon text-xs text-gray-700">TYPE:</span>
+                        <span className="font-pokemon text-xs text-gray-800 uppercase">{pokemon.type}</span>
                       </div>
-                    ))}
+                    </div>
+                    <div className="pokemon-ability-vintage">
+                      <div className="flex items-center justify-between">
+                        <span className="font-pokemon text-xs text-gray-700">TAILLE:</span>
+                        <span className="font-pokemon text-xs text-gray-800">{pokemon.height}M</span>
+                      </div>
+                    </div>
+                    <div className="pokemon-ability-vintage">
+                      <div className="flex items-center justify-between">
+                        <span className="font-pokemon text-xs text-gray-700">POIDS:</span>
+                        <span className="font-pokemon text-xs text-gray-800">{pokemon.weight}KG</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Attaques - compactes */}
-              {pokemon.moves && pokemon.moves.length > 0 && (
-                <div className="pokemon-card-vintage flex-1">
-                  <div className="p-3 h-full">
-                    <h2 className="font-pokemon text-sm text-gray-700 mb-2 uppercase flex items-center space-x-2">
-                      <span>⚔️</span>
-                      <span>ATTAQUES</span>
-                    </h2>
-                    
-                    <div className="grid grid-cols-1 gap-1">
-                      {pokemon.moves.slice(0, 4).map((move: string, index: number) => (
-                        <div 
-                          key={index}
-                          className="pokemon-ability-vintage bg-gray-100 border border-gray-300 rounded p-1"
-                        >
-                          <span className="font-pokemon text-xs uppercase text-gray-800">
-                            {move.replace('-', ' ').substring(0, 15)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {pokemon.moves.length > 4 && (
-                      <div className="mt-1 text-center">
-                        <span className="font-pokemon text-xs text-gray-600 uppercase">
-                          +{pokemon.moves.length - 4} AUTRES
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
               {/* Actions vintage - compactes */}
               <div className="pokemon-card-vintage flex-shrink-0">

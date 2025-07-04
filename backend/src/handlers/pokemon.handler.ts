@@ -53,7 +53,7 @@ export const getPokemonByIdHandler = asyncHandler(async (c: Context) => {
     success: true,
     pokemon: {
       id: p.pokeapi_id,
-      nameFr: p.name,
+      name_fr: p.name,
       sprite_url: p.sprite_url,
       type: p.type,
       base_hp: p.base_hp,
