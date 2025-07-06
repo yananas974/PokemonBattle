@@ -47,6 +47,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       
       if (battleResponse.success && battleResponse.battle) {
         return json({
+          user,
           battle: battleResponse.battle,
           error: null,
           mode: 'existing' as const
@@ -57,6 +58,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Sinon, vérifier qu'on a les IDs des équipes pour créer un nouveau combat
     if (!playerTeamId || !enemyTeamId) {
       return json({
+        user,
         battle: null,
         error: 'IDs des équipes manquants pour créer un nouveau combat',
         mode: 'error' as const
@@ -70,6 +72,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     
     if (!playerTeam) {
       return json({
+        user,
         battle: null,
         error: 'Équipe du joueur introuvable',
         mode: 'error' as const
@@ -78,6 +81,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     if (!enemyTeam) {
       return json({
+        user,
         battle: null,
         error: 'Équipe ennemie introuvable',
         mode: 'error' as const
@@ -92,6 +96,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     if (initResponse.success && initResponse.battle) {
       return json({
+        user,
         battle: initResponse.battle,
         error: null,
         mode: 'new' as const,
@@ -101,6 +106,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     return json({
+      user,
       battle: null,
       error: initResponse.error || 'Erreur lors de l\'initialisation du combat',
       mode: 'error' as const
@@ -109,6 +115,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   } catch (error) {
     console.error('Erreur loader combat interactif:', error);
     return json({
+      user,
       battle: null,
       error: error instanceof Error ? error.message : 'Erreur de chargement',
       mode: 'error' as const
@@ -166,6 +173,7 @@ export default function InteractiveBattlePage() {
   const [currentBattle, setCurrentBattle] = useState<BattleState | null>(loaderData.battle);
   const [showMoveSelector, setShowMoveSelector] = useState(false);
   const [selectedMove, setSelectedMove] = useState<any>(null);
+  const [hackAnswer, setHackAnswer] = useState('');
 
   // Mettre à jour l'état du combat après une action
   useEffect(() => {
@@ -214,6 +222,42 @@ export default function InteractiveBattlePage() {
   // Calculer le pourcentage de HP
   const getHpPercentage = (current: number, max: number): number => {
     return Math.max(0, Math.min(100, (current / max) * 100));
+  };
+
+  // Gérer le hack
+  const handleHackSubmit = async (answer = hackAnswer) => {
+    if (!currentBattle || !currentBattle.hackChallenge) return;
+
+    const token = loaderData.user?.backendToken;
+
+    try {
+      const response = await fetch('/api/interactive-battle/solve-hack', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          battleId: currentBattle.battleId,
+          answer: answer.trim(),
+          token
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.battleState) {
+        setCurrentBattle(result.battle);
+      }
+      
+      // Afficher le message de résultat
+      alert(result.message);
+      setHackAnswer('');
+      
+    } catch (error) {
+      console.error('Erreur hack:', error);
+      alert('Erreur lors de la soumission du hack');
+    }
   };
 
   // Affichage d'erreur
@@ -338,14 +382,16 @@ export default function InteractiveBattlePage() {
           {/* Pokémon joueur (en bas à gauche) */}
           {currentBattle.playerPokemon && (
             <div className="absolute bottom-4 left-8">
-              {/* Sprite joueur (back) */}
+              {/* Sprite joueur (back) - PLUS GROS */}
               <div className="flex justify-center mb-2">
                 <img 
-                  src={currentBattle.playerPokemon.sprite_back_url || currentBattle.playerPokemon.sprite_url || '/placeholder-pokemon.png'} 
+                  src={
+                    currentBattle.playerPokemon.sprite_url
+                      ? currentBattle.playerPokemon.sprite_url.replace('pokemon/', 'pokemon/back/')
+                      : '/placeholder-pokemon.png'
+                  } 
                   alt={currentBattle.playerPokemon.name_fr || 'Votre Pokémon'}
-                  className={`w-24 h-24 pixelated ${
-                    isLoading && currentBattle.currentTurn === 'player' ? 'animate-bounce' : ''
-                  }`}
+                  className="w-32 h-32 pixelated"
                 />
               </div>
               
@@ -506,7 +552,7 @@ export default function InteractiveBattlePage() {
               <div className="text-center py-8">
                 {isLoading ? (
                   <div className="space-y-4">
-                    <div className="text-4xl animate-spin">⚡</div>
+                    <div className="text-4xl">⚡</div>
                     <p className="font-pokemon text-pokemon-blue text-sm">
                       COMBAT EN COURS...
                     </p>
@@ -562,6 +608,97 @@ export default function InteractiveBattlePage() {
             message={actionData.error}
             icon="⚠️"
           />
+        </VintageCard>
+      )}
+
+      {/* ✅ NOUVEAU : Interface de Hack Challenge */}
+      {currentBattle.isHackActive && currentBattle.hackChallenge && (
+        <VintageCard variant="highlighted" className="border-4 border-red-500">
+          <VintageTitle level={2}>
+            🚨 ALERTE SÉCURITÉ - DÉFI DE HACK !
+          </VintageTitle>
+          
+          <div className="space-y-4">
+            <div className="bg-red-100 border-l-4 border-red-500 p-4 rounded">
+              <p className="font-pokemon text-red-700 text-sm font-bold">
+                🔒 VOTRE SYSTÈME A ÉTÉ COMPROMIS ! RÉSOLVEZ CE DÉFI IMMÉDIATEMENT :
+              </p>
+            </div>
+            
+            <div className="bg-pokemon-cream p-4 rounded border-2 border-pokemon-blue">
+              <div className="grid grid-cols-2 gap-4 mb-3">
+                <div className="text-center">
+                  <span className="font-pokemon text-pokemon-blue-dark text-sm block">
+                    DIFFICULTÉ
+                  </span>
+                  <span className="font-pokemon text-red-600 text-lg font-bold">
+                    {currentBattle.hackChallenge.difficulty.toUpperCase()}
+                  </span>
+                </div>
+                <div className="text-center">
+                  <span className="font-pokemon text-pokemon-blue-dark text-sm block">
+                    TEMPS RESTANT
+                  </span>
+                  <span className="font-pokemon text-red-600 text-xl font-bold">
+                    ⏰ {currentBattle.hackChallenge.time_limit}s
+                  </span>
+                </div>
+              </div>
+              
+              <div className="mb-3">
+                <p className="font-pokemon text-pokemon-blue text-xs mb-2">
+                  CODE CHIFFRÉ :
+                </p>
+                <div className="bg-black text-green-400 p-3 rounded font-mono text-lg text-center">
+                  {currentBattle.hackChallenge.encrypted_code}
+                </div>
+              </div>
+              
+              <div className="mb-4">
+                <p className="font-pokemon text-pokemon-blue text-xs">
+                  INDICE : {currentBattle.hackChallenge.explanation}
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="ENTREZ VOTRE RÉPONSE..."
+                  className="w-full p-3 border-2 border-pokemon-blue rounded font-pokemon text-pokemon-blue-dark uppercase text-center"
+                  value={hackAnswer}
+                  onChange={(e) => setHackAnswer(e.target.value.toUpperCase())}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && hackAnswer.trim()) {
+                      handleHackSubmit();
+                    }
+                  }}
+                  disabled={isLoading}
+                />
+                
+                <div className="flex space-x-2">
+                  <VintageButton
+                    variant="red"
+                    className="flex-1"
+                    onClick={handleHackSubmit}
+                    disabled={!hackAnswer.trim() || isLoading}
+                  >
+                    🔓 DÉCRYPTER
+                  </VintageButton>
+                  
+                  <VintageButton
+                    variant="gray"
+                    onClick={() => {
+                      // Abandon du hack = pénalité
+                      handleHackSubmit('ABANDON');
+                    }}
+                    disabled={isLoading}
+                  >
+                    💀 ABANDONNER
+                  </VintageButton>
+                </div>
+              </div>
+            </div>
+          </div>
         </VintageCard>
       )}
     </div>

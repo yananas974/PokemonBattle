@@ -199,7 +199,7 @@ export default function DashboardIndex() {
       <VintageCard>
         <div className="flex items-center justify-between">
           <div>
-            <VintageTitle level={1} animated>
+            <VintageTitle level={1}>
               SALUT, {user.username?.toUpperCase()} ! ⚡
             </VintageTitle>
             <p className="font-pokemon text-xs text-pokemon-blue">
@@ -207,7 +207,7 @@ export default function DashboardIndex() {
             </p>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="text-5xl animate-pokemon-bounce">
+            <div className="text-5xl">
               🎮
             </div>
             {/* Bouton de déconnexion vintage */}
@@ -222,7 +222,7 @@ export default function DashboardIndex() {
               >
                 {isLoggingOut ? (
                   <>
-                    <span className="animate-pokemon-blink">⏳</span>
+                    <span>⏳</span>
                     <span>DECONNEXION...</span>
                   </>
                 ) : (

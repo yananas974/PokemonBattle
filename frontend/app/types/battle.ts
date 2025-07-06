@@ -42,6 +42,15 @@ export interface BattleState {
   isFinished: boolean;
   winner?: 'player' | 'enemy' | 'draw';
   turnCount: number;
+  isHackActive?: boolean;
+  hackChallenge?: {
+    id: string;
+    encrypted_code: string;
+    algorithm: string;
+    difficulty: string;
+    explanation: string;
+    time_limit: number;
+  } | null;
 }
 
 export interface BattleAction {

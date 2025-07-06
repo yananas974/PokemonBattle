@@ -44,9 +44,9 @@ export default function DashboardLayout() {
             {/* Logo/Titre vintage */}
             <Link 
               to="/dashboard" 
-              className="flex items-center space-x-3 text-pokemon-yellow font-pokemon text-sm hover:text-pokemon-cream transition-colors"
+              className="flex items-center space-x-3 text-pokemon-yellow font-pokemon text-sm hover:text-pokemon-cream"
             >
-              <span className="text-2xl animate-pokemon-bounce">⚡</span>
+              <span className="text-2xl">⚡</span>
               <span className="hidden sm:inline uppercase tracking-wider">POKEMON BATTLE</span>
             </Link>
 
@@ -55,7 +55,7 @@ export default function DashboardLayout() {
               {/* Profile Avatar vintage */}
               <Link
                 to="/dashboard/profile"
-                className="flex items-center space-x-2 pokemon-nav-item rounded-lg px-2 py-1 transition-all duration-200"
+                className="flex items-center space-x-2 pokemon-nav-item rounded-lg px-2 py-1"
               >
                 <div className="w-8 h-8 bg-pokemon-blue rounded-lg flex items-center justify-center text-pokemon-yellow text-sm font-pokemon border-2 border-pokemon-blue-dark">
                   {user.username?.charAt(0).toUpperCase() || 'U'}

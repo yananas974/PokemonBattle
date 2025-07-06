@@ -2,6 +2,7 @@ import { TurnBasedBattleService, type TurnBasedBattleState, type BattlePokemon, 
 import { PokemonMoveService } from '../pokemonMoveService/pokemonMoveService.js';
 import { serviceWrapper } from '../../utils/asyncWrapper.js';
 import { ValidationError, NotFoundError } from '../../models/errors.js';
+import { HackChallengeService, type HackChallenge } from '../hackService/hackChallengeService.js';
 
 export interface InteractiveBattleState extends TurnBasedBattleState {
   isPlayerTurn: boolean;
@@ -10,6 +11,9 @@ export interface InteractiveBattleState extends TurnBasedBattleState {
   battleId: string;
   weatherTurns: number;
   timeBonus: number;
+  hackChallenge?: HackChallenge | null;
+  isHackActive: boolean;
+  hackStartTime?: number;
 }
 
 export interface PlayerMoveRequest {
@@ -96,7 +100,9 @@ export class InteractiveBattleService {
         weatherEffects,
         weatherTurns: 0,
         timeBonus,
-        winner: null
+        winner: null,
+        hackChallenge: null,
+        isHackActive: false
       };
       
       // Stocker le combat
@@ -170,9 +176,13 @@ export class InteractiveBattleService {
       // Vérifier le vainqueur
       this.checkWinner(newState);
       
-      // Préparer le prochain tour
-      if (!newState.winner) {
+      // ✅ CORRECTION : Vérifier si un hack doit être déclenché SEULEMENT pendant le tour du joueur
+      if (!newState.winner && !newState.isHackActive && newState.isPlayerTurn && this.shouldTriggerHack()) {
+        await this.triggerHackChallenge(newState);
+      } else if (!newState.winner && !newState.isHackActive) {
+        // Préparer le prochain tour normalement
         newState.turn++;
+        newState.isPlayerTurn = true; // ✅ NOUVEAU : S'assurer que c'est le tour du joueur
         newState.waitingForPlayerMove = true;
         
         // Mettre à jour les attaques disponibles si le Pokémon a changé
@@ -180,10 +190,6 @@ export class InteractiveBattleService {
         if (currentPlayerPokemon) {
           newState.availableMoves = await PokemonMoveService.getPokemonMoves(currentPlayerPokemon.pokemon_id);
         }
-      } else {
-        newState.waitingForPlayerMove = false;
-        newState.phase = 'finished';
-        newState.battlePhase = 'end_turn'; // ✅ Add battlePhase
       }
       
       // Sauvegarder l'état
@@ -373,5 +379,184 @@ export class InteractiveBattleService {
     });
 
     console.log(`🔄 ${preparedPokemon.name_fr} entre en combat pour l'équipe ${team}`);
+  }
+
+  /**
+   * 🎲 Vérifier si un hack doit être déclenché (probabilité)
+   */
+  private static shouldTriggerHack(): boolean {
+    const hackProbability = 0.15; // 15% de chance par tour
+    return Math.random() < hackProbability;
+  }
+
+  /**
+   * 🚨 Déclencher un défi de hack
+   */
+  private static async triggerHackChallenge(battleState: InteractiveBattleState): Promise<void> {
+    try {
+      const challenge = await HackChallengeService.generateRandomChallenge();
+      if (challenge) {
+        battleState.hackChallenge = challenge;
+        battleState.isHackActive = true;
+        battleState.hackStartTime = Date.now();
+        // ✅ CORRECTION : Garder waitingForPlayerMove = true pour que l'interface fonctionne
+        battleState.waitingForPlayerMove = true;
+        // ✅ NOUVEAU : S'assurer que c'est le tour du joueur
+        battleState.isPlayerTurn = true;
+        
+        battleState.battleLog.push({
+          turn: battleState.turn,
+          phase: 'move_execution',
+          attacker: battleState.currentTeam1Pokemon!,
+          defender: battleState.currentTeam1Pokemon!,
+          move: { name: 'Hack', type: 'Normal', power: 0, accuracy: 100, pp: 0, category: 'status', criticalHitRatio: 0, description: 'Défi de hack' },
+          damage: 0,
+          isCritical: false,
+          typeEffectiveness: 1,
+          stab: false,
+          weatherBonus: 1,
+          accuracy: true,
+          description: `🚨 ALERTE HACK ! ${challenge.explanation}`,
+          remainingHP: battleState.currentTeam1Pokemon!.current_hp,
+          isKO: false
+        });
+        
+        console.log(`🚨 Hack déclenché pendant le tour du joueur: ${challenge.algorithm} - Solution: ${challenge.solution}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors du déclenchement du hack:', error);
+    }
+  }
+
+  /**
+   * 🎯 Résoudre un défi de hack
+   */
+  static async solveHackChallenge(
+    battleId: string, 
+    answer: string
+  ): Promise<{ success: boolean; message: string; battleState?: InteractiveBattleState }> {
+    
+    return serviceWrapper(async () => {
+      const battleState = this.activeBattles.get(battleId);
+      if (!battleState) {
+        throw new NotFoundError('Combat non trouvé');
+      }
+      
+      if (!battleState.isHackActive || !battleState.hackChallenge) {
+        throw new ValidationError('Aucun défi de hack actif');
+      }
+      
+      // Vérifier le temps limite
+      const timeElapsed = (Date.now() - (battleState.hackStartTime || 0)) / 1000;
+      if (timeElapsed > battleState.hackChallenge.time_limit) {
+        // Temps écoulé - penalité
+        await this.applyHackPenalty(battleState);
+        return {
+          success: false,
+          message: `⏰ Temps écoulé ! Votre Pokémon perd 20% de ses HP.`,
+          battleState
+        };
+      }
+      
+      // Vérifier la réponse
+      const isCorrect = HackChallengeService.verifyAnswer(battleState.hackChallenge, answer);
+      
+      if (isCorrect) {
+        // Succès - bonus
+        await this.applyHackBonus(battleState);
+        return {
+          success: true,
+          message: `🎉 Hack résolu ! Votre Pokémon gagne +15% d'attaque pour ce combat !`,
+          battleState
+        };
+      } else {
+        return {
+          success: false,
+          message: `❌ Réponse incorrecte ! Temps restant: ${Math.round(battleState.hackChallenge.time_limit - timeElapsed)}s`
+        };
+      }
+    });
+  }
+
+  /**
+   * 🎁 Appliquer bonus hack (réponse correcte)
+   */
+  private static async applyHackBonus(battleState: InteractiveBattleState): Promise<void> {
+    if (battleState.currentTeam1Pokemon) {
+      // +15% d'attaque temporaire
+      battleState.currentTeam1Pokemon.effective_attack = Math.floor(
+        battleState.currentTeam1Pokemon.effective_attack * 1.15
+      );
+      
+      battleState.battleLog.push({
+        turn: battleState.turn,
+        phase: 'move_execution',
+        attacker: battleState.currentTeam1Pokemon,
+        defender: battleState.currentTeam1Pokemon,
+        move: { name: 'Hack Bonus', type: 'Normal', power: 0, accuracy: 100, pp: 0, category: 'status', criticalHitRatio: 0, description: 'Bonus de hack' },
+        damage: 0,
+        isCritical: false,
+        typeEffectiveness: 1,
+        stab: false,
+        weatherBonus: 1,
+        accuracy: true,
+        description: `✨ ${battleState.currentTeam1Pokemon.name_fr} gagne un bonus d'attaque grâce au hack !`,
+        remainingHP: battleState.currentTeam1Pokemon.current_hp,
+        isKO: false
+      });
+    }
+    
+    // ✅ CORRECTION : Réactiver le combat en mode joueur
+    battleState.isHackActive = false;
+    battleState.hackChallenge = null;
+    battleState.hackStartTime = undefined;
+    battleState.waitingForPlayerMove = true;
+    battleState.isPlayerTurn = true; // ✅ NOUVEAU : S'assurer que c'est le tour du joueur
+  }
+
+  /**
+   * 💀 Appliquer pénalité hack (échec/temps écoulé)
+   */
+  private static async applyHackPenalty(battleState: InteractiveBattleState): Promise<void> {
+    if (battleState.currentTeam1Pokemon) {
+      // -20% des HP actuels
+      const penalty = Math.floor(battleState.currentTeam1Pokemon.current_hp * 0.2);
+      battleState.currentTeam1Pokemon.current_hp = Math.max(1, battleState.currentTeam1Pokemon.current_hp - penalty);
+      
+      battleState.battleLog.push({
+        turn: battleState.turn,
+        phase: 'move_execution',
+        attacker: battleState.currentTeam1Pokemon,
+        defender: battleState.currentTeam1Pokemon,
+        move: { name: 'Hack Penalty', type: 'Normal', power: 0, accuracy: 100, pp: 0, category: 'status', criticalHitRatio: 0, description: 'Pénalité de hack' },
+        damage: penalty,
+        isCritical: false,
+        typeEffectiveness: 1,
+        stab: false,
+        weatherBonus: 1,
+        accuracy: true,
+        description: `💀 ${battleState.currentTeam1Pokemon.name_fr} subit une pénalité de hack (-${penalty} HP) !`,
+        remainingHP: battleState.currentTeam1Pokemon.current_hp,
+        isKO: battleState.currentTeam1Pokemon.current_hp <= 0
+      });
+      
+      // Vérifier si KO par pénalité
+      if (battleState.currentTeam1Pokemon.current_hp <= 0) {
+        battleState.currentTeam1Pokemon.is_ko = true;
+        const teamPokemon = battleState.team1Pokemon;
+        const pokemonInTeam = teamPokemon.find(p => p.pokemon_id === battleState.currentTeam1Pokemon!.pokemon_id);
+        if (pokemonInTeam) {
+          pokemonInTeam.is_ko = true;
+        }
+        await this.switchToNextPokemon(battleState, 'team1');
+      }
+    }
+    
+    // ✅ CORRECTION : Réactiver le combat en mode joueur
+    battleState.isHackActive = false;
+    battleState.hackChallenge = null;
+    battleState.hackStartTime = undefined;
+    battleState.waitingForPlayerMove = true;
+    battleState.isPlayerTurn = true; // ✅ NOUVEAU : S'assurer que c'est le tour du joueur
   }
 } 

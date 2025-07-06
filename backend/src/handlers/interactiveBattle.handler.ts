@@ -120,12 +120,14 @@ export const initInteractiveBattleHandler = asyncHandler(async (c: Context) => {
         currentHp: battleState.currentTeam2Pokemon.current_hp ?? 100,
         maxHp: battleState.currentTeam2Pokemon.base_hp ?? 100,
       } : null,
-      currentTurn: battleState.isPlayerTurn ? 'player' : 'enemy',
+      currentTurn: battleState.isHackActive ? 'hack' : (battleState.isPlayerTurn ? 'player' : 'enemy'),
       battleLog: battleState.battleLog || ['Combat commencé !'],
       weather: weatherEffects,
       isFinished: !!battleState.winner,
       winner: battleState.winner,
-      turnCount: battleState.turn || 1
+      turnCount: battleState.turn || 1,
+      hackChallenge: battleState.hackChallenge || null,
+      isHackActive: battleState.isHackActive || false
     }
   });
 });
@@ -175,14 +177,16 @@ export const executePlayerMoveHandler = asyncHandler(async (c: Context) => {
         currentHp: battleState.currentTeam2Pokemon.current_hp,
         maxHp: battleState.currentTeam2Pokemon.max_hp || battleState.currentTeam2Pokemon.base_hp,
       } : null,
-      currentTurn: battleState.isPlayerTurn ? 'player' : 'enemy',
+      currentTurn: battleState.isHackActive ? 'hack' : (battleState.isPlayerTurn ? 'player' : 'enemy'),
       battleLog: battleState.battleLog || [],
       weather: battleState.weatherEffects,
       isFinished: !!battleState.winner,
       winner: battleState.winner === 'team1' ? 'player' : 
              battleState.winner === 'team2' ? 'enemy' : 
              battleState.winner,
-      turnCount: battleState.turn || 1
+      turnCount: battleState.turn || 1,
+      hackChallenge: battleState.hackChallenge,
+      isHackActive: battleState.isHackActive
     }
   });
 });
@@ -262,4 +266,59 @@ export const forfeitBattleHandler = asyncHandler(async (c: Context) => {
     success: true,
     message: 'Combat abandonné'
   });
+});
+
+export const solveHackChallengeHandler = asyncHandler(async (c: Context) => {
+  const body = await c.req.json();
+  const { battleId, answer, token } = body;
+  
+  // Authentification manuelle
+  if (token) {
+    const payload = jwt.verify(token, process.env.JWT_SECRET!) as { sub: string };
+    const user = await getUserById(Number(payload.sub));
+    if (!user) {
+      throw new UnauthorizedError('Invalid token');
+    }
+    c.set('user', user);
+  }
+  
+  const user = c.get('user');
+  if (!user) {
+    throw new UnauthorizedError('User not authenticated');
+  }
+
+  const result = await InteractiveBattleService.solveHackChallenge(battleId, answer);
+  
+  if (result.battleState) {
+    // Retourner l'état mis à jour
+    return c.json({
+      ...result,
+      battle: {
+        battleId: result.battleState.battleId,
+        playerPokemon: result.battleState.currentTeam1Pokemon ? {
+          ...result.battleState.currentTeam1Pokemon,
+          currentHp: result.battleState.currentTeam1Pokemon.current_hp,
+          maxHp: result.battleState.currentTeam1Pokemon.max_hp || result.battleState.currentTeam1Pokemon.base_hp,
+          moves: result.battleState.availableMoves
+        } : null,
+        enemyPokemon: result.battleState.currentTeam2Pokemon ? {
+          ...result.battleState.currentTeam2Pokemon,
+          currentHp: result.battleState.currentTeam2Pokemon.current_hp,
+          maxHp: result.battleState.currentTeam2Pokemon.max_hp || result.battleState.currentTeam2Pokemon.base_hp,
+        } : null,
+        currentTurn: result.battleState.isHackActive ? 'hack' : (result.battleState.isPlayerTurn ? 'player' : 'enemy'),
+        battleLog: result.battleState.battleLog || [],
+        weather: result.battleState.weatherEffects,
+        isFinished: !!result.battleState.winner,
+        winner: result.battleState.winner === 'team1' ? 'player' : 
+               result.battleState.winner === 'team2' ? 'enemy' : 
+               result.battleState.winner,
+        turnCount: result.battleState.turn || 1,
+        hackChallenge: result.battleState.hackChallenge,
+        isHackActive: result.battleState.isHackActive
+      }
+    });
+  }
+  
+  return c.json(result);
 }); 
