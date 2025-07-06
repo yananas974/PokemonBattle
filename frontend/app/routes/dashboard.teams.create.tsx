@@ -110,18 +110,7 @@ export default function TeamsCreate() {
           </div>
         </nav>
 
-        {/* Header vintage avec titre */}
-        <div className="pokemon-card-vintage">
-          <div className="p-6">
-            <h1 className="font-pokemon text-2xl text-gray-700 mb-3 uppercase tracking-wide flex items-center space-x-3">
-              <span className="text-3xl pokemon-blink">➕</span>
-              <span>CREER UNE NOUVELLE EQUIPE</span>
-            </h1>
-            <p className="text-gray-600 text-sm">
-              ASSEMBLEZ VOTRE EQUIPE DE REVE POUR DOMINER LES COMBATS POKEMON !
-            </p>
-          </div>
-        </div>
+      
 
         {/* Messages d'état vintage */}
         {actionData?.error && (
@@ -241,46 +230,6 @@ export default function TeamsCreate() {
                 </Link>
               </div>
             </Form>
-          </div>
-        </div>
-
-        {/* Étapes suivantes */}
-        <div className="pokemon-card-vintage">
-          <div className="p-5">
-            <h3 className="font-pokemon text-lg text-gray-700 mb-4 uppercase">
-              🗺️ ETAPES SUIVANTES
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="pokemon-lcd-screen p-4 text-center">
-                <div className="text-2xl mb-2">1️⃣</div>
-                <h4 className="font-pokemon text-xs text-gray-700 mb-2 uppercase">
-                  CREER L'EQUIPE
-                </h4>
-                <p className="text-xs text-gray-600">
-                  Donnez un nom à votre équipe
-                </p>
-              </div>
-              
-              <div className="pokemon-lcd-screen p-4 text-center opacity-60">
-                <div className="text-2xl mb-2">2️⃣</div>
-                <h4 className="font-pokemon text-xs text-gray-700 mb-2 uppercase">
-                  AJOUTER POKEMON
-                </h4>
-                <p className="text-xs text-gray-600">
-                  Sélectionnez vos Pokémon
-                </p>
-              </div>
-              
-              <div className="pokemon-lcd-screen p-4 text-center opacity-60">
-                <div className="text-2xl mb-2">3️⃣</div>
-                <h4 className="font-pokemon text-xs text-gray-700 mb-2 uppercase">
-                  COMBATTRE
-                </h4>
-                <p className="text-xs text-gray-600">
-                  Lancez-vous dans l'arène !
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
