@@ -270,7 +270,7 @@ export default function FriendTeams() {
         </VintageTitle>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <VintageButton 
-            href={`/battle/interactive?friendId=${friendId}`} 
+            href={`/dashboard/battle/interactive?friendId=${friendId}`}
             variant="red"
             className="flex items-center justify-center space-x-2"
           >

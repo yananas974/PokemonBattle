@@ -83,12 +83,10 @@ export const initInteractiveBattleHandler = asyncHandler(async (c: Context) => {
       name_fr: p.name,
       type: p.type,
       level: p.level,
-      hp: p.hp,
-      maxHp: p.hp,
-      currentHp: p.hp,
-      attack: p.attack,
-      defense: p.defense,
-      speed: p.speed,
+      base_hp: p.hp,
+      base_attack: p.attack,
+      base_defense: p.defense,
+      base_speed: p.speed,
       sprite_url: p.sprite_url,
       sprite_back_url: p.sprite_url.replace('front', 'back'),
       moves: []
@@ -160,10 +158,32 @@ export const executePlayerMoveHandler = asyncHandler(async (c: Context) => {
     userId: user.id
   });
   
+  // ✅ Retourner l'état complet dans le bon format
   return c.json({
     success: true,
     message: 'Attaque exécutée',
-    battle: battleState
+    battle: {
+      battleId: battleState.battleId,
+      playerPokemon: battleState.currentTeam1Pokemon ? {
+        ...battleState.currentTeam1Pokemon,
+        currentHp: battleState.currentTeam1Pokemon.current_hp,
+        maxHp: battleState.currentTeam1Pokemon.max_hp || battleState.currentTeam1Pokemon.base_hp,
+        moves: battleState.availableMoves
+      } : null,
+      enemyPokemon: battleState.currentTeam2Pokemon ? {
+        ...battleState.currentTeam2Pokemon,
+        currentHp: battleState.currentTeam2Pokemon.current_hp,
+        maxHp: battleState.currentTeam2Pokemon.max_hp || battleState.currentTeam2Pokemon.base_hp,
+      } : null,
+      currentTurn: battleState.isPlayerTurn ? 'player' : 'enemy',
+      battleLog: battleState.battleLog || [],
+      weather: battleState.weatherEffects,
+      isFinished: !!battleState.winner,
+      winner: battleState.winner === 'team1' ? 'player' : 
+             battleState.winner === 'team2' ? 'enemy' : 
+             battleState.winner,
+      turnCount: battleState.turn || 1
+    }
   });
 });
 

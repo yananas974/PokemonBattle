@@ -331,7 +331,7 @@ export class TurnBasedBattleService {
   /**
    * Exécuter une attaque avec la formule de dégâts Pokémon Gen 1
    */
-  private static executeMove(
+  public static executeMove(
     attacker: BattlePokemon, 
     defender: BattlePokemon, 
     move: PokemonMove, 
@@ -449,7 +449,7 @@ export class TurnBasedBattleService {
   /**
    * Changer de Pokémon actif quand un Pokémon est KO
    */
-  private static switchToNextPokemon(battleState: TurnBasedBattleState, team: 'team1' | 'team2'): void {
+  public static switchToNextPokemon(battleState: TurnBasedBattleState, team: 'team1' | 'team2'): void {
     const teamPokemon = team === 'team1' ? battleState.team1Pokemon : battleState.team2Pokemon;
     const nextPokemon = teamPokemon.find(p => !p.is_ko);
     

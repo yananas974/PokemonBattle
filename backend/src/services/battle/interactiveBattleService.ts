@@ -58,16 +58,30 @@ export class InteractiveBattleService {
         // Pokémon actuels
         currentTeam1Pokemon: {
           ...playerPokemon,
-          current_hp: playerPokemon.base_hp || playerPokemon.hp,
-          max_hp: playerPokemon.base_hp || playerPokemon.hp,
+          current_hp: playerPokemon.base_hp,
+          max_hp: playerPokemon.base_hp,
+          effective_attack: playerPokemon.base_attack,
+          effective_defense: playerPokemon.base_defense,
+          effective_speed: playerPokemon.base_speed,
+          weatherMultiplier: 1.0,
+          weatherStatus: 'none',
+          statusCondition: 'none',
+          statusTurns: 0,
           is_ko: false,
           team: 'team1',
           position: 0
         },
         currentTeam2Pokemon: {
           ...enemyPokemon,
-          current_hp: enemyPokemon.base_hp || enemyPokemon.hp,
-          max_hp: enemyPokemon.base_hp || enemyPokemon.hp,
+          current_hp: enemyPokemon.base_hp,
+          max_hp: enemyPokemon.base_hp,
+          effective_attack: enemyPokemon.base_attack,
+          effective_defense: enemyPokemon.base_defense,
+          effective_speed: enemyPokemon.base_speed,
+          weatherMultiplier: 1.0,
+          weatherStatus: 'none',
+          statusCondition: 'none',
+          statusTurns: 0,
           is_ko: false,
           team: 'team2',
           position: 0
@@ -226,7 +240,7 @@ export class InteractiveBattleService {
   }
   
   /**
-   * Exécuter une attaque (réutilise la logique existante)
+   * Exécuter une attaque
    */
   private static async executeMove(
     battleState: InteractiveBattleState,
@@ -236,8 +250,8 @@ export class InteractiveBattleService {
     source: 'player' | 'enemy'
   ): Promise<void> {
     
-    // Réutiliser la méthode executeMove du TurnBasedBattleService
-    const action = (TurnBasedBattleService as any).executeMove(
+    // ✅ Utiliser la méthode publique maintenant
+    const action = TurnBasedBattleService.executeMove(
       attacker, 
       defender, 
       move, 
@@ -245,16 +259,22 @@ export class InteractiveBattleService {
       battleState.weatherEffects
     );
     
-    battleState.battleLog.push(action);
+    battleState.battleLog.push(action); // ✅ Pousser l'objet TurnAction complet
     
-    // Appliquer les dégâts
+    // ✅ Appliquer les dégâts
     defender.current_hp = Math.max(0, defender.current_hp - action.damage);
     if (defender.current_hp === 0) {
       defender.is_ko = true;
-      action.isKO = true;
       
-      // Changer de Pokémon actif
-      (TurnBasedBattleService as any).switchToNextPokemon(battleState, defender.team);
+      // ✅ SYNC : Marquer aussi le Pokémon dans le tableau de l'équipe
+      const teamPokemon = defender.team === 'team1' ? battleState.team1Pokemon : battleState.team2Pokemon;
+      const pokemonInTeam = teamPokemon.find(p => p.pokemon_id === defender.pokemon_id);
+      if (pokemonInTeam) {
+        pokemonInTeam.is_ko = true;
+      }
+      
+      // ✅ Changer de Pokémon actif
+      await this.switchToNextPokemon(battleState, defender.team);
     }
     
     console.log(`${source === 'player' ? '🎮' : '🤖'} ${attacker.name_fr} utilise ${move.name} → ${action.damage} dégâts`);
@@ -274,5 +294,84 @@ export class InteractiveBattleService {
     } else if (!team2Alive) {
       battleState.winner = 'team1';
     }
+  }
+  
+  /**
+   * Changer de Pokémon actif correctement préparé pour le combat
+   */
+  private static async switchToNextPokemon(
+    battleState: InteractiveBattleState, 
+    team: 'team1' | 'team2'
+  ): Promise<void> {
+    const teamPokemon = team === 'team1' ? battleState.team1Pokemon : battleState.team2Pokemon;
+    const nextPokemonData = teamPokemon.find(p => !p.is_ko);
+    
+    if (!nextPokemonData) {
+      // Plus de Pokémon disponibles
+      if (team === 'team1') {
+        battleState.currentTeam1Pokemon = null;
+      } else {
+        battleState.currentTeam2Pokemon = null;
+      }
+      return;
+    }
+
+    // ✅ Préparer correctement le nouveau Pokémon pour le combat
+    const preparedPokemon: BattlePokemon = {
+      pokemon_id: nextPokemonData.pokemon_id,
+      name_fr: nextPokemonData.name_fr,
+      type: nextPokemonData.type,
+      level: nextPokemonData.level,
+      base_hp: nextPokemonData.base_hp,
+      base_attack: nextPokemonData.base_attack,
+      base_defense: nextPokemonData.base_defense,
+      base_speed: nextPokemonData.base_speed,
+      sprite_url: nextPokemonData.sprite_url,
+      
+      // Stats de combat
+      current_hp: nextPokemonData.base_hp,
+      max_hp: nextPokemonData.base_hp,
+      effective_attack: nextPokemonData.base_attack,
+      effective_defense: nextPokemonData.base_defense,
+      effective_speed: nextPokemonData.base_speed,
+      is_ko: false,
+      team,
+      position: teamPokemon.indexOf(nextPokemonData),
+      
+      // Propriétés météo et statuts
+      weatherMultiplier: 1.0,
+      weatherStatus: 'none',
+      statusCondition: 'none',
+      statusTurns: 0
+    };
+
+    // ✅ Assigner le nouveau Pokémon
+    if (team === 'team1') {
+      battleState.currentTeam1Pokemon = preparedPokemon;
+      // Mettre à jour les attaques disponibles
+      battleState.availableMoves = await PokemonMoveService.getPokemonMoves(preparedPokemon.pokemon_id);
+    } else {
+      battleState.currentTeam2Pokemon = preparedPokemon;
+    }
+
+    // ✅ Ajouter un message au log
+    battleState.battleLog.push({
+      turn: battleState.turn,
+      phase: 'move_execution',
+      attacker: preparedPokemon,
+      defender: preparedPokemon,
+      move: { name: 'Changement', type: 'Normal', power: 0, accuracy: 100, pp: 0, category: 'status', criticalHitRatio: 0, description: 'Changement de Pokémon' },
+      damage: 0,
+      isCritical: false,
+      typeEffectiveness: 1,
+      stab: false,
+      weatherBonus: 1,
+      accuracy: true,
+      description: `${preparedPokemon.name_fr} entre en combat !`,
+      remainingHP: preparedPokemon.current_hp,
+      isKO: false
+    });
+
+    console.log(`🔄 ${preparedPokemon.name_fr} entre en combat pour l'équipe ${team}`);
   }
 } 
