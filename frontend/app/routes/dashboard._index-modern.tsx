@@ -78,7 +78,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 };
 
-export default function DashboardIndex() {
+export default function ModernDashboardPage() {
   const { user, stats, recentBattles } = useLoaderData<typeof loader>();
 
   return (

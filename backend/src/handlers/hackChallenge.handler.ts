@@ -2,108 +2,80 @@ import { Context } from 'hono';
 import { HackChallengeService } from '../services/hackService/hackChallengeService.js';
 import { db } from '../config/drizzle.config.js';
 import { hacks } from '../db/schema.js';
-import { asyncHandler, authAsyncHandler } from '../utils/asyncWrapper.js';
-import { ValidationError, NotFoundError } from '../models/errors.js';
+import { asyncHandler } from '../utils/asyncWrapper.js';
+import { NotFoundError } from '../models/errors.js';
 import { 
   submitHackAnswerSchema,
-  triggerHackChallengeSchema
+  triggerHackChallengeSchema,
+  HackChallengeResponse
 } from '../schemas/index.js';
+import { zValidator } from '@hono/zod-validator';
+import { formatResponse } from '../utils/responseFormatter.js';
+import { HACK_CHALLENGE_MESSAGES } from '../constants/message.js';
+import { HackChallengeHandler } from '../models/type/hackChallenge.js';
+import { cleanupChallenge, withChallengeAndCleanup, createAnswerResponse, activeChallenges } from '../utils/hackChallengeHelpers.js';
 
-// Stocker les défis actifs en mémoire (ou Redis en prod)
-const activeChallenges = new Map<string, any>();
+// Validators groupés
+export const hackChallengeValidators = {
+  submitAnswer: zValidator('json', submitHackAnswerSchema),
+  triggerChallenge: zValidator('json', triggerHackChallengeSchema)
+};
 
-// ✅ Handlers refactorisés sans try/catch
-export const triggerHackChallengeHandler = asyncHandler(async (c: Context) => {
-  console.log('🚨 === HACK DÉCLENCHÉ ===');
-  
-  // Générer un défi aléatoire
-  const challenge = await HackChallengeService.generateRandomChallenge();
-  
-  if (!challenge) {
-    throw new NotFoundError('Impossible de générer un défi');
-  }
-
-  // Stocker le défi (pour vérification ultérieure)
-  activeChallenges.set(challenge.id, {
-    ...challenge,
-    createdAt: Date.now(),
-    userId: c.get('user')?.id
-  });
-
-  // Nettoyer les anciens défis (optionnel)
-  setTimeout(() => {
-    activeChallenges.delete(challenge.id);
-  }, challenge.time_limit * 1000 + 10000); // +10s de grâce
-
-  console.log(`🎯 Défi généré: ${challenge.algorithm} sur "${challenge.solution}"`);
-  
-  // Retourner le défi (sans la solution !)
-  return c.json({
-    success: true,
-    challenge: {
-      id: challenge.id,
-      encrypted_code: challenge.encrypted_code,
-      algorithm: challenge.algorithm,
-      difficulty: challenge.difficulty,
-      explanation: challenge.explanation,
-      time_limit: challenge.time_limit,
-      message: "🚨 Vous avez été hacké ! Résolvez ce défi pour continuer :"
+// Handlers regroupés
+export const hackChallengeHandlers: HackChallengeHandler = {
+  triggerChallenge: asyncHandler(async (c) => {
+    const challenge = await HackChallengeService.generateRandomChallenge();
+    
+    if (!challenge) {
+      throw new NotFoundError('Impossible de générer un défi');
     }
-  });
-});
 
-export const submitHackAnswerHandler = asyncHandler(async (c: Context) => {
-  const body = await c.req.json();
-  const { challengeId, answer } = submitHackAnswerSchema.parse(body);
-  
-  const challenge = activeChallenges.get(challengeId);
-  if (!challenge) {
-    throw new NotFoundError('Défi expiré ou invalide');
-  }
-
-  // Vérifier le temps limite
-  const timeElapsed = (Date.now() - challenge.createdAt) / 1000;
-  if (timeElapsed > challenge.time_limit) {
-    activeChallenges.delete(challengeId);
-    return c.json({ 
-      success: false, 
-      message: 'Temps écoulé ! Défi échoué.',
-      correct_answer: challenge.solution
+    // Stocker le défi
+    activeChallenges.set(challenge.id, {
+      ...challenge,
+      createdAt: Date.now(),
+      userId: c.get('user')?.id
     });
-  }
 
-  // Vérifier la réponse
-  const isCorrect = HackChallengeService.verifyAnswer(challenge, answer);
-  
-  if (isCorrect) {
-    activeChallenges.delete(challengeId);
-    return c.json({ 
-      success: true, 
-      message: '🎉 Bravo ! Hack résolu avec succès !',
-      time_taken: Math.round(timeElapsed)
-    });
-  } else {
-    return c.json({ 
-      success: false, 
-      message: '❌ Réponse incorrecte, essayez encore !',
-      time_remaining: Math.max(0, challenge.time_limit - timeElapsed)
-    });
-  }
-});
+    // Programmer le nettoyage
+    cleanupChallenge(challenge.id, challenge.time_limit);
+    
+    return c.json(formatResponse(HACK_CHALLENGE_MESSAGES.CHALLENGE_GENERATED, {
+      challenge: {
+        ...challenge,
+        message: "🚨 Vous avez été hacké ! Résolvez ce défi pour continuer :"
+      } as HackChallengeResponse
+    }));
+  }),
 
-export const getAllWordsHandler = asyncHandler(async (c: Context) => {
-  console.log('📋 === GET ALL WORDS HANDLER ===');
-  
-  const words = await db.select().from(hacks);
-  
-  console.log(`📊 Mots trouvés: ${words.length}`);
-  words.forEach(word => {
-    console.log(`  - ${word.base_word}`);
-  });
-  
-  return c.json({
-    success: true,
-    words: words.map(w => w.base_word),
-    total: words.length
-  });
-}); 
+  submitAnswer: asyncHandler(async (c) => {
+    const { challengeId, answer } = submitHackAnswerSchema.parse(await c.req.json());
+    
+    return withChallengeAndCleanup(challengeId, c, (challenge, timeElapsed) => {
+      // Vérifier le temps limite
+      if (timeElapsed > challenge.time_limit) {
+        return c.json(formatResponse(HACK_CHALLENGE_MESSAGES.CHALLENGE_FAILED, {
+          message: 'Temps écoulé ! Défi échoué.',
+          correct_answer: challenge.solution
+        }));
+      }
+
+      // Vérifier la réponse
+      const isCorrect = HackChallengeService.verifyAnswer(challenge as any, answer);
+      return createAnswerResponse(
+        c, 
+        isCorrect, 
+        timeElapsed, 
+        challenge
+      );
+    });
+  }),
+
+  getAllWords: asyncHandler(async (c) => {
+    const words = await db.select().from(hacks);
+    return c.json(formatResponse(HACK_CHALLENGE_MESSAGES.WORDS_RETRIEVED, {
+      words: words.map(w => w.base_word),
+      total: words.length
+    }));
+  })
+}; 

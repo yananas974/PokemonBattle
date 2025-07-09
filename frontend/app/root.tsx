@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 import { globalAudio } from '~/utils/globalAudioManager';
 
 import "./tailwind.css";
+import "./styles/pokemon-modern.css";
 import { AudioProvider } from '~/contexts/AudioContext';
 
 export const links: LinksFunction = () => [

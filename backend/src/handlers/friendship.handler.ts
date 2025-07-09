@@ -1,156 +1,97 @@
 import type { Context } from 'hono';
 import { FriendshipService } from '../services/services.js';
-import { 
-  sendFriendRequestSchema,
-  acceptFriendRequestSchema,
-  blockFriendRequestSchema,
-  getUserFriendsSchema
-} from '../schemas/index.js';
+import { sendFriendRequestSchema } from '../schemas/index.js';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { asyncHandler, authAsyncHandler } from '../utils/asyncWrapper.js';
-import { ValidationError, NotFoundError, ConflictError } from '../models/errors.js';
+import { authAsyncHandler } from '../utils/asyncWrapper.js';
+import { ValidationError } from '../models/errors.js';
+import { formatResponse } from '../utils/responseFormatter.js';
+import { FRIENDSHIP_MESSAGES } from '../constants/message.js';
+import { validateId } from '../utils/validators.js';
 
-// ✅ Créer les validators
-export const sendFriendRequestValidator = zValidator('json', sendFriendRequestSchema);
-export const acceptFriendRequestValidator = zValidator('param', z.object({ id: z.string() }));
-export const blockFriendRequestValidator = zValidator('param', z.object({ id: z.string() }));
+// Types
+interface FriendshipHandler {
+  [key: string]: (c: Context) => Promise<Response>;
+}
 
-// ✅ Handlers refactorisés sans try/catch
-export const sendFriendRequestHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  const { friendId } = await c.req.json();
+interface AuthenticatedContext extends Context {
+  user: { id: number };
+}
 
-  if (friendId === user.id) {
-    throw new ValidationError('Vous ne pouvez pas vous envoyer une demande d\'ami à vous-même');
-  }
-
-  const friendship = await FriendshipService.sendFriendRequest({ friendId }, user.id);
-
-  return c.json({
-    success: true,
-    message: 'Friend request sent successfully',
-    friendship
+// Helpers
+const withUser = <T>(handler: (c: AuthenticatedContext, userId: number) => Promise<T>) => {
+  return authAsyncHandler(async (c: Context) => {
+    const user = c.get('user');
+    return handler(c as AuthenticatedContext, user.id);
   });
-});
+};
 
-export const acceptFriendRequestHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  const friendshipId = parseInt(c.req.param('id'));
+const withIdParam = async (
+  c: AuthenticatedContext, 
+  userId: number,
+  paramName: string,
+  serviceCall: (id: number, userId: number) => Promise<any>,
+  message: string
+) => {
+  const id = validateId(c.req.param(paramName), `ID ${paramName}`);
+  const result = await serviceCall(id, userId);
+  return c.json(formatResponse(message, result));
+};
 
-  if (isNaN(friendshipId)) {
-    throw new ValidationError('ID de demande d\'ami invalide');
-  }
+// Validators groupés
+export const friendshipValidators = {
+  sendRequest: zValidator('json', sendFriendRequestSchema),
+  acceptRequest: zValidator('param', z.object({ id: z.string() })),
+  blockRequest: zValidator('param', z.object({ id: z.string() }))
+};
 
-  const friendship = await FriendshipService.acceptFriendRequest(friendshipId, user.id);
+// Handlers regroupés
+export const friendshipHandlers: FriendshipHandler = {
+  sendRequest: withUser(async (c, userId) => {
+    const { friendId } = await c.req.json();
+    if (friendId === userId) {
+      throw new ValidationError('Vous ne pouvez pas vous envoyer une demande d\'ami à vous-même');
+    }
+    const friendship = await FriendshipService.sendFriendRequest({ friendId }, userId);
+    return c.json(formatResponse(FRIENDSHIP_MESSAGES.SENT, { friendship }));
+  }),
 
-  return c.json({
-    success: true,
-    message: 'Friend request accepted successfully',
-    friendship
-  });
-});
+  acceptRequest: withUser(async (c, userId) => 
+    withIdParam(c, userId, 'id', FriendshipService.acceptFriendRequest, FRIENDSHIP_MESSAGES.ACCEPTED)
+  ),
 
-export const blockFriendRequestHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  const friendshipId = parseInt(c.req.param('id'));
+  blockRequest: withUser(async (c, userId) => 
+    withIdParam(c, userId, 'id', 
+      (id, uId) => FriendshipService.updateFriendshipStatus(id, uId, 'blocked'),
+      FRIENDSHIP_MESSAGES.BLOCKED
+    )
+  ),
 
-  if (isNaN(friendshipId)) {
-    throw new ValidationError('ID de demande d\'ami invalide');
-  }
+  getFriends: withUser(async (c, userId) => {
+    const friends = await FriendshipService.getUserFriends(userId);
+    return c.json(formatResponse(FRIENDSHIP_MESSAGES.RETRIEVED, { friends }));
+  }),
 
-  const friendship = await FriendshipService.updateFriendshipStatus(friendshipId, user.id, 'blocked');
+  getPendingRequests: withUser(async (c, userId) => {
+    const requests = await FriendshipService.getPendingFriendRequests(userId);
+    return c.json(formatResponse(FRIENDSHIP_MESSAGES.PENDING_RETRIEVED, { friends: requests }));
+  }),
 
-  return c.json({
-    success: true,
-    message: 'Friend blocked successfully',
-    friendship
-  });
-});
+  getSentRequests: withUser(async (c, userId) => {
+    const requests = await FriendshipService.getSentFriendRequests(userId);
+    return c.json(formatResponse(FRIENDSHIP_MESSAGES.SENT_RETRIEVED, { friends: requests }));
+  }),
 
-export const getUserFriendsHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  console.log(`👥 Récupération amis pour user ${user.id}`);
-  
-  const friends = await FriendshipService.getUserFriends(user.id);
-  console.log(`✅ ${friends.length} amis trouvés`);
-  
-  return c.json({
-    success: true,
-    message: 'Friends retrieved successfully',
-    friends
-  });
-});
+  removeFriend: withUser(async (c, userId) => 
+    withIdParam(c, userId, 'id', FriendshipService.removeFriend, FRIENDSHIP_MESSAGES.REMOVED)
+  ),
 
-export const getPendingFriendRequestsHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  console.log(`📥 Récupération demandes reçues pour user ${user.id}`);
-  
-  const requests = await FriendshipService.getPendingFriendRequests(user.id);
-  console.log(`✅ ${requests.length} demandes trouvées`);
-  
-  return c.json({
-    success: true,
-    message: 'Pending friend requests retrieved successfully',
-    friends: requests
-  });
-});
+  getAvailableUsers: withUser(async (c, userId) => {
+    const users = await FriendshipService.getAvailableUsers(userId);
+    return c.json(formatResponse(FRIENDSHIP_MESSAGES.USERS_RETRIEVED, { users }));
+  }),
 
-
-export const getSentFriendRequestsHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  
-  const requests = await FriendshipService.getSentFriendRequests(user.id);
-  
-  return c.json({
-    success: true,
-    message: 'Sent friend requests retrieved successfully',
-    friends: requests // ✅ Correction: utilise 'friends' comme les autres endpoints
-  });
-});
-
-
-export const removeFriendHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  const friendshipId = parseInt(c.req.param('id'));
-  
-  if (isNaN(friendshipId)) {
-    throw new ValidationError('ID d\'amitié invalide');
-  }
-  
-  await FriendshipService.removeFriend(friendshipId, user.id);
-  
-  return c.json({
-    success: true,
-    message: 'Friend removed successfully'
-  });
-});
-
-export const getAvailableUsersHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  
-  const usersWithoutPasswords = await FriendshipService.getAvailableUsers(user.id);
-  
-  return c.json({
-    success: true,
-    message: 'Available users retrieved successfully',
-    users: usersWithoutPasswords
-  });
-});
-
-export const getFriendTeamsHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  const friendId = parseInt(c.req.param('friendId'));
-
-  if (isNaN(friendId)) {
-    throw new ValidationError('ID d\'ami invalide');
-  }
-
-  const teams = await FriendshipService.getFriendTeamsWithValidation(friendId, user.id);
-
-  return c.json({
-    success: true,
-    message: 'Friend teams retrieved successfully',
-    teams
-  });
-});
+  getFriendTeams: withUser(async (c, userId) => 
+    withIdParam(c, userId, 'friendId', FriendshipService.getFriendTeamsWithValidation, FRIENDSHIP_MESSAGES.TEAMS_RETRIEVED)
+  )
+};

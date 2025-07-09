@@ -51,8 +51,14 @@ export default function BattleHub() {
   return (
     <div className="space-y-6">
       {/* Header de combat */}
-      
-     
+      <VintageCard>
+        <VintageTitle level={1}>
+          ⚔️ HUB DE COMBAT
+        </VintageTitle>
+        <p className="font-pokemon text-pokemon-blue text-sm text-center">
+          CHOISISSEZ VOTRE MODE DE COMBAT ET AFFRONTEZ VOS ADVERSAIRES
+        </p>
+      </VintageCard>
 
       {/* Sélection d'équipe du joueur */}
       <VintageCard>
@@ -252,14 +258,11 @@ export default function BattleHub() {
                 </p>
                 
                 <VintageButton
+                  href={`/dashboard/battle/simulate${selectedTeam ? `?team1=${selectedTeam.id}` : ''}`}
                   variant="yellow"
                   className="w-full py-4"
-                  onClick={() => {
-                    // TODO: Implémenter combat simulé
-                    alert('Combat simulé bientôt disponible !');
-                  }}
                 >
-                  <span className="text-lg">🏃‍♂️ COMBAT SIMULÉ</span>
+                  <span className="text-lg">⚡ COMBAT SIMULÉ</span>
                 </VintageButton>
               </div>
             </VintageCard>
@@ -287,7 +290,7 @@ export default function BattleHub() {
         <VintageTitle level={3}>
           ⚡ ACTIONS RAPIDES
         </VintageTitle>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <VintageButton 
             href="/dashboard/teams" 
             variant="blue"
@@ -295,6 +298,15 @@ export default function BattleHub() {
           >
             <span>👥</span>
             <span>GÉRER MES ÉQUIPES</span>
+          </VintageButton>
+          
+          <VintageButton 
+            href={`/dashboard/battle/simulate${selectedTeam ? `?team1=${selectedTeam.id}` : ''}`}
+            variant="yellow"
+            className="flex items-center justify-center space-x-2"
+          >
+            <span>⚡</span>
+            <span>SIMULATION RAPIDE</span>
           </VintageButton>
           
           <VintageButton 
