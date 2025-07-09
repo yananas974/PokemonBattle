@@ -1,4 +1,4 @@
-import type { ErrorContext } from '../../models/interfaces/error.interface.js';
+import type { ErrorContext } from '@pokemon-battle/shared';
 
 export class ErrorLogger {
   static log(error: Error, context: ErrorContext) {

@@ -3,15 +3,45 @@ import { Pokemon, PokemonInTeam } from './pokemon';
 // ✅ INTERFACE ÉQUIPE
 export interface Team {
   id: number;
-  name: string;
-  user_id: number;
-  created_at: string;
-  updated_at: string;
+  teamName: string;
+  userId: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-// ✅ ÉQUIPE AVEC POKEMON
+// ✅ DONNÉES DE CRÉATION D'ÉQUIPE
+export interface CreateTeamData {
+  teamName: string;
+}
+
+// ✅ DONNÉES DE MISE À JOUR D'ÉQUIPE
+export interface UpdateTeamData {
+  teamName?: string;
+}
+
+// ✅ ÉQUIPE EN BASE DE DONNÉES (avec underscores)
+export interface TeamDB {
+  id: number;
+  team_name: string;
+  user_id: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// ✅ ÉQUIPE AVEC POKÉMON
 export interface TeamWithPokemon extends Team {
-  pokemon: PokemonInTeam[];
+  pokemon: Array<{
+    id: number;
+    name: string;
+    name_fr: string;
+    type: string;
+    level: number;
+    sprite_url: string;
+    hp: number;
+    attack: number;
+    defense: number;
+    speed: number;
+  }>;
 }
 
 // ✅ REQUÊTES ET RÉPONSES API

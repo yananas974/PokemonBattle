@@ -51,7 +51,11 @@ export const friendshipHandlers: FriendshipHandler = {
     if (friendId === userId) {
       throw new ValidationError('Vous ne pouvez pas vous envoyer une demande d\'ami à vous-même');
     }
-    const friendship = await FriendshipService.sendFriendRequest({ friendId }, userId);
+    const friendship = await FriendshipService.sendFriendRequest({
+      userId,
+      friendId,
+      status: 'pending'
+    }, userId);
     return c.json(formatResponse(FRIENDSHIP_MESSAGES.SENT, { friendship }));
   }),
 

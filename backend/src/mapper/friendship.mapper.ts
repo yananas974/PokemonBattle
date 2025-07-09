@@ -1,26 +1,24 @@
-import type { CreateFriendshipData, FriendshipDB, Friendship } from "../models/interfaces/interfaces.js";
-import { FriendshipStatus } from "../models/type/friendship.type.js";
+import type { CreateFriendshipData, FriendshipDB, Friendship } from '@pokemon-battle/shared';
 
-
-export const mapUpdateFriendshipToDb = (status: FriendshipStatus): Partial<FriendshipDB> => ({
+export const mapUpdateFriendshipToDb = (status: string): any => ({
   status,
-  updated_at: new Date()
+  updated_at: new Date().toISOString()
 });
 
-export const mapCreateFriendshipToDb = (data: CreateFriendshipData, userId: number): Omit<FriendshipDB, 'id' | 'created_at' | 'updated_at'> => ({
-  user_id: userId,
-  friend_id: data.friendId,
-  status: 'pending'
+export const mapCreateFriendshipToDb = (data: CreateFriendshipData): any => ({
+  userId: data.userId,
+  friendId: data.friendId,
+  status: data.status
 });
 
-export const mapFriendshipToApi = (friendshipDB: FriendshipDB): Friendship => ({
+export const mapFriendshipToApi = (friendshipDB: any): Friendship => ({
   id: friendshipDB.id,
-  userId: friendshipDB.user_id,
-  friendId: friendshipDB.friend_id,
+  userId: friendshipDB.userId || friendshipDB.user_id,
+  friendId: friendshipDB.friendId || friendshipDB.friend_id,
   status: friendshipDB.status,
-  createdAt: friendshipDB.created_at.toISOString(),
-  updatedAt: friendshipDB.updated_at.toISOString()
+  createdAt: friendshipDB.createdAt || friendshipDB.created_at || new Date().toISOString(),
+  updatedAt: friendshipDB.updatedAt || friendshipDB.updated_at || new Date().toISOString()
 });
 
-export const mapFriendshipsToApi = (friendshipsDB: FriendshipDB[]): Friendship[] => 
+export const mapFriendshipsToApi = (friendshipsDB: any[]): Friendship[] => 
   friendshipsDB.map(mapFriendshipToApi); 

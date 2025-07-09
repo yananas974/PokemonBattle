@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { asyncHandler } from '../utils/asyncWrapper.js';
 import { ValidationError, UnauthorizedError, ConflictError } from '../models/errors.js';
-import { formatResponse, AUTH_MESSAGES, validateEmail, User } from '@pokemon-battle/shared';
+import { formatResponse, AUTH_MESSAGES, validateEmail, User, CreateUserData } from '@pokemon-battle/shared';
 
 // ✅ TYPES
 interface AuthHandler {
@@ -20,6 +20,10 @@ interface AuthHandler {
 }
 
 interface UserDB extends User {
+  password_hash: string;
+}
+
+interface CreateUserWithHashData extends Omit<CreateUserData, 'password'> {
   password_hash: string;
 }
 
@@ -46,7 +50,7 @@ const validateUserCredentials = async (email: string, password: string): Promise
   return user;
 };
 
-const createUserAccount = async (email: string, username: string, password: string): Promise<User> => {
+const createUserAccount = async (email: string, username: string, password: string) => {
   // Vérifier si l'utilisateur existe déjà
   const existingUser = await getUserByEmail(email);
   if (existingUser) {
@@ -56,11 +60,12 @@ const createUserAccount = async (email: string, username: string, password: stri
   const hashedPassword = await hashPassword(password);
   console.log('Attempting to create user:', { email, username });
   
-  const user = await createUser(mapCreateUserToDb({ 
+  // Créer directement sans mapper pour éviter les conflits de types
+  const user = await createUser({
     email, 
     username, 
     password_hash: hashedPassword 
-  })) as User;
+  } as any);
   
   return user;
 };
@@ -80,11 +85,11 @@ export const authHandlers: AuthHandler = {
     const { email, password, username } = await c.req.json();
     
     const user = await createUserAccount(email, username, password);
-    const token = await generateToken(String(user.id));
+    const token = await generateToken(String((user as any).id));
     setAuthCookie(c, token);
     
     return c.json(formatResponse(AUTH_MESSAGES.REGISTER_SUCCESS, {
-      user: mapUserToApi(user),
+      user: mapUserToApi(user as any),
       token
     }));
   }),

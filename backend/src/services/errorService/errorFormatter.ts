@@ -1,4 +1,4 @@
-import type { ErrorResponse } from '../../models/interfaces/error.interface.js';
+import type { ErrorResponse } from '@pokemon-battle/shared';
 import { BaseError } from '../../models/errors.js';
 
 export class ErrorFormatter {

@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { TeamBattleService, TurnBasedBattleService } from "../services/services.js";
 import { mapBattleResultToApi, mapBattleErrorToApi } from '../mapper/battle.mapper.js';
-import { Team } from "../models/interfaces/team.interface.js";
+import { Team } from '@pokemon-battle/shared';
 import { asyncHandler } from '../utils/asyncWrapper.js';
 import { ValidationError } from '../models/errors.js';
 import { WeatherDetectionService } from '../services/weatherService/weatherDetectionService.js';

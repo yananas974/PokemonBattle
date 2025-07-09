@@ -1,12 +1,13 @@
 import type { Context } from 'hono';
-import type { ErrorContext } from '../models/interfaces/error.interface.js';
+import type { ErrorContext } from '@pokemon-battle/shared';
 
 export const extractErrorContext = (c: Context): ErrorContext => ({
   path: c.req.path,
   method: c.req.method,
-  userId: c.get('user')?.id,
+  userId: c.get('userId'),
   ip: c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown',
-  userAgent: c.req.header('user-agent') || 'unknown'
+  userAgent: c.req.header('user-agent') || 'unknown',
+  timestamp: new Date().toISOString()
 });
 
 export const mapDatabaseError = (error: any) => {

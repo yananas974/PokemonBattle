@@ -94,10 +94,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       enemyTeamId: parseInt(enemyTeamId)
     }, token);
 
-    if (initResponse.success && initResponse.battle) {
+    // Fix: Handle nested response structure
+    const battleData = initResponse.data?.battle || initResponse.battle;
+    
+    if (initResponse.success && battleData) {
       return json({
         user,
-        battle: initResponse.battle,
+        battle: battleData,
         error: null,
         mode: 'new' as const,
         playerTeam,
@@ -177,13 +180,18 @@ export default function InteractiveBattlePage() {
 
   // Mettre à jour l'état du combat après une action
   useEffect(() => {
-    if (actionData?.success && 'battle' in actionData && actionData.battle) {
-      console.log('🎮 Nouvelle bataille reçue:', actionData.battle);
-      setCurrentBattle(actionData.battle);
+    // Fix: Handle nested response structure like in the loader
+    const battleData = (actionData as any)?.data?.battle || (actionData as any)?.battle;
+    
+    if (actionData?.success && battleData) {
+      console.log('🎮 Nouvelle bataille reçue:', battleData);
+      setCurrentBattle(battleData);
       setShowMoveSelector(false);
       setSelectedMove(null);
     } else if (actionData?.error) {
       console.error('🎮 Erreur d\'action:', actionData.error);
+    } else if (actionData) {
+      console.log('🎮 ActionData reçue:', actionData);
     }
   }, [actionData]);
 

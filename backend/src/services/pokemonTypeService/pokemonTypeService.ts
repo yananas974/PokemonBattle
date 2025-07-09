@@ -1,14 +1,9 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { db } from '../../config/drizzle.config.js';
 import { sql } from 'drizzle-orm';
 import { pokemonReference } from '../../db/schema.js';
-import { Pool } from 'pg';
 import { z } from 'zod';
 
 export class PokemonTypeService {
-  private static db = drizzle(new Pool({
-    connectionString: process.env.DATABASE_URL
-  }));
-
   private static cachedTypes: string[] | null = null;
   private static cacheExpiry: number = 0;
   private static CACHE_DURATION = 60 * 60 * 1000; // 1 heure
@@ -34,7 +29,7 @@ export class PokemonTypeService {
     try {
       console.log('🔄 Récupération des types Pokemon depuis la base...');
       
-      const result = await this.db
+      const result = await db
         .selectDistinct({ type: pokemonReference.type })
         .from(pokemonReference);
       

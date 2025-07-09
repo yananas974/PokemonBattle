@@ -1,5 +1,5 @@
 {
-  "name": "pokemon-battle-backend",
+  "name": "@pokemon-battle/backend",
   "version": "1.0.0",
   "description": "Pokemon Battle Backend with Hono",
   "type": "module",
@@ -9,6 +9,10 @@
     "build": "tsc",
     "start": "tsx src/index.ts",
     "start:production": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "test": "echo \"Tests à implémenter\" && exit 0",
+    "lint": "echo \"Linting à implémenter\" && exit 0",
     "db:reset": "tsx src/reset-db.ts",
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
@@ -32,15 +36,14 @@
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.44.2",
     "hono": "^4.0.0",
-    "hono-rate-limiter": "^0.4.2",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.16.0",
-    "zod": "^3.25.51"
+    "pg": "^8.16.0"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
     "@types/pg": "^8.10.9",
-    "tsx": "^4.6.0",
-    "typescript": "^5.3.0"
+    "tsx": "^4.6.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

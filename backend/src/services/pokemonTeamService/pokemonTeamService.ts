@@ -4,7 +4,7 @@ import { Create, Delete, GetMany } from "../../db/crud/crud.js";
 import { db } from '../../config/drizzle.config.js';
 import { TeamService } from "../createTeamService/teamService.js";
 import { mapPokemonToApi, type PokemonWithReferenceDB } from "../../mapper/pokemon.mapper.js";
-import type { Pokemon } from "../../models/interfaces/pokemon.interface.js";
+import type { Pokemon } from '@pokemon-battle/shared';
 import { z } from "zod";
 import { serviceWrapper } from '../../utils/asyncWrapper.js';
 import { ValidationError, NotFoundError } from '../../models/errors.js';

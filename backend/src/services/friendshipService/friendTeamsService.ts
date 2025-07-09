@@ -1,8 +1,9 @@
 import { Get } from "../../db/crud/crud.js";
 import { friendships } from "../../db/schema.js";
 import { eq, and, or } from "drizzle-orm";
-import type { FriendshipDB, TeamDB } from "../../models/interfaces/interfaces.js";
+import type { FriendshipDB, TeamDB } from '@pokemon-battle/shared';
 import { z } from "zod";
+import { mapTeamToApi } from '../../mapper/team.mapper.js';
 
 // ✅ Schémas Zod
 const getFriendTeamsSchema = z.object({
@@ -32,7 +33,6 @@ export class FriendTeamsService {
     // Récupérer les équipes de l'ami
     const { Team } = await import('../../db/schema.js');
     const { GetMany } = await import('../../db/crud/crud.js');
-    const { transformTeamForAPI } = await import('../../models/interfaces/team.interface.js');
     const { getTeamPokemon } = await import('../pokemonTeamService/pokemonTeamService.js');
 
     const teamsDB = await GetMany<TeamDB>(Team, eq(Team.user_id, friendId));
@@ -40,7 +40,7 @@ export class FriendTeamsService {
     // Ajoute les pokémon à chaque équipe
     const teamsWithPokemon = await Promise.all(
       teamsDB.map(async (team) => {
-        const teamAPI = transformTeamForAPI(team);
+        const teamAPI = mapTeamToApi(team);
         const pokemon = await getTeamPokemon(team.id);
         return { ...teamAPI, pokemon: pokemon || [] };
       })

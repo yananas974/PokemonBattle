@@ -1,4 +1,4 @@
-import type { CreateTeamData, UpdateTeamData, TeamDB, Team as TeamAPI } from "../models/interfaces/interfaces.js";
+import type { CreateTeamData, UpdateTeamData, TeamDB, Team as TeamAPI } from '@pokemon-battle/shared';
 
 
 export const mapCreateTeamToDb = (data: CreateTeamData & { userId: number }): Omit<TeamDB, 'id' | 'created_at' | 'updated_at'> => ({

@@ -18,7 +18,15 @@ export const HACK_CHALLENGE_MESSAGES = {
   CHALLENGE_FAILED: 'Hack challenge failed',
   CHALLENGE_EXPIRED: 'Challenge expired or invalid',
   INCORRECT_ANSWER: 'Incorrect answer, try again',
-  WORDS_RETRIEVED: 'Words retrieved successfully'
+  WORDS_RETRIEVED: 'Words retrieved successfully',
+  // ✅ Messages pour les combats interactifs
+  TRIGGERED: '🚨 ALERTE HACK !',
+  SUCCESS: '🎉 Hack résolu ! Votre Pokémon gagne +15% d\'attaque pour ce combat !',
+  FAILURE: '❌ Réponse incorrecte !',
+  TIMEOUT: '⏰ Temps écoulé ! Votre Pokémon perd 20% de ses HP.',
+  BONUS_APPLIED: '✨ gagne un bonus d\'attaque grâce au hack !',
+  PENALTY_APPLIED: '💀 subit une pénalité de hack',
+  TIME_REMAINING: 'Temps restant:'
 } as const;
 
 // ✅ MESSAGES POUR L'AUTHENTIFICATION
@@ -62,6 +70,33 @@ export const BATTLE_MESSAGES = {
   INVALID_MOVE: 'Invalid move',
   NOT_YOUR_TURN: 'Not your turn',
   BATTLE_NOT_FOUND: 'Battle not found'
+} as const;
+
+// ✅ MESSAGES POUR LES COMBATS INTERACTIFS
+export const INTERACTIVE_BATTLE_MESSAGES = {
+  INITIALIZED: '🎮 Combat interactif initialisé - En attente du joueur',
+  WAITING_FOR_PLAYER: 'En attente du mouvement du joueur',
+  PLAYER_MOVE_EXECUTED: 'Mouvement du joueur exécuté',
+  ENEMY_MOVE_EXECUTED: 'Mouvement de l\'ennemi exécuté',
+  POKEMON_SWITCHED: 'entre en combat !',
+  POKEMON_FAINTED: 'est K.O. !',
+  BATTLE_WON: '🏆 VICTOIRE !',
+  BATTLE_LOST: '💀 DÉFAITE !',
+  BATTLE_DRAW: '🤝 MATCH NUL !',
+  EXPIRED: 'Combat expiré',
+  FORFEITED: 'Combat abandonné',
+  NOT_YOUR_TURN: 'Ce n\'est pas votre tour',
+  USES_MOVE: 'utilise'
+} as const;
+
+// ✅ MESSAGES POUR LES ATTAQUES
+export const MOVE_MESSAGES = {
+  USES_MOVE: 'utilise',
+  CRITICAL_HIT: 'Coup critique !',
+  SUPER_EFFECTIVE: 'C\'est super efficace !',
+  NOT_VERY_EFFECTIVE: 'Ce n\'est pas très efficace...',
+  MISSED: 'L\'attaque a échoué !',
+  NO_EFFECT: 'Ça n\'a aucun effet...'
 } as const;
 
 // ✅ MESSAGES POUR LA MÉTÉO

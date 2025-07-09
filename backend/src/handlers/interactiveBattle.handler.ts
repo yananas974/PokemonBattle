@@ -73,18 +73,18 @@ const validateTeamsExist = (playerTeam: any, enemyTeam: any, playerTeamId: numbe
 const prepareBattleTeam = (team: any) => ({
   teamName: team.teamName,
   pokemon: team.pokemon.map((p: any) => ({
-    pokemon_id: p.pokemon_id,
-    name_fr: p.name,
+    pokemon_id: p.pokemon_reference_id, // Use reference ID for moves lookup
+    name_fr: p.name_fr,
     type: p.type,
-    level: p.level,
-    base_hp: p.hp,
-    current_hp: p.hp,
-    max_hp: p.hp,
-    base_attack: p.attack,
-    base_defense: p.defense,
-    base_speed: p.speed,
+    level: p.level || 50,
+    base_hp: p.base_hp,
+    current_hp: p.base_hp,
+    max_hp: p.base_hp,
+    base_attack: p.base_attack,
+    base_defense: p.base_defense,
+    base_speed: p.base_speed,
     sprite_url: p.sprite_url,
-    sprite_back_url: p.sprite_url.replace('front', 'back'),
+    sprite_back_url: p.back_sprite_url || p.sprite_url,
     moves: []
   }))
 });
@@ -160,8 +160,8 @@ export const interactiveBattleHandlers: InteractiveBattleHandler = {
     
     // Récupérer les équipes
     const allTeamsWithPokemon = await PokemonTeamService.getTeamsWithPokemon(user.id);
-    const playerTeam = allTeamsWithPokemon.find(t => t.id === playerTeamId);
-    const enemyTeam = allTeamsWithPokemon.find(t => t.id === enemyTeamId);
+    const playerTeam = allTeamsWithPokemon.find((t: any) => t.id === playerTeamId);
+    const enemyTeam = allTeamsWithPokemon.find((t: any) => t.id === enemyTeamId);
     
     // Validations
     validateTeamsExist(playerTeam, enemyTeam, playerTeamId, enemyTeamId);

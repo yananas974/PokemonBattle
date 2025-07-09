@@ -1,8 +1,8 @@
-import { WeatherEffect } from '../../models/interfaces/weatherEffect.interface.js';
+import { WeatherEffect } from '@pokemon-battle/shared';
 
 export const WEATHER_EFFECTS: WeatherEffect[] = [
   {
-    condition: 'Clear',
+    condition: 'ClearDay',
     bonusTypes: ['Feu', 'Sol', 'Roche'],
     malusTypes: ['Eau', 'Glace'],
     multiplier: 1.2,
@@ -44,11 +44,11 @@ export const WEATHER_EFFECTS: WeatherEffect[] = [
     description: 'Brouillard - Les types Spectre et Psy sont renforcés'
   },
   {
-    condition: 'Wind',
+    condition: 'Mist',
     bonusTypes: ['Vol', 'Insecte'],
     malusTypes: ['Feu', 'Poison'],
     multiplier: 1.1,
-    description: 'Temps venteux - Les types Vol et Insecte sont renforcés'
+    description: 'Temps brumeux - Les types Vol et Insecte sont renforcés'
   }
 ];
 

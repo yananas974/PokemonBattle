@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "@pokemon-battle/frontend",
   "private": true,
   "sideEffects": false,
   "type": "module",
@@ -8,7 +8,9 @@
     "dev": "remix vite:dev --host 0.0.0.0 --port 3000",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "remix-serve ./build/server/index.js",
-    "typecheck": "tsc"
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf build .cache node_modules/.cache",
+    "test": "echo \"Tests à implémenter\" && exit 0"
   },
   "dependencies": {
     "@pokemon-battle/shared": "file:../shared",
@@ -21,7 +23,6 @@
   },
   "devDependencies": {
     "@remix-run/dev": "^2.16.8",
-    "@types/node": "^24.0.12",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
     "@typescript-eslint/eslint-plugin": "^6.7.4",
@@ -35,7 +36,6 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
-    "typescript": "^5.1.6",
     "vite": "^6.3.5",
     "vite-tsconfig-paths": "^4.2.1"
   },

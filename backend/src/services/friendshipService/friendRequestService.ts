@@ -1,37 +1,24 @@
-import { Create, Get, GetMany, Update } from "../../db/crud/crud.js";
-import { friendships, users } from "../../db/schema.js";
-import { eq, and, or } from "drizzle-orm";
-import type { 
+// ✅ Services pour les demandes d'amitié
+import { serviceWrapper } from '../../utils/asyncWrapper.js';
+import { Create, GetMany, Get, Update } from '../../db/crud/crud.js';
+import { friendships, users } from '../../db/schema.js';
+import { eq, and, or } from 'drizzle-orm';
+import { 
   FriendshipDB, 
   Friendship, 
-  CreateFriendshipData
-} from "../../models/interfaces/interfaces.js";
+  CreateFriendshipData,
+  ValidationService
+} from '@pokemon-battle/shared';
 import { mapFriendshipToApi, mapCreateFriendshipToDb } from "../../mapper/friendship.mapper.js";
-import { z } from "zod";
-
-// ✅ Schémas Zod
-const sendFriendRequestSchema = z.object({
-  friendId: z.number().min(1, "Friend ID must be positive")
-});
-
-const friendshipActionSchema = z.object({
-  friendshipId: z.number().min(1, "Friendship ID must be positive"),
-  userId: z.number().min(1, "User ID must be positive")
-});
-
-const updateStatusSchema = z.object({
-  friendshipId: z.number().min(1, "Friendship ID must be positive"),
-  userId: z.number().min(1, "User ID must be positive"),
-  status: z.enum(['blocked', 'pending', 'accepted'])
-});
 
 export class FriendRequestService {
   
   static async sendFriendRequest(data: CreateFriendshipData, userId: number): Promise<Friendship> {
     console.log(`📤 Envoi demande d'ami: ${userId} -> ${data.friendId}`);
     
-    // ✅ Validation Zod
-    sendFriendRequestSchema.parse({ friendId: data.friendId });
+    // ✅ Validation centralisée
+    ValidationService.validateSendFriendRequest({ friendId: data.friendId });
+    ValidationService.validateUserId(userId);
     
     if (data.friendId === userId) {
       throw new Error("Cannot add yourself as friend");
@@ -50,7 +37,15 @@ export class FriendRequestService {
       throw new Error("Friendship already exists");
     }
 
-    const friendshipDB = await Create<FriendshipDB>(friendships, mapCreateFriendshipToDb(data, userId));
+    const friendshipToCreate = {
+      user_id: userId,
+      friend_id: data.friendId,
+      status: 'pending' as const,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    const friendshipDB = await Create<FriendshipDB>(friendships, friendshipToCreate);
     console.log(`✅ Demande créée:`, friendshipDB);
     return mapFriendshipToApi(friendshipDB);  
   }
@@ -58,8 +53,8 @@ export class FriendRequestService {
   static async acceptFriendRequest(friendshipId: number, userId: number): Promise<Friendship> {
     console.log(`🤝 Acceptation demande: friendshipId=${friendshipId}, userId=${userId}`);
     
-    // ✅ Validation Zod
-    friendshipActionSchema.parse({ friendshipId, userId });
+    // ✅ Validation centralisée
+    ValidationService.validateFriendshipAction({ friendshipId, userId });
     
     const friendship = await Get<FriendshipDB>(
       friendships, 
@@ -80,7 +75,7 @@ export class FriendRequestService {
     const updatedFriendship = await Update<FriendshipDB>(
       friendships, 
       eq(friendships.id, friendshipId), 
-      { status: 'accepted', updated_at: new Date() }
+      { status: 'accepted', updated_at: new Date().toISOString() }
     );
 
     console.log(`✅ Amitié acceptée:`, updatedFriendship);
@@ -89,6 +84,9 @@ export class FriendRequestService {
 
   static async getPendingFriendRequests(userId: number): Promise<Friendship[]> {
     console.log(`📥 Récupération demandes en attente pour userId=${userId}`);
+    
+    // ✅ Validation centralisée
+    ValidationService.validateUserId(userId);
     
     const pendingRequests = await GetMany<FriendshipDB>(
       friendships,
@@ -99,7 +97,7 @@ export class FriendRequestService {
 
     const requestsWithDetails = await Promise.all(
       pendingRequests.map(async (friendship) => {
-        const senderId = friendship.user_id;
+        const senderId = friendship.userId;
         const sender = await Get<typeof users.$inferSelect>(users, eq(users.id, senderId));
         
         console.log(`👤 Expéditeur trouvé: ${sender?.username} (ID: ${senderId})`);
@@ -120,6 +118,9 @@ export class FriendRequestService {
   }
 
   static async getSentFriendRequests(userId: number): Promise<Friendship[]> {
+    // ✅ Validation centralisée
+    ValidationService.validateUserId(userId);
+    
     const sentRequests = await GetMany<FriendshipDB>(
       friendships,
       and(eq(friendships.user_id, userId), eq(friendships.status, 'pending'))!
@@ -127,7 +128,7 @@ export class FriendRequestService {
 
     const requestsWithDetails = await Promise.all(
       sentRequests.map(async (friendship) => {
-        const recipientId = friendship.friend_id;
+        const recipientId = friendship.friendId;
         const recipient = await Get<typeof users.$inferSelect>(users, eq(users.id, recipientId));
         
         return {
@@ -149,8 +150,8 @@ export class FriendRequestService {
     userId: number, 
     status: 'blocked' | 'pending' | 'accepted'
   ): Promise<Friendship> {
-    // ✅ Validation Zod
-    updateStatusSchema.parse({ friendshipId, userId, status });
+    // ✅ Validation centralisée
+    ValidationService.validateUpdateFriendshipStatus({ friendshipId, userId, status });
     
     const friendship = await Get<FriendshipDB>(friendships, eq(friendships.id, friendshipId));
 
@@ -158,38 +159,34 @@ export class FriendRequestService {
       throw new Error("Friendship not found");
     }
 
-    if (friendship.user_id !== userId && friendship.friend_id !== userId) {
+    if ((friendship as any).user_id !== userId && (friendship as any).friend_id !== userId) {
       throw new Error("Unauthorized to modify this friendship");
     }
 
     const updatedFriendship = await Update<FriendshipDB>(
       friendships, 
       eq(friendships.id, friendshipId), 
-      { status, updated_at: new Date() }
+      { status, updated_at: new Date().toISOString() }
     );
-      return mapFriendshipToApi(updatedFriendship);
+    
+    return mapFriendshipToApi(updatedFriendship);
   }
 
-  // ✅ Méthodes avec validation
+  // ✅ Méthodes avec validation simplifiées
   static async sendFriendRequestWithValidation(friendId: number, userId: number): Promise<Friendship> {
-    if (!friendId) {
-      throw new Error('Friend ID is required');
-    }
-    const data: CreateFriendshipData = { friendId };
+    const data: CreateFriendshipData = { 
+      userId, 
+      friendId, 
+      status: 'pending' 
+    };
     return await this.sendFriendRequest(data, userId);
   }
 
   static async acceptFriendRequestWithValidation(friendshipId: number, userId: number): Promise<Friendship> {
-    if (!friendshipId || isNaN(friendshipId)) {
-      throw new Error('Invalid friendship ID');
-    }
     return await this.acceptFriendRequest(friendshipId, userId);
   }
 
   static async blockFriendWithValidation(friendshipId: number, userId: number): Promise<Friendship> {
-    if (!friendshipId || isNaN(friendshipId)) {
-      throw new Error('Invalid friendship ID');
-    }
     return await this.updateFriendshipStatus(friendshipId, userId, 'blocked');
   }
 

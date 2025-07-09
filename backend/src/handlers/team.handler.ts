@@ -1,7 +1,6 @@
 import type { Context } from "hono";
 import { TeamService } from "../services/createTeamService/teamService.js"; 
 import { PokemonTeamService } from "../services/pokemonTeamService/pokemonTeamService.js";
-import { User } from "../models/interfaces/user.interface.js";
 import { Delete, Get } from "../db/crud/crud.js";
 import { Team, pokemon } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
@@ -14,7 +13,7 @@ import {
   removePokemonFromTeamParamsSchema
 } from "../schemas/index.js";
 import { zValidator } from '@hono/zod-validator';
-import { formatResponse, TEAM_MESSAGES, validateId } from '@pokemon-battle/shared';
+import { formatResponse, TEAM_MESSAGES, validateId, User } from '@pokemon-battle/shared';
 
 // ✅ TYPES
 interface TeamHandler {
@@ -139,7 +138,7 @@ export const teamHandlers: TeamHandler = {
     
     const team = await validateTeamOwnership(teamId, user.id);
     const teamsWithPokemon = await PokemonTeamService.getTeamsWithPokemon(user.id);
-    const teamWithPokemon = teamsWithPokemon.find(t => t.id === teamId);
+    const teamWithPokemon = teamsWithPokemon.find((t: any) => t.id === teamId);
     
     return c.json(formatTeamResponse('Team retrieved successfully', { 
       team: teamWithPokemon 

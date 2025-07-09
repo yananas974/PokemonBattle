@@ -7,6 +7,22 @@ export interface User {
   updated_at: string;
 }
 
+// ✅ DONNÉES DE CRÉATION D'UTILISATEUR
+export interface CreateUserData {
+  email: string;
+  username: string;
+  password: string;
+}
+
+// ✅ RÉPONSE UTILISATEUR (sans mot de passe)
+export interface UserResponse {
+  id: number;
+  email: string;
+  username: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // ✅ UTILISATEUR AVEC TOKEN (pour les sessions)
 export interface UserWithToken extends User {
   token: string;

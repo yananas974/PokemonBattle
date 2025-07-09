@@ -10,6 +10,19 @@ export interface Friendship {
   updatedAt: string;
 }
 
+// ✅ DONNÉES DE CRÉATION D'AMITIÉ
+export interface CreateFriendshipData {
+  userId: number;
+  friendId: number;
+  status: FriendshipStatusType;
+}
+
+// ✅ AMITIÉ EN BASE DE DONNÉES (avec timestamps)
+export interface FriendshipDB extends Friendship {
+  created_at: string;
+  updated_at: string;
+}
+
 // ✅ AMITIÉ AVEC DÉTAILS UTILISATEUR
 export interface FriendshipWithUser extends Friendship {
   friend: {

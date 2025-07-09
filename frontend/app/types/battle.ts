@@ -62,6 +62,9 @@ export interface BattleAction {
 export interface BattleResponse {
   success: boolean;
   battle?: BattleState;
+  data?: {
+    battle?: BattleState;
+  };
   message?: string;
   error?: string;
 }

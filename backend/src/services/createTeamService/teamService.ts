@@ -1,59 +1,59 @@
-import { Create, Get, GetMany, Delete, Update } from "../../db/crud/crud.js";
+import { Create, Update, GetMany, Get } from "../../db/crud/crud.js";
 import { Team } from "../../db/schema.js";
-import { eq } from "drizzle-orm";
-import { mapCreateTeamToDb, mapUpdateTeamToDb, mapTeamToApi, mapTeamsToApi } from "../../mapper/team.mapper.js";
-import type { CreateTeamData, UpdateTeamData, TeamDB, Team as TeamAPI } from "../../models/interfaces/interfaces.js";
-import { z } from "zod";
-
-const createTeamSchema = z.object({
-  teamName: z.string().min(1)
-});
-
-const updateTeamSchema = z.object({
-  teamName: z.string().min(1).optional(),
-  userId: z.number().optional()
-});
+import { eq, and } from "drizzle-orm";
+import type { CreateTeamData, TeamDB } from '@pokemon-battle/shared';
+import { ValidationService } from '@pokemon-battle/shared';
+import { mapTeamToApi } from "../../mapper/team.mapper.js";
 
 export class TeamService {
-  
-  static async createTeam(data: CreateTeamData, userId: number): Promise<TeamAPI> {
-    const parsed = createTeamSchema.parse(data);
-    const completeData = { ...parsed, userId };
-    const teamDB = await Create<TeamDB>(Team, mapCreateTeamToDb(completeData));
+
+  static async createTeam(data: CreateTeamData, userId: number) {
+    // ✅ Validation centralisée
+    const validatedData = ValidationService.validateCreateTeam(data);
+    ValidationService.validateUserId(userId);
+    
+    const teamDB = await Create<TeamDB>(Team, {
+      team_name: validatedData.teamName,
+      user_id: userId,
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+    
     return mapTeamToApi(teamDB);
   }
 
-  static async updateTeam(id: number, data: UpdateTeamData): Promise<TeamAPI> {
-    const parsed = updateTeamSchema.parse(data);
-    const teamDB = await Update<TeamDB>(Team, eq(Team.id, id), mapUpdateTeamToDb(parsed));
-    return mapTeamToApi(teamDB);
+  static async updateTeam(data: any, teamId: number) {
+    // ✅ Validation centralisée
+    const validatedData = ValidationService.validateUpdateTeam(data);
+    ValidationService.validateTeamId(teamId);
+    
+    const updatedTeam = await Update<TeamDB>(Team, eq(Team.id, teamId), {
+      team_name: validatedData.teamName,
+      updated_at: new Date()
+    });
+    
+    return mapTeamToApi(updatedTeam);
   }
 
-  static async getTeamById(id: number): Promise<TeamAPI | null> {
-    const teamDB = await Get<TeamDB>(Team, eq(Team.id, id));
-    return teamDB ? mapTeamToApi(teamDB) : null;
-  }
-
-  static async getTeamsByUserId(userId: number): Promise<TeamAPI[]> {
+  static async getUserTeams(userId: number) {
+    // ✅ Validation centralisée
+    ValidationService.validateUserId(userId);
+    
     const teamsDB = await GetMany<TeamDB>(Team, eq(Team.user_id, userId));
-    return mapTeamsToApi(teamsDB);
+    return teamsDB.map(mapTeamToApi);
   }
 
-  static async deleteTeam(id: number): Promise<void> {
-    await Delete(Team, eq(Team.id, id));
+  static async getTeamsByUserId(userId: number) {
+    // Alias for getUserTeams for backward compatibility
+    return this.getUserTeams(userId);
   }
 
-  /**
-   * Vérifier si une équipe appartient à un utilisateur
-   */
   static async verifyTeamOwnership(teamId: number, userId: number): Promise<boolean> {
-    const team = await this.getTeamById(teamId);
-    return team ? team.userId === userId : false;
-    }
+    // ✅ Validation centralisée
+    ValidationService.validateTeamId(teamId);
+    ValidationService.validateUserId(userId);
+    
+    const team = await Get<TeamDB>(Team, and(eq(Team.id, teamId), eq(Team.user_id, userId))!);
+    return !!team;
+  }
 }
-export const createTeam = TeamService.createTeam;
-export const getTeamById = TeamService.getTeamById;
-export const getTeamByUserId = TeamService.getTeamsByUserId;
-export const updateTeam = TeamService.updateTeam;
-export const deleteTeam = TeamService.deleteTeam;
-export const verifyTeamOwnership = TeamService.verifyTeamOwnership;

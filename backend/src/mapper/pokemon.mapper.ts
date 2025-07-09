@@ -1,6 +1,4 @@
-import { Pokemon } from "../models/interfaces/pokemon.interface.js";
-import { BattlePokemon, PokemonWithEffects } from "../models/interfaces/battle.interface.js";
-import { PokemonType } from "../services/weatherEffectService/weatherEffectService.js";
+import { Pokemon, BattlePokemon, PokemonWithEffects } from '@pokemon-battle/shared';
 
 // ✅ Types de base de données (basés sur le schéma Drizzle)
 export interface PokemonDB {
@@ -36,43 +34,39 @@ export interface PokemonWithReferenceDB extends PokemonDB {
   pokemon_reference: PokemonReferenceDB;
 }
 
-// ✅ Type pour les requêtes de création
-export type CreatePokemonRequest = Omit<Pokemon, 'id' | 'user_id' | 'created_at'>;
-
 // ✅ MAPPERS - FOCUS SUR POKEMON (pas combat)
 
 /**
  * Mapper: Base de données → Interface API Pokemon
  */
-export const mapPokemonToApi = (pokemonDB: PokemonWithReferenceDB): Pokemon => ({
+export const mapPokemonToApi = (pokemonDB: PokemonWithReferenceDB): Pokemon & { pokemon_reference_id: number } => ({
   id: pokemonDB.id,
-  pokemon_id: pokemonDB.pokemon_reference.pokeapi_id,
-  name: pokemonDB.pokemon_reference.name,
+  pokemon_reference_id: pokemonDB.pokemon_reference_id,
+  name_fr: pokemonDB.pokemon_reference.name,
+  name_en: pokemonDB.pokemon_reference.name,
   type: pokemonDB.pokemon_reference.type,
-  level: pokemonDB.level || 1,
-  hp: pokemonDB.hp || 100,
-  attack: pokemonDB.attack || 50,
-  defense: pokemonDB.defense || 50,
-  speed: pokemonDB.speed || 50,
+  base_hp: pokemonDB.pokemon_reference.base_hp || 50,
+  base_attack: pokemonDB.pokemon_reference.base_attack || 50,
+  base_defense: pokemonDB.pokemon_reference.base_defense || 50,
+  base_speed: pokemonDB.pokemon_reference.base_speed || 50,
   height: pokemonDB.pokemon_reference.height || 0,
   weight: pokemonDB.pokemon_reference.weight || 0,
   sprite_url: pokemonDB.pokemon_reference.sprite_url || '',
-  back_sprite_url: pokemonDB.pokemon_reference.back_sprite_url || '',
-  user_id: pokemonDB.team_id || 0,
-  created_at: pokemonDB.created_at
+  back_sprite_url: pokemonDB.pokemon_reference.back_sprite_url || ''
 });
 
 /**
  * Mapper: PokemonReferenceDB → Pokemon API (pour les données de référence)
  */
-export const mapPokemonReferenceToApi = (pokemonRef: PokemonReferenceDB): Omit<Pokemon, 'id' | 'user_id' | 'created_at' | 'level'> => ({
-  pokemon_id: pokemonRef.pokeapi_id,
-  name: pokemonRef.name,
+export const mapPokemonReferenceToApi = (pokemonRef: PokemonReferenceDB): Pokemon => ({
+  id: pokemonRef.id,
+  name_fr: pokemonRef.name,
+  name_en: pokemonRef.name,
   type: pokemonRef.type,
-  hp: pokemonRef.base_hp || 50,
-  attack: pokemonRef.base_attack || 50,
-  defense: pokemonRef.base_defense || 50,
-  speed: pokemonRef.base_speed || 50,
+  base_hp: pokemonRef.base_hp || 50,
+  base_attack: pokemonRef.base_attack || 50,
+  base_defense: pokemonRef.base_defense || 50,
+  base_speed: pokemonRef.base_speed || 50,
   height: pokemonRef.height || 0,
   weight: pokemonRef.weight || 0,
   sprite_url: pokemonRef.sprite_url || '',
@@ -80,57 +74,21 @@ export const mapPokemonReferenceToApi = (pokemonRef: PokemonReferenceDB): Omit<P
 });
 
 /**
- * Mapper: Requête de création → Données pour la base
- */
-export const mapCreatePokemonToDb = (
-  request: CreatePokemonRequest,
-  teamId?: number
-): Omit<PokemonDB, 'id' | 'created_at'> => ({
-  pokemon_reference_id: request.pokemon_id,
-  level: request.level || 1,
-  hp: request.hp || 100,
-  attack: request.attack || 50,
-  defense: request.defense || 50,
-  speed: request.speed || 50,
-  team_id: teamId || null
-});
-
-/**
  * Mapper: Données jointes de requête → Pokemon API
- * Utilisé pour les requêtes avec jointure pokemon + pokemon_reference
  */
-export const mapJoinedPokemonToApi = (joinedData: {
-  id: number;
-  level: number;
-  hp: number;
-  attack: number;
-  defense: number;
-  speed: number;
-  team_id: number | null;
-  pokemon_id: number;
-  name_fr: string;
-  sprite_url: string | null;
-  back_sprite_url?: string | null;
-  type: string;
-  height?: number | null;
-  weight?: number | null;
-  created_at?: Date;
-}): Pokemon => ({
+export const mapJoinedPokemonToApi = (joinedData: any): Pokemon => ({
   id: joinedData.id,
-  pokemon_id: joinedData.pokemon_id,
-  name: joinedData.name_fr,
+  name_fr: joinedData.name_fr || joinedData.name,
+  name_en: joinedData.name_en || joinedData.name,
   type: joinedData.type,
-  level: joinedData.level,
-  hp: joinedData.hp,
-  attack: joinedData.attack,
-  defense: joinedData.defense,
-  speed: joinedData.speed,
+  base_hp: joinedData.hp || joinedData.base_hp || 50,
+  base_attack: joinedData.attack || joinedData.base_attack || 50,
+  base_defense: joinedData.defense || joinedData.base_defense || 50,
+  base_speed: joinedData.speed || joinedData.base_speed || 50,
   height: joinedData.height || 0,
   weight: joinedData.weight || 0,
   sprite_url: joinedData.sprite_url || '',
-  back_sprite_url: joinedData.back_sprite_url || '',
-  user_id: joinedData.team_id || 0,
-  created_at: joinedData.created_at || new Date()
+  back_sprite_url: joinedData.back_sprite_url || ''
 });
 
 /**
@@ -138,53 +96,32 @@ export const mapJoinedPokemonToApi = (joinedData: {
  */
 export const mapPokemonToFrontend = (pokemon: Pokemon) => ({
   id: pokemon.id,
-  pokemon_id: pokemon.pokemon_id,
-  nameFr: pokemon.name,
+  nameFr: pokemon.name_fr,
+  nameEn: pokemon.name_en,
   type: pokemon.type,
-  level: pokemon.level,
-  hp: pokemon.hp,
-  attack: pokemon.attack,
-  defense: pokemon.defense,
-  speed: pokemon.speed,
+  baseHp: pokemon.base_hp,
+  baseAttack: pokemon.base_attack,
+  baseDefense: pokemon.base_defense,
+  baseSpeed: pokemon.base_speed,
   height: pokemon.height,
   weight: pokemon.weight,
   sprite_url: pokemon.sprite_url,
-  back_sprite_url: pokemon.back_sprite_url,
-    userId: pokemon.user_id,
-  createdAt: pokemon.created_at.toISOString()
+  back_sprite_url: pokemon.back_sprite_url
 });
 
 /**
- * Utilitaires Pokemon (pas de doublon avec battle.mapper.ts)
+ * Utilitaires Pokemon
  */
 export const validatePokemonStats = (pokemon: Partial<Pokemon>): boolean => {
   return !!(
-    pokemon.hp && pokemon.hp > 0 &&
-    pokemon.attack && pokemon.attack > 0 &&
-    pokemon.defense && pokemon.defense > 0 &&
-    pokemon.speed && pokemon.speed > 0
+    pokemon.base_hp && pokemon.base_hp > 0 &&
+    pokemon.base_attack && pokemon.base_attack > 0 &&
+    pokemon.base_defense && pokemon.base_defense > 0 &&
+    pokemon.base_speed && pokemon.base_speed > 0
   );
 };
 
 export const calculatePokemonPower = (pokemon: Pokemon): number => {
-  return pokemon.hp + pokemon.attack + pokemon.defense + pokemon.speed;
+  return pokemon.base_hp + pokemon.base_attack + pokemon.base_defense + pokemon.base_speed;
 };
-
-/**
- * Mapper: BattlePokemon → PokemonWithEffects (avec effets météo)
- * ⚠️ Complément au battle.mapper.ts, pas de doublon
- */
-export const mapBattlePokemonWithEffects = (
-  battlePokemon: BattlePokemon,
-  weatherMultiplier: number,
-  weatherStatus: string
-): PokemonWithEffects => ({
-  ...battlePokemon,
-  effective_hp: Math.round(battlePokemon.base_hp * weatherMultiplier),
-  effective_attack: Math.round(battlePokemon.base_attack * weatherMultiplier),
-  effective_defense: Math.round(battlePokemon.base_defense * weatherMultiplier),
-  effective_speed: Math.round(battlePokemon.base_speed * weatherMultiplier),
-  weatherStatus,
-  totalMultiplier: weatherMultiplier
-});
 
