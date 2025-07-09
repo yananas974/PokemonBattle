@@ -4,7 +4,6 @@ import type { CookieOptions } from 'hono/utils/cookie';
 import { createUser, getUserByEmail, getAllUsers } from '../services/services.js';
 import type { Context } from 'hono';
 import { mapCreateUserToDb, mapUserToApi, mapUsersToApi } from '../mapper/user.mapper.js';
-import { User } from '../models/interfaces/interfaces.js';
 import { 
   loginSchema, 
   signupSchema
@@ -13,11 +12,15 @@ import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { asyncHandler } from '../utils/asyncWrapper.js';
 import { ValidationError, UnauthorizedError, ConflictError } from '../models/errors.js';
-import { formatResponse, AUTH_MESSAGES, validateEmail } from '@pokemon-battle/shared';
+import { formatResponse, AUTH_MESSAGES, validateEmail, User } from '@pokemon-battle/shared';
 
 // ✅ TYPES
 interface AuthHandler {
   [key: string]: (c: Context) => Promise<Response>;
+}
+
+interface UserDB extends User {
+  password_hash: string;
 }
 
 // ✅ HELPERS
@@ -30,7 +33,7 @@ const clearAuthCookie = (c: Context) => {
 };
 
 const validateUserCredentials = async (email: string, password: string): Promise<User> => {
-  const user = await getUserByEmail(email) as User;
+  const user = await getUserByEmail(email) as UserDB;
   if (!user) {
     throw new UnauthorizedError('Email ou mot de passe invalide');
   }
