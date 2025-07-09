@@ -9,18 +9,41 @@ import {
   loginSchema, 
   signupSchema
 } from '../schemas/index.js';
+import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { asyncHandler } from '../utils/asyncWrapper.js';
 import { ValidationError, UnauthorizedError, ConflictError } from '../models/errors.js';
+import { formatResponse, AUTH_MESSAGES, validateEmail } from '@pokemon-battle/shared';
 
-// ✅ Validators middleware
-export const signupValidator = zValidator('json', signupSchema);
-export const loginValidator = zValidator('json', loginSchema);
+// ✅ TYPES
+interface AuthHandler {
+  [key: string]: (c: Context) => Promise<Response>;
+}
 
-// ✅ Handlers refactorisés sans try/catch
-export const signupHandler = asyncHandler(async (c: Context) => {
-  const { email, password, username } = await c.req.json();
-  
+// ✅ HELPERS
+const setAuthCookie = (c: Context, token: string) => {
+  setCookie(c, 'authToken', token, cookieOptions as CookieOptions);
+};
+
+const clearAuthCookie = (c: Context) => {
+  setCookie(c, 'authToken', '', {...cookieOptions, maxAge: 0} as CookieOptions);
+};
+
+const validateUserCredentials = async (email: string, password: string): Promise<User> => {
+  const user = await getUserByEmail(email) as User;
+  if (!user) {
+    throw new UnauthorizedError('Email ou mot de passe invalide');
+  }
+
+  const isValidPassword = await comparePassword(password, user.password_hash);
+  if (!isValidPassword) {
+    throw new UnauthorizedError('Email ou mot de passe invalide');
+  }
+
+  return user;
+};
+
+const createUserAccount = async (email: string, username: string, password: string): Promise<User> => {
   // Vérifier si l'utilisateur existe déjà
   const existingUser = await getUserByEmail(email);
   if (existingUser) {
@@ -36,56 +59,77 @@ export const signupHandler = asyncHandler(async (c: Context) => {
     password_hash: hashedPassword 
   })) as User;
   
-  const token = await generateToken(String(user.id));
-  setCookie(c, 'authToken', token, cookieOptions as CookieOptions);
-  
-  return c.json({
-    success: true,
-    message: 'User created successfully',
-    user: mapUserToApi(user)
-  });
-});
+  return user;
+};
 
-export const loginHandler = asyncHandler(async (c: Context) => {
-  const { email, password } = await c.req.json();
-  
-  const user = await getUserByEmail(email) as User;
-  if (!user) {
-    throw new UnauthorizedError('Email ou mot de passe invalide');
-  }
+// ✅ VALIDATORS GROUPÉS
+export const authValidators = {
+  signup: zValidator('json', signupSchema),
+  login: zValidator('json', loginSchema),
+  email: zValidator('json', z.object({
+    email: z.string().email('Invalid email format')
+  }))
+};
 
-  const isValidPassword = await comparePassword(password, user.password_hash);
-  if (!isValidPassword) {
-    throw new UnauthorizedError('Email ou mot de passe invalide');
-  }
+// ✅ HANDLERS GROUPÉS
+export const authHandlers: AuthHandler = {
+  signup: asyncHandler(async (c: Context) => {
+    const { email, password, username } = await c.req.json();
+    
+    const user = await createUserAccount(email, username, password);
+    const token = await generateToken(String(user.id));
+    setAuthCookie(c, token);
+    
+    return c.json(formatResponse(AUTH_MESSAGES.REGISTER_SUCCESS, {
+      user: mapUserToApi(user),
+      token
+    }));
+  }),
 
-  const token = await generateToken(String(user.id));
-  setCookie(c, 'authToken', token, cookieOptions as CookieOptions);
+  login: asyncHandler(async (c: Context) => {
+    const { email, password } = await c.req.json();
+    
+    const user = await validateUserCredentials(email, password);
+    const token = await generateToken(String(user.id));
+    setAuthCookie(c, token);
 
-  return c.json({
-    success: true,
-    message: 'Login successful',
-    user: mapUserToApi(user),
-    token: token
-  });
-});
+    return c.json(formatResponse(AUTH_MESSAGES.LOGIN_SUCCESS, {
+      user: mapUserToApi(user),
+      token
+    }));
+  }),
 
-export const logoutHandler = asyncHandler(async (c: Context) => {
-  setCookie(c, 'authToken', '', {...cookieOptions, maxAge: 0} as CookieOptions);
-  return c.json({ 
-    success: true,
-    message: 'Logged out successfully' 
-  });
-}); 
+  logout: asyncHandler(async (c: Context) => {
+    clearAuthCookie(c);
+    return c.json(formatResponse(AUTH_MESSAGES.LOGOUT_SUCCESS));
+  }),
 
-export const getUsersHandler = asyncHandler(async (c: Context) => {
-  const users = await getAllUsers();
-  
-  return c.json({
-    success: true,
-    message: 'Users retrieved successfully',
-    users: mapUsersToApi(users)
-  });
-});
+  getUsers: asyncHandler(async (c: Context) => {
+    const users = await getAllUsers();
+    
+    return c.json(formatResponse('Users retrieved successfully', {
+      users: mapUsersToApi(users),
+      totalCount: users.length
+    }));
+  }),
 
-// ✅ Note: Handlers de bataille supprimés - ils appartiennent au battle.handler.ts
+  validateEmail: asyncHandler(async (c: Context) => {
+    const { email } = await c.req.json();
+    
+    // Vérifier le format
+    if (!validateEmail(email)) {
+      throw new ValidationError('Format d\'email invalide');
+    }
+    
+    // Vérifier la disponibilité
+    const existingUser = await getUserByEmail(email);
+    const isAvailable = !existingUser;
+    
+    return c.json(formatResponse('Email validation completed', {
+      email,
+      isValid: true,
+      isAvailable,
+      message: isAvailable ? 'Email disponible' : 'Email déjà utilisé'
+    }));
+  })
+};

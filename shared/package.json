@@ -2,20 +2,29 @@
   "name": "@pokemon-battle/shared",
   "version": "1.0.0",
   "description": "Types partagés entre frontend et backend",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.js"
+      "default": "./dist/index.js"
     }
   },
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
+    "@types/node": "^20.19.6",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
   }
 }

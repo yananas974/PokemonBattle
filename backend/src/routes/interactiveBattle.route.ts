@@ -1,18 +1,13 @@
 import { Hono } from 'hono';
-import {
-  initInteractiveBattleHandler,
-  executePlayerMoveHandler,
-  getBattleStateHandler,
-  forfeitBattleHandler,
-  solveHackChallengeHandler
-} from '../handlers/interactiveBattle.handler.js';
+import { interactiveBattleHandlers, interactiveBattleValidators } from '../handlers/interactiveBattle.handler.js';
 
 const interactiveBattleRoutes = new Hono();
 
-interactiveBattleRoutes.post('/init', initInteractiveBattleHandler);
-interactiveBattleRoutes.post('/move', executePlayerMoveHandler);
-interactiveBattleRoutes.get('/:battleId', getBattleStateHandler);
-interactiveBattleRoutes.post('/:battleId/forfeit', forfeitBattleHandler);
-interactiveBattleRoutes.post('/solve-hack', solveHackChallengeHandler);
+// ✅ Routes de combat interactif avec la nouvelle structure
+interactiveBattleRoutes.post('/init', interactiveBattleValidators.initBattle, interactiveBattleHandlers.initBattle);
+interactiveBattleRoutes.post('/move', interactiveBattleValidators.playerMove, interactiveBattleHandlers.executePlayerMove);
+interactiveBattleRoutes.get('/:battleId', interactiveBattleHandlers.getBattleState);
+interactiveBattleRoutes.post('/:battleId/forfeit', interactiveBattleHandlers.forfeitBattle);
+interactiveBattleRoutes.post('/solve-hack', interactiveBattleHandlers.solveHackChallenge);
 
 export { interactiveBattleRoutes }; 

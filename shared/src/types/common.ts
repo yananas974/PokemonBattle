@@ -21,14 +21,6 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
   };
 }
 
-// ✅ ERREURS
-export interface ErrorResponse {
-  success: false;
-  error: string;
-  message?: string;
-  code?: string;
-}
-
 // ✅ FILTRES
 export interface FilterParams {
   type?: string;

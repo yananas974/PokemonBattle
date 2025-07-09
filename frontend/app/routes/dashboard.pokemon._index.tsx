@@ -3,7 +3,7 @@ import { json } from '@remix-run/node';
 import { useLoaderData, useNavigation, Link } from '@remix-run/react';
 import { getUserFromSession } from '~/sessions';
 import { pokemonService } from '~/services/pokemonService';
-import type { Pokemon, PokemonResponse } from '~/types/pokemon';
+import { Pokemon, PokemonResponse } from '@pokemon-battle/shared';
 import { 
   VintageCard, 
   VintageTitle, 
@@ -33,7 +33,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   console.log('✅ User found:', user.username);
 
   try {
-    // ✅ Utiliser le pokemonService qui gère correctement les tokens
+    // ✅ Utiliser le pokemonService qui gère correctement les types shared
     const data: PokemonResponse = await pokemonService.getAllPokemon(request);
     console.log('✅ Pokemon API Response:', {
       success: data.success,
@@ -59,7 +59,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     if (search) {
       const searchLower = search.toLowerCase();
       filteredPokemon = filteredPokemon.filter((p: Pokemon) => 
-        p.nameFr?.toLowerCase().includes(searchLower) ||
+        p.name_fr?.toLowerCase().includes(searchLower) ||
         p.id?.toString().includes(search)
       );
     }
@@ -115,7 +115,6 @@ export default function PokemonIndex() {
     success
   } = data;
   
-  const fallback = false; // Supprimé car fallback n'existe plus dans PokemonResponse
   const error = 'error' in data ? data.error as string : undefined;
   
   const navigation = useNavigation();
@@ -132,17 +131,8 @@ export default function PokemonIndex() {
             message={error}
           />
         )}
-        
-        {fallback && (
-          <StatusIndicator
-            type="warning"
-            title="MODE SECOURS"
-            message="DONNEES DE TEST ACTIVES"
-            animate
-          />
-        )}
 
-        {success && !fallback && (
+        {success && (
           <StatusIndicator
             type="success"
             title="CONNEXION OK"
@@ -213,7 +203,7 @@ export default function PokemonIndex() {
               <PokemonCard
                 key={poke.id}
                 id={poke.id}
-                name_fr={poke.nameFr}
+                name_fr={poke.name_fr}
                 type={poke.type}
                 sprite_url={poke.sprite_url}
                 base_hp={poke.base_hp}

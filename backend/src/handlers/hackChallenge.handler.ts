@@ -10,19 +10,16 @@ import {
   HackChallengeResponse
 } from '../schemas/index.js';
 import { zValidator } from '@hono/zod-validator';
-import { formatResponse } from '../utils/responseFormatter.js';
-import { HACK_CHALLENGE_MESSAGES } from '../constants/message.js';
-import { HackChallengeHandler } from '../models/type/hackChallenge.js';
+import { formatResponse, HACK_CHALLENGE_MESSAGES } from '@pokemon-battle/shared';
 import { cleanupChallenge, withChallengeAndCleanup, createAnswerResponse, activeChallenges } from '../utils/hackChallengeHelpers.js';
 
-// Validators groupés
+
 export const hackChallengeValidators = {
   submitAnswer: zValidator('json', submitHackAnswerSchema),
   triggerChallenge: zValidator('json', triggerHackChallengeSchema)
 };
 
-// Handlers regroupés
-export const hackChallengeHandlers: HackChallengeHandler = {
+export const hackChallengeHandlers = {
   triggerChallenge: asyncHandler(async (c) => {
     const challenge = await HackChallengeService.generateRandomChallenge();
     
@@ -30,14 +27,12 @@ export const hackChallengeHandlers: HackChallengeHandler = {
       throw new NotFoundError('Impossible de générer un défi');
     }
 
-    // Stocker le défi
     activeChallenges.set(challenge.id, {
       ...challenge,
       createdAt: Date.now(),
       userId: c.get('user')?.id
     });
 
-    // Programmer le nettoyage
     cleanupChallenge(challenge.id, challenge.time_limit);
     
     return c.json(formatResponse(HACK_CHALLENGE_MESSAGES.CHALLENGE_GENERATED, {
@@ -52,7 +47,6 @@ export const hackChallengeHandlers: HackChallengeHandler = {
     const { challengeId, answer } = submitHackAnswerSchema.parse(await c.req.json());
     
     return withChallengeAndCleanup(challengeId, c, (challenge, timeElapsed) => {
-      // Vérifier le temps limite
       if (timeElapsed > challenge.time_limit) {
         return c.json(formatResponse(HACK_CHALLENGE_MESSAGES.CHALLENGE_FAILED, {
           message: 'Temps écoulé ! Défi échoué.',
@@ -60,7 +54,6 @@ export const hackChallengeHandlers: HackChallengeHandler = {
         }));
       }
 
-      // Vérifier la réponse
       const isCorrect = HackChallengeService.verifyAnswer(challenge as any, answer);
       return createAnswerResponse(
         c, 
@@ -79,3 +72,9 @@ export const hackChallengeHandlers: HackChallengeHandler = {
     }));
   })
 }; 
+
+const calculateScore = (challenge: any, timeElapsed: number): number => {
+  const baseScore = 100;
+  const timeBonus = Math.max(0, challenge.time_limit - timeElapsed);
+  return Math.round(baseScore + (timeBonus / 1000));
+};

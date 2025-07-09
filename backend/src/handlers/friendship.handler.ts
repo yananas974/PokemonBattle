@@ -5,18 +5,17 @@ import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { authAsyncHandler } from '../utils/asyncWrapper.js';
 import { ValidationError } from '../models/errors.js';
-import { formatResponse } from '../utils/responseFormatter.js';
-import { FRIENDSHIP_MESSAGES } from '../constants/message.js';
-import { validateId } from '../utils/validators.js';
+import { formatResponse, FRIENDSHIP_MESSAGES, validateId } from '@pokemon-battle/shared';
 
-// Types
+// Ajouter ces types localement
 interface FriendshipHandler {
   [key: string]: (c: Context) => Promise<Response>;
 }
 
 interface AuthenticatedContext extends Context {
-  user: { id: number };
+  get(key: 'user'): { id: number };
 }
+
 
 // Helpers
 const withUser = <T>(handler: (c: AuthenticatedContext, userId: number) => Promise<T>) => {

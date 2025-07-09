@@ -1,8 +1,10 @@
-import type { 
+import { 
   CreateTeamData, 
   TeamsResponse, 
-  CreateTeamResponse 
-} from '../../../backend/src/models/interfaces/team.interface';
+  CreateTeamResponse,
+  StandardApiResponse,
+  TeamWithPokemon
+} from '@pokemon-battle/shared';
 import { apiCallWithRequest, apiCall, handleApiError } from '~/utils/api';
 
 // ✅ HELPER DRY POUR LES APPELS API côté serveur (loaders)
@@ -30,62 +32,105 @@ async function makeApiCall<T>(
 export const teamService = {
   // ✅ Méthodes avec surcharge : Request (loaders) ou token (actions)
   async createTeam(data: CreateTeamData, requestOrToken?: Request | string): Promise<CreateTeamResponse> {
+    let backendResponse: StandardApiResponse<{ team: TeamWithPokemon }>;
+    
     if (requestOrToken instanceof Request) {
-      return makeApiCallServer('/api/teams/createTeam', requestOrToken, {
+      backendResponse = await makeApiCallServer('/api/teams/createTeam', requestOrToken, {
         method: 'POST',
         body: JSON.stringify(data),
       });
     } else {
-      return makeApiCall('/api/teams/createTeam', {
+      backendResponse = await makeApiCall('/api/teams/createTeam', {
         method: 'POST',
         body: JSON.stringify(data),
       }, requestOrToken);
     }
+    
+    return {
+      success: backendResponse.success,
+      team: backendResponse.data?.team,
+      message: backendResponse.message,
+      error: backendResponse.error
+    };
   },
 
   async getMyTeams(requestOrToken?: Request | string): Promise<TeamsResponse> {
+    let backendResponse: StandardApiResponse<{ teams: TeamWithPokemon[]; totalCount: number }>;
+    
     if (requestOrToken instanceof Request) {
-      return makeApiCallServer('/api/teams', requestOrToken);
+      backendResponse = await makeApiCallServer('/api/teams', requestOrToken);
     } else {
-      return makeApiCall('/api/teams', {}, requestOrToken);
+      backendResponse = await makeApiCall('/api/teams', {}, requestOrToken);
     }
+    
+    return {
+      success: backendResponse.success,
+      teams: backendResponse.data?.teams || [],
+      totalCount: backendResponse.data?.totalCount
+    };
   },
 
   async addPokemonToTeam(teamId: number, pokemonId: number, requestOrToken?: Request | string) {
+    let backendResponse: StandardApiResponse<{ team: TeamWithPokemon }>;
+    
     if (requestOrToken instanceof Request) {
-      return makeApiCallServer(`/api/teams/${teamId}/pokemon`, requestOrToken, {
+      backendResponse = await makeApiCallServer(`/api/teams/${teamId}/pokemon`, requestOrToken, {
         method: 'POST',
         body: JSON.stringify({ pokemonId }),
       });
     } else {
-      return makeApiCall(`/api/teams/${teamId}/pokemon`, {
+      backendResponse = await makeApiCall(`/api/teams/${teamId}/pokemon`, {
         method: 'POST',
         body: JSON.stringify({ pokemonId }),
       }, requestOrToken);
     }
+    
+    return {
+      success: backendResponse.success,
+      team: backendResponse.data?.team,
+      message: backendResponse.message,
+      error: backendResponse.error
+    };
   },
 
   async removePokemonFromTeam(teamId: number, pokemonId: number, requestOrToken?: Request | string) {
+    let backendResponse: StandardApiResponse<{ team: TeamWithPokemon }>;
+    
     if (requestOrToken instanceof Request) {
-      return makeApiCallServer(`/api/teams/${teamId}/pokemon/${pokemonId}`, requestOrToken, {
+      backendResponse = await makeApiCallServer(`/api/teams/${teamId}/pokemon/${pokemonId}`, requestOrToken, {
         method: 'DELETE',
       });
     } else {
-      return makeApiCall(`/api/teams/${teamId}/pokemon/${pokemonId}`, {
+      backendResponse = await makeApiCall(`/api/teams/${teamId}/pokemon/${pokemonId}`, {
         method: 'DELETE',
       }, requestOrToken);
     }
+    
+    return {
+      success: backendResponse.success,
+      team: backendResponse.data?.team,
+      message: backendResponse.message,
+      error: backendResponse.error
+    };
   },
 
   async deleteTeam(teamId: number, requestOrToken?: Request | string) {
+    let backendResponse: StandardApiResponse<{}>;
+    
     if (requestOrToken instanceof Request) {
-      return makeApiCallServer(`/api/teams/${teamId}`, requestOrToken, {
+      backendResponse = await makeApiCallServer(`/api/teams/${teamId}`, requestOrToken, {
         method: 'DELETE',
       });
     } else {
-      return makeApiCall(`/api/teams/${teamId}`, {
+      backendResponse = await makeApiCall(`/api/teams/${teamId}`, {
         method: 'DELETE',
       }, requestOrToken);
     }
+    
+    return {
+      success: backendResponse.success,
+      message: backendResponse.message,
+      error: backendResponse.error
+    };
   },
 }; 

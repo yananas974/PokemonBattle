@@ -1,12 +1,18 @@
 import { Hono } from 'hono';
-import { signupHandler, loginHandler, logoutHandler, getUsersHandler, signupValidator, loginValidator } from '../handlers/auth.handler.js';
+import { authHandlers, authValidators } from '../handlers/auth.handler.js';
 import { authMiddleware } from '../middlewares/authMiddleware/auth.middleware.js';
 
 const authRoutes = new Hono();
 
-authRoutes.post('/signup', signupValidator, signupHandler);
-authRoutes.post('/login', loginValidator, loginHandler);
-authRoutes.post('/logout', logoutHandler);
-authRoutes.get('/users', authMiddleware, getUsersHandler);
+// ✅ Routes d'authentification
+authRoutes.post('/signup', authValidators.signup, authHandlers.signup);
+authRoutes.post('/login', authValidators.login, authHandlers.login);
+authRoutes.post('/logout', authHandlers.logout);
+
+// ✅ Routes protégées
+authRoutes.get('/users', authMiddleware, authHandlers.getUsers);
+
+// ✅ Validation d'email
+authRoutes.post('/validate-email', authValidators.email, authHandlers.validateEmail);
 
 export { authRoutes };

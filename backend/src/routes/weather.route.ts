@@ -1,8 +1,14 @@
 import { Hono } from 'hono';
-import { getWeatherEffectsHandler, simulateBattleHandler } from '../handlers/weather.handler.js';
+import { weatherHandlers, weatherValidators } from '../handlers/weather.handler.js';
 
 const weatherRoutes = new Hono();
-weatherRoutes.get('/effects', getWeatherEffectsHandler);
-weatherRoutes.post('/simulate-battle', simulateBattleHandler);
+
+// ✅ Routes météo avec la nouvelle structure
+weatherRoutes.get('/effects', weatherValidators.weatherQuery, weatherHandlers.getWeatherEffects);
+weatherRoutes.post('/simulate-battle', weatherValidators.simulateBattle, weatherHandlers.simulateBattle);
+
+// ✅ Nouvelles routes utilitaires
+weatherRoutes.get('/available-effects', weatherHandlers.getAvailableEffects);
+weatherRoutes.get('/time-bonus', weatherHandlers.getCurrentTimeBonus);
 
 export { weatherRoutes };

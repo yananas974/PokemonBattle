@@ -13,90 +13,137 @@ import {
   addPokemonToTeamRequestSchema,
   removePokemonFromTeamParamsSchema
 } from "../schemas/index.js";
+import { zValidator } from '@hono/zod-validator';
+import { formatResponse, TEAM_MESSAGES, validateId } from '@pokemon-battle/shared';
 
-export const getTeamsHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  
-  const teamsWithPokemon = await PokemonTeamService.getTeamsWithPokemon(user.id);
-  
-  return c.json({
-    success: true,
-    teams: teamsWithPokemon
-  });
-});
+// ✅ TYPES
+interface TeamHandler {
+  [key: string]: (c: Context) => Promise<Response>;
+}
 
-export const createTeamHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  const body = await c.req.json();
-  const data = createTeamRequestSchema.parse(body);
-  
-  const team = await TeamService.createTeam(data, user.id);
-  
-  return c.json({
-    success: true,
-    message: 'Team created successfully',
-    team
-  });
-});
-
-export const deleteTeamHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  const params = deleteTeamParamsSchema.parse({ id: c.req.param('id') });
-  const teamId = params.id;
-
-  const team = await Get(Team, and(eq(Team.id, teamId), eq(Team.user_id, user.id))!);
+// ✅ HELPERS
+const validateTeamOwnership = async (teamId: number, userId: number): Promise<any> => {
+  const team = await Get(Team, and(eq(Team.id, teamId), eq(Team.user_id, userId))!);
   if (!team) {
     throw new NotFoundError('Équipe');
   }
+  return team;
+};
 
-  await Delete(Team, eq(Team.id, teamId));
-  
-  return c.json({
-    success: true,
-    message: 'Équipe supprimée avec succès'
+const withTeamOwnership = (handler: (c: Context, team: any) => Promise<Response>) => {
+  return authAsyncHandler(async (c: Context) => {
+    const user = c.get('user');
+    const teamId = Number(c.req.param('teamId') || c.req.param('id'));
+    
+    if (!validateId(teamId)) {
+      throw new ValidationError('ID d\'équipe invalide');
+    }
+    
+    const team = await validateTeamOwnership(teamId, user.id);
+    return handler(c, team);
   });
-});
+};
 
-export const addPokemonToTeamHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  const body = await c.req.json();
-  const teamId = c.req.param('teamId');
-  
-  const data = addPokemonToTeamRequestSchema.parse({
-    teamId: Number(teamId),
-    pokemonId: body.pokemonId
-  });
+const formatTeamResponse = (message: string, data?: any) => {
+  return formatResponse(message, data);
+};
 
-  const result = await PokemonTeamService.addPokemonToTeam(
-    data.teamId, 
-    data.pokemonId, 
-    user.id
-  );
-  
-  return c.json({
-    success: true,
-    message: 'Pokémon ajouté à l\'équipe avec succès',
-    pokemon: result
-  });
-});
+// ✅ VALIDATORS GROUPÉS
+export const teamValidators = {
+  create: zValidator('json', createTeamRequestSchema),
+  delete: zValidator('param', deleteTeamParamsSchema),
+  addPokemon: zValidator('json', addPokemonToTeamRequestSchema),
+  removePokemon: zValidator('param', removePokemonFromTeamParamsSchema)
+};
 
-export const removePokemonFromTeamHandler = authAsyncHandler(async (c: Context) => {
-  const user = c.get('user');
-  const params = removePokemonFromTeamParamsSchema.parse({
-    teamId: c.req.param('teamId'),
-    pokemonId: c.req.param('pokemonId')
-  });
+// ✅ HANDLERS GROUPÉS
+export const teamHandlers: TeamHandler = {
+  getTeams: authAsyncHandler(async (c: Context) => {
+    const user = c.get('user');
+    const teamsWithPokemon = await PokemonTeamService.getTeamsWithPokemon(user.id);
+    
+    return c.json(formatTeamResponse(TEAM_MESSAGES.RETRIEVED, {
+      teams: teamsWithPokemon,
+      totalCount: teamsWithPokemon.length
+    }));
+  }),
 
-  const team = await Get(Team, and(eq(Team.id, params.teamId), eq(Team.user_id, user.id))!);
-  if (!team) {
-    throw new NotFoundError('Équipe');
-  }
+  createTeam: authAsyncHandler(async (c: Context) => {
+    const user = c.get('user');
+    const body = await c.req.json();
+    const data = createTeamRequestSchema.parse(body);
+    
+    const team = await TeamService.createTeam(data, user.id);
+    
+    return c.json(formatTeamResponse(TEAM_MESSAGES.CREATED, { team }));
+  }),
 
-  await Delete(pokemon, and(eq(pokemon.team_id, params.teamId), eq(pokemon.id, params.pokemonId))!);
-  
-  return c.json({
-    success: true,
-    message: 'Pokémon retiré de l\'équipe avec succès'
-  });
-});
+  deleteTeam: withTeamOwnership(async (c: Context, team: any) => {
+    const teamId = team.id;
+    await Delete(Team, eq(Team.id, teamId));
+    
+    return c.json(formatTeamResponse(TEAM_MESSAGES.DELETED, { teamId }));
+  }),
+
+  addPokemonToTeam: authAsyncHandler(async (c: Context) => {
+    const user = c.get('user');
+    const body = await c.req.json();
+    const teamId = Number(c.req.param('teamId'));
+    
+    if (!validateId(teamId)) {
+      throw new ValidationError('ID d\'équipe invalide');
+    }
+    
+    const data = addPokemonToTeamRequestSchema.parse({
+      teamId,
+      pokemonId: body.pokemonId
+    });
+
+    const result = await PokemonTeamService.addPokemonToTeam(
+      data.teamId, 
+      data.pokemonId, 
+      user.id
+    );
+    
+    return c.json(formatTeamResponse(TEAM_MESSAGES.POKEMON_ADDED, { 
+      pokemon: result,
+      teamId: data.teamId 
+    }));
+  }),
+
+  removePokemonFromTeam: withTeamOwnership(async (c: Context, team: any) => {
+    const pokemonId = Number(c.req.param('pokemonId'));
+    
+    if (!validateId(pokemonId)) {
+      throw new ValidationError('ID de Pokémon invalide');
+    }
+
+    await Delete(pokemon, and(
+      eq(pokemon.team_id, team.id), 
+      eq(pokemon.id, pokemonId)
+    )!);
+    
+    return c.json(formatTeamResponse(TEAM_MESSAGES.POKEMON_REMOVED, { 
+      pokemonId,
+      teamId: team.id 
+    }));
+  }),
+
+  getTeamById: authAsyncHandler(async (c: Context) => {
+    const user = c.get('user');
+    const teamId = Number(c.req.param('id'));
+    
+    if (!validateId(teamId)) {
+      throw new ValidationError('ID d\'équipe invalide');
+    }
+    
+    const team = await validateTeamOwnership(teamId, user.id);
+    const teamsWithPokemon = await PokemonTeamService.getTeamsWithPokemon(user.id);
+    const teamWithPokemon = teamsWithPokemon.find(t => t.id === teamId);
+    
+    return c.json(formatTeamResponse('Team retrieved successfully', { 
+      team: teamWithPokemon 
+    }));
+  })
+};
 

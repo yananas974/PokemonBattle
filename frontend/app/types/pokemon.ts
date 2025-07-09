@@ -1,27 +1,32 @@
-export interface Pokemon {
+// ✅ RÉEXPORT DES TYPES SHARED AVEC ADAPTATIONS FRONTEND
+export { 
+  Pokemon, 
+  PokemonInTeam, 
+  PokemonDetail, 
+  BattlePokemon, 
+  PokemonResponse, 
+  PokemonDetailResponse, 
+  CreatePokemonRequest,
+  PokemonType as PokemonTypeEnum 
+} from '@pokemon-battle/shared';
+
+// ✅ TYPES SPÉCIFIQUES AU FRONTEND (si nécessaire)
+export interface PokemonCardProps {
   id: number;
-  nameFr: string;
-  sprite_url: string;
+  name_fr: string;
   type: string;
+  sprite_url: string;
   base_hp: number;
   base_attack: number;
-  base_defense: number;
-  base_speed: number;
-  height: number;
-  weight: number;
 }
 
-export interface PokemonInTeam extends Pokemon {
-  pokemon_id: number;
-  name_fr: string;
-  level: number;
-  hp: number;
-  attack: number;
-  defense: number;
-  speed: number;
-}
-
-export interface PokemonResponse {
-  success: boolean;
-  pokemon: Pokemon[];
+export interface PokemonFiltersProps {
+  types: string[];
+  generations: number[];
+  currentFilters: {
+    search: string;
+    type: string;
+    generation: string;
+  };
+  isLoading: boolean;
 } 
