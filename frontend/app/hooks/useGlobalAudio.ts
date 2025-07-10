@@ -5,12 +5,15 @@ export function useGlobalAudio() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<string | null>(null);
   const [volume, setVolumeState] = useState(globalAudio.getVolume());
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   // Vérifier le statut périodiquement
   useEffect(() => {
     const updateStatus = () => {
       setIsPlaying(globalAudio.isPlaying());
       setCurrentTrack(globalAudio.getCurrentTrack());
+      // Vérifier si l'autoplay est bloqué (méthode temporaire)
+      setAutoplayBlocked(globalAudio.getCurrentTrack() !== null && !globalAudio.isPlaying());
     };
 
     // Vérification initiale
@@ -53,6 +56,7 @@ export function useGlobalAudio() {
     isPlaying,
     currentTrack,
     volume,
+    autoplayBlocked,
     playDashboard,
     playBattle,
     pause,

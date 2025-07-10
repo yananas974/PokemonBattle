@@ -159,11 +159,28 @@ export class InteractiveBattleService {
       newState.winner = determineWinner(newState.team1Pokemon, newState.team2Pokemon);
       
       // ✅ Gestion des hacks avec les constantes du shared
-      if (!newState.winner && !newState.isHackActive && newState.isPlayerTurn && shouldTriggerHack()) {
+      // Les hacks ne se déclenchent QUE pour le joueur humain (team1), jamais pour l'IA (team2)
+      // IMPORTANT : Une fois qu'un hack est résolu, plus aucun hack ne peut se déclencher dans ce combat
+      const hasResolvedHack = (newState as any).lastHackTurn !== undefined;
+      
+      console.log(`🔍 Hack check: turn=${newState.turn}, isPlayerTurn=${newState.isPlayerTurn}, hasResolvedHack=${hasResolvedHack}`);
+      
+      // DÉSACTIVATION COMPLÈTE : Pas de nouveaux hacks si un a déjà été résolu
+      if (hasResolvedHack) {
+        console.log('🚫 HACKS DÉSACTIVÉS - Un hack a déjà été résolu dans ce combat');
+      } else if (!newState.winner && !newState.isHackActive && newState.isPlayerTurn && shouldTriggerHack()) {
+        console.log('🚨 Hack déclenché pour le JOUEUR !');
         await this.triggerHackChallenge(newState);
-      } else if (!newState.winner && !newState.isHackActive) {
+      } else {
+        if (!newState.isPlayerTurn) {
+          console.log('🤖 Tour de l\'IA - pas de hack possible');
+        }
+      }
+      
+      // Continuer le combat normalement si pas de hack actif
+      if (!newState.winner && !newState.isHackActive) {
         newState.turn++;
-        newState.isPlayerTurn = true;
+        newState.isPlayerTurn = true; // ✅ Toujours revenir au joueur après un tour
         newState.waitingForPlayerMove = true;
         
         const currentPlayerPokemon = newState.currentTeam1Pokemon;
@@ -291,8 +308,15 @@ export class InteractiveBattleService {
 
   /**
    * Déclencher un défi de hack
+   * ⚠️  IMPORTANT : Les hacks ne peuvent être déclenchés QUE pour le joueur humain (team1)
    */
   private static async triggerHackChallenge(battleState: InteractiveBattleState): Promise<void> {
+    // ✅ Double vérification : hack uniquement pour le joueur
+    if (!battleState.isPlayerTurn || !battleState.currentTeam1Pokemon) {
+      console.log('🚫 Tentative de hack bloquée - pas le tour du joueur ou pas de Pokémon joueur');
+      return;
+    }
+    
     try {
       const challenge = await HackChallengeService.generateRandomChallenge();
       if (challenge) {
@@ -300,7 +324,7 @@ export class InteractiveBattleService {
         battleState.isHackActive = true;
         battleState.hackStartTime = Date.now();
         battleState.waitingForPlayerMove = true;
-        battleState.isPlayerTurn = true;
+        battleState.isPlayerTurn = true; // ✅ Force le tour joueur
         
         // ✅ Utiliser les helpers du shared pour créer l'action de log
         const hackAction = createHackLogAction(
@@ -311,7 +335,7 @@ export class InteractiveBattleService {
         );
         battleState.battleLog.push(hackAction);
         
-        console.log(`🚨 Hack déclenché: ${challenge.algorithm} - Solution: ${challenge.solution}`);
+        console.log(`🚨 Hack déclenché pour le JOUEUR: ${challenge.algorithm} - Solution: ${challenge.solution}`);
       }
     } catch (error) {
       console.error('Erreur lors du déclenchement du hack:', error);
@@ -340,6 +364,8 @@ export class InteractiveBattleService {
       const timeElapsed = (Date.now() - (battleState.hackStartTime || 0)) / 1000;
       if (timeElapsed > battleState.hackChallenge.time_limit) {
         await this.applyHackPenalty(battleState);
+        // Sauvegarder l'état mis à jour après la pénalité
+        this.activeBattles.set(battleId, battleState);
         return {
           success: false,
           message: HACK_CHALLENGE_MESSAGES.TIMEOUT,
@@ -352,16 +378,20 @@ export class InteractiveBattleService {
       
       if (isCorrect) {
         await this.applyHackBonus(battleState);
+        // Sauvegarder l'état mis à jour après le bonus
+        this.activeBattles.set(battleId, battleState);
         return {
           success: true,
           message: HACK_CHALLENGE_MESSAGES.SUCCESS,
           battleState
         };
       } else {
+        // Pour les mauvaises réponses, on garde le hack actif mais on informe l'utilisateur
         const timeRemaining = formatTimeRemaining(timeElapsed, battleState.hackChallenge.time_limit);
         return {
           success: false,
-          message: `${HACK_CHALLENGE_MESSAGES.FAILURE} ${HACK_CHALLENGE_MESSAGES.TIME_REMAINING} ${timeRemaining}`
+          message: `${HACK_CHALLENGE_MESSAGES.FAILURE} ${HACK_CHALLENGE_MESSAGES.TIME_REMAINING} ${timeRemaining}`,
+          battleState
         };
       }
     });
@@ -423,5 +453,8 @@ export class InteractiveBattleService {
     battleState.hackStartTime = undefined;
     battleState.waitingForPlayerMove = true;
     battleState.isPlayerTurn = true;
+    
+    // ✅ Marquer le tour où le hack a été résolu pour éviter les hacks consécutifs
+    (battleState as any).lastHackTurn = battleState.turn;
   }
 } 

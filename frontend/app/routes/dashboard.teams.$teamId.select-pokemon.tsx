@@ -1,16 +1,12 @@
 import type { LoaderFunctionArgs, ActionFunctionArgs, MetaFunction } from '@remix-run/node';
 import { json, redirect } from '@remix-run/node';
-import { useLoaderData, useActionData, useNavigation, useSubmit } from '@remix-run/react';
+import { useLoaderData, useActionData, useNavigation, useSubmit, Link } from '@remix-run/react';
 import { getUserFromSession } from '~/sessions';
-import { pokemonService, teamService } from '~/services/pokemonService';
+import { pokemonService } from '~/services/pokemonService';
 import { teamService as backendTeamService } from '~/services/teamService';
-import { 
-  VintageCard, 
-  VintageTitle, 
-  VintageButton,
-  StatusIndicator
-} from '~/components';
-import type { Pokemon } from '~/types/pokemon';
+import { ModernCard } from '~/components/ui/ModernCard';
+import { ModernButton } from '~/components/ui/ModernButton';
+import type { Pokemon } from '~/types/shared';
 import { useState } from 'react';
 
 // Types pour les données
@@ -49,46 +45,26 @@ export const loader = async ({ request, params }: LoaderFunctionArgs): Promise<R
   }
 
   try {
-    // Appeler directement notre Resource Route en interne
-    console.log('🔄 Loader: Appel direct Resource Route Pokemon...');
-    const pokemonUrl = new URL('/api/pokemon', request.url);
-    const pokemonRequest = new Request(pokemonUrl, {
-      headers: request.headers,
-      method: 'GET',
-    });
-    
-    // Importer et appeler directement le loader de notre Resource Route
-    const { loader: pokemonLoader } = await import('./api/pokemonAPI/api.pokemon');
-    const pokemonResponse = await pokemonLoader({ request: pokemonRequest, params: {}, context: {} });
-    
-    // Vérifier que la réponse est bien une Response
-    if (!(pokemonResponse instanceof Response)) {
-      throw new Error('Réponse invalide de la Resource Route Pokemon');
-    }
-    
-    const pokemonData = await pokemonResponse.json();
-    
+    // Utiliser les services directement
+    console.log('🔄 Loader: Appel service Pokemon...');
+    const pokemonData = await pokemonService.getAllPokemon(request);
     console.log('✅ Loader: Pokemon récupérés:', pokemonData.pokemon?.length);
     
-    // Appeler directement notre Resource Route teams en interne
-    console.log('🔄 Loader: Appel direct Resource Route Teams...');
-    const teamsUrl = new URL('/api/teams', request.url);
-    const teamsRequest = new Request(teamsUrl, {
-      headers: request.headers,
-      method: 'GET',
-    });
-    
-    // Importer et appeler directement le loader de la Resource Route teams
-    const { loader: teamsLoader } = await import('./api/teamAPI/api.teams');
-    const teamsResponse = await teamsLoader({ request: teamsRequest, params: {}, context: {} });
-    
-    // Vérifier que la réponse est bien une Response
-    if (!(teamsResponse instanceof Response)) {
-      throw new Error('Réponse invalide de la Resource Route Teams');
+    // Vérification de la structure des données Pokemon
+    if (!pokemonData || !pokemonData.pokemon || !Array.isArray(pokemonData.pokemon)) {
+      console.error('❌ Structure pokemonData invalide:', pokemonData);
+      throw new Response('Structure de données Pokemon invalide', { status: 500 });
     }
     
-    const teamData = await teamsResponse.json();
+    console.log('🔄 Loader: Appel service Teams...');
+    const teamData = await backendTeamService.getMyTeams(request);
     console.log('✅ Loader: Teams récupérées:', teamData.teams?.length);
+    
+    // Vérification de la structure des données
+    if (!teamData || !teamData.teams || !Array.isArray(teamData.teams)) {
+      console.error('❌ Structure teamData invalide:', teamData);
+      throw new Response('Structure de données équipes invalide', { status: 500 });
+    }
     
     const team = teamData.teams.find((t: any) => t.id === Number(teamId));
     
@@ -140,13 +116,13 @@ export const action = async ({ request, params }: ActionFunctionArgs): Promise<R
       
       return json<ActionData>({ 
         success: true, 
-        message: 'POKEMON AJOUTE A L\'EQUIPE AVEC SUCCES !',
+        message: 'Pokémon ajouté à l\'équipe avec succès !',
         pokemon: (result as any).pokemon
       });
     } catch (error) {
       console.error('Erreur lors de l\'ajout du Pokémon:', error);
       return json<ActionData>({ 
-        error: error instanceof Error ? error.message : 'ERREUR LORS DE L\'AJOUT DU POKEMON',
+        error: error instanceof Error ? error.message : 'Erreur lors de l\'ajout du Pokémon',
         success: false 
       });
     }
@@ -168,12 +144,12 @@ export const action = async ({ request, params }: ActionFunctionArgs): Promise<R
       
       return json<ActionData>({ 
         success: true, 
-        message: 'POKEMON RETIRE DE L\'EQUIPE AVEC SUCCES !',
+        message: 'Pokémon retiré de l\'équipe avec succès !',
       });
     } catch (error) {
       console.error('Erreur lors du retrait du Pokémon:', error);
       return json<ActionData>({ 
-        error: error instanceof Error ? error.message : 'ERREUR LORS DU RETRAIT DU POKEMON',
+        error: error instanceof Error ? error.message : 'Erreur lors du retrait du Pokémon',
         success: false 
       });
     }
@@ -199,7 +175,7 @@ export default function SelectPokemon() {
   // Filtrage des Pokémon
   const filteredPokemon = pokemon.filter(p => {
     const matchesSearch = !searchFilter || 
-      p.nameFr?.toLowerCase().includes(searchFilter.toLowerCase())
+      p.name_fr?.toLowerCase().includes(searchFilter.toLowerCase())
     
     const matchesType = typeFilter === 'all' || p.type === typeFilter;
     
@@ -213,12 +189,10 @@ export default function SelectPokemon() {
 
   const handleAddPokemon = (pokemonId: number) => {
     if (teamPokemonCount >= maxPokemonPerTeam) {
-      alert('EQUIPE COMPLETE ! MAXIMUM 6 POKEMON PAR EQUIPE.');
       return;
     }
     
     if (teamPokemonIds.includes(pokemonId)) {
-      alert('CE POKEMON EST DEJA DANS L\'EQUIPE !');
       return;
     }
 
@@ -231,7 +205,6 @@ export default function SelectPokemon() {
 
   const handleRemovePokemon = (pokemonId: number) => {
     if (!teamPokemonIds.includes(pokemonId)) {
-      alert('CE POKEMON N\'EST PAS DANS L\'EQUIPE !');
       return;
     }
 
@@ -243,294 +216,322 @@ export default function SelectPokemon() {
   };
 
   return (
-    <div className="min-h-screen pokemon-vintage-bg">
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        
-        {/* Navigation de retour */}
-        <VintageCard padding="sm">
-          <VintageButton 
-            href="/dashboard/teams" 
-            variant="blue" 
-            size="sm"
-            className="inline-flex items-center space-x-2"
-          >
-            <span>👥</span>
-            <span>← RETOUR EQUIPES</span>
-          </VintageButton>
-        </VintageCard>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative overflow-hidden">
+      {/* Decorative Elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-20 left-10 text-6xl animate-pulse">👥</div>
+        <div className="absolute top-40 right-20 text-4xl animate-bounce delay-300">⚡</div>
+        <div className="absolute bottom-32 left-20 text-5xl animate-pulse delay-700">🔧</div>
+        <div className="absolute bottom-20 right-10 text-4xl animate-bounce delay-1000">🎯</div>
+        <div className="absolute top-1/3 left-1/4 text-3xl animate-pulse delay-500">⭐</div>
+        <div className="absolute top-2/3 right-1/3 text-3xl animate-bounce delay-1200">💎</div>
+      </div>
 
-        {/* Header avec info équipe */}
-        <VintageCard>
-          <div className="flex flex-col md:flex-row md:items-center justify-between">
-            <div>
-              <VintageTitle level={1} className="mb-2 flex items-center space-x-2">
-                <span>🔧</span>
-                <span>MODIFIER EQUIPE</span>
-                <span className="animate-pokemon-blink">⚡</span>
-              </VintageTitle>
-              <VintageTitle level={2} className="text-pokemon-blue">
-                {team.name}
-              </VintageTitle>
-              <p className="font-pokemon text-xs text-pokemon-blue-dark uppercase mt-2">
-                {teamPokemonCount}/{maxPokemonPerTeam} POKEMON DANS L'EQUIPE
-              </p>
-            </div>
-            
-            {/* Indicateur de slots */}
-            <div className="mt-4 md:mt-0">
-              <div className="bg-pokemon-blue border-2 border-pokemon-blue-dark rounded p-4">
-                <div className="font-pokemon text-xs text-pokemon-cream uppercase mb-2">
-                  SLOTS DISPONIBLES
+      <div className="relative z-10 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          
+          {/* Navigation Header */}
+          <ModernCard variant="glass" className="backdrop-blur-xl bg-white/10">
+            <div className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <Link 
+                    to="/dashboard/teams"
+                    className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 transition-all duration-200 text-white hover:scale-105"
+                  >
+                    <span className="text-lg">👥</span>
+                    <span className="font-medium">← Retour aux Équipes</span>
+                  </Link>
+                  <span className="text-white/60">→</span>
+                  <h1 className="text-white font-bold text-lg">
+                    🔧 Modifier l'Équipe
+                  </h1>
                 </div>
-                <div className="flex space-x-1">
-                  {Array.from({ length: maxPokemonPerTeam }).map((_, index) => (
-                    <div
-                      key={index}
-                      className={`w-4 h-4 border-2 border-pokemon-blue-dark rounded ${
-                        index < teamPokemonCount 
-                          ? 'bg-pokemon-green' 
-                          : 'bg-pokemon-gray'
-                      }`}
-                    />
-                  ))}
+                
+                <div className="text-right">
+                  <div className="text-white font-bold text-xl">{team.teamName || team.name}</div>
+                  <div className="text-white/70 text-sm">
+                    {teamPokemonCount}/{maxPokemonPerTeam} Pokémon
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </VintageCard>
+          </ModernCard>
 
-        {/* Messages de statut */}
-        {actionData?.error && (
-          <StatusIndicator
-            type="error"
-            title="ERREUR OPERATION"
-            message={actionData.error}
-          />
-        )}
-
-        {actionData?.success && actionData?.message && (
-          <StatusIndicator
-            type="success"
-            title="OPERATION REUSSIE"
-            message={actionData.message}
-          />
-        )}
-
-        {/* Équipe actuelle */}
-        <VintageCard>
-          <VintageTitle level={2} className="mb-4 flex items-center space-x-2">
-            <span>👥</span>
-            <span>EQUIPE ACTUELLE</span>
-          </VintageTitle>
-          
-          {team.pokemon && team.pokemon.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {team.pokemon.map((poke: any, index: number) => (
-                <div
-                  key={index}
-                  className="pokemon-card-vintage group hover:scale-105 transition-all duration-200"
-                >
-                  <div className="text-center p-3">
-                    <img
-                      src={poke.sprite_url || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id || poke.pokemon_id}.png`}
-                      alt={poke.name_fr || poke.name_en}
-                      className="w-16 h-16 object-contain mx-auto mb-2"
-                      style={{ imageRendering: 'pixelated' }}
-                    />
-                    <div className="font-pokemon text-xs text-pokemon-blue-dark uppercase mb-2 truncate">
-                      {poke.name_fr || poke.name_en}
-                    </div>
-                    <VintageButton
-                      variant="red"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => handleRemovePokemon(poke.id || poke.pokemon_id)}
-                      disabled={isLoading}
-                    >
-                      ❌ RETIRER
-                    </VintageButton>
+          {/* Success/Error Messages */}
+          {actionData?.error && (
+            <ModernCard variant="glass" className="border-l-4 border-red-400 bg-red-500/20">
+              <div className="p-6">
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">❌</span>
+                  <div>
+                    <h3 className="text-red-200 font-bold mb-2">Erreur</h3>
+                    <p className="text-red-100">{actionData.error}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-6xl mb-4 opacity-50 animate-pokemon-blink">👥</div>
-              <VintageTitle level={3} className="mb-2">
-                EQUIPE VIDE
-              </VintageTitle>
-              <p className="font-pokemon text-xs text-pokemon-blue uppercase">
-                AJOUTEZ DES POKEMON DEPUIS LA LISTE CI-DESSOUS
-              </p>
-            </div>
+              </div>
+            </ModernCard>
           )}
-        </VintageCard>
 
-        {/* Filtres */}
-        <VintageCard>
-          <VintageTitle level={2} className="mb-4 flex items-center space-x-2">
-            <span>🔍</span>
-            <span>FILTRES POKEMON</span>
-          </VintageTitle>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Recherche par nom */}
-            <div>
-              <label className="font-pokemon text-xs text-pokemon-blue-dark uppercase block mb-2">
-                RECHERCHER PAR NOM
-              </label>
-              <input
-                type="text"
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-                placeholder="PIKACHU, DRACAUFEU..."
-                className="w-full bg-pokemon-cream border-2 border-pokemon-blue-dark rounded p-2 font-pokemon text-sm text-pokemon-blue-dark placeholder-pokemon-blue focus:border-pokemon-blue focus:outline-none"
-              />
-            </div>
-            
-            {/* Filtre par type */}
-            <div>
-              <label className="font-pokemon text-xs text-pokemon-blue-dark uppercase block mb-2">
-                FILTRER PAR TYPE
-              </label>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="w-full bg-pokemon-cream border-2 border-pokemon-blue-dark rounded p-2 font-pokemon text-sm text-pokemon-blue-dark focus:border-pokemon-blue focus:outline-none"
-              >
-                <option value="all">TOUS LES TYPES</option>
-                {availableTypes.map(type => (
-                  <option key={type} value={type}>
-                    {type.toUpperCase()}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </VintageCard>
+          {actionData?.success && actionData?.message && (
+            <ModernCard variant="glass" className="border-l-4 border-green-400 bg-green-500/20">
+              <div className="p-6">
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">✅</span>
+                  <div>
+                    <h3 className="text-green-200 font-bold mb-2">Succès</h3>
+                    <p className="text-green-100">{actionData.message}</p>
+                  </div>
+                </div>
+              </div>
+            </ModernCard>
+          )}
 
-        {/* Liste des Pokémon disponibles */}
-        <VintageCard>
-          <VintageTitle level={2} className="mb-4 flex items-center space-x-2">
-            <span>📚</span>
-            <span>POKEMON DISPONIBLES</span>
-            <span className="text-sm font-digital">({filteredPokemon.length})</span>
-          </VintageTitle>
-          
-          {filteredPokemon.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredPokemon.map((poke) => {
-                const isInTeam = teamPokemonIds.includes(poke.id);
-                const canAdd = teamPokemonCount < maxPokemonPerTeam && !isInTeam;
-                
-                return (
+          {/* Team Slots Indicator */}
+          <ModernCard variant="glass" className="bg-purple-500/20">
+            <div className="p-6">
+              <h2 className="text-white font-bold text-xl mb-4 flex items-center space-x-2">
+                <span>👥</span>
+                <span>Équipe Actuelle</span>
+                <span className="text-sm font-normal">({teamPokemonCount}/6)</span>
+              </h2>
+              
+              {/* Slots visualization */}
+              <div className="flex space-x-2 mb-6">
+                {Array.from({ length: maxPokemonPerTeam }).map((_, index) => (
                   <div
-                    key={poke.id}
-                    className={`pokemon-card-vintage group transition-all duration-200 ${
-                      isInTeam ? 'opacity-50' : 'hover:scale-105'
+                    key={index}
+                    className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center ${
+                      index < teamPokemonCount 
+                        ? 'bg-green-500 border-green-400 text-white' 
+                        : 'bg-white/10 border-white/30 text-white/50'
                     }`}
                   >
-                    <div className="p-4">
-                      <div className="text-center mb-3">
+                    {index < teamPokemonCount ? '⚡' : '○'}
+                  </div>
+                ))}
+              </div>
+
+              {/* Team Pokemon */}
+              {team.pokemon && team.pokemon.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  {team.pokemon.map((poke: any, index: number) => (
+                    <ModernCard key={index} variant="glass" className="bg-white/5 hover:bg-white/10 transition-all duration-200">
+                      <div className="p-4 text-center">
                         <img
-                          src={poke.sprite_url || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png`}
-                          alt={poke.nameFr}
+                          src={poke.sprite_url || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id || poke.pokemon_id}.png`}
+                          alt={poke.name_fr || poke.name_en}
                           className="w-16 h-16 object-contain mx-auto mb-2"
                           style={{ imageRendering: 'pixelated' }}
                         />
-                        <div className="font-pokemon text-sm text-pokemon-blue-dark uppercase mb-1">
-                          {poke.nameFr}
+                        <div className="text-white text-sm font-medium mb-3 truncate">
+                          {poke.name_fr || poke.name_en}
                         </div>
-                        <div className="font-pokemon text-xs text-pokemon-blue">
-                          #{poke.id.toString().padStart(3, '0')}
-                        </div>
-                      </div>
-                      
-                      {/* Type */}
-                      <div className="flex justify-center mb-3">
-                        <span
-                          className="bg-pokemon-blue text-pokemon-cream px-2 py-1 rounded border border-pokemon-blue-dark font-pokemon text-xs uppercase"
-                        >
-                          {poke.type}
-                        </span>
-                      </div>
-                      
-                      {/* Boutons d'action */}
-                      <div className="space-y-2">
-                        {isInTeam ? (
-                          <VintageButton
-                            variant="red"
-                            size="sm"
-                            className="w-full"
-                            onClick={() => handleRemovePokemon(poke.id)}
-                            disabled={isLoading}
-                          >
-                            ❌ RETIRER
-                          </VintageButton>
-                        ) : (
-                          <VintageButton
-                            variant={canAdd ? "green" : "gray"}
-                            size="sm"
-                            className="w-full"
-                            onClick={() => canAdd && handleAddPokemon(poke.id)}
-                            disabled={!canAdd || isLoading}
-                          >
-                            {canAdd ? "➕ AJOUTER" : "❌ EQUIPE PLEINE"}
-                          </VintageButton>
-                        )}
-                        
-                        <VintageButton
-                          href={`/dashboard/pokemon/${poke.id}`}
-                          variant="blue"
+                        <ModernButton
+                          variant="secondary"
                           size="sm"
-                          className="w-full"
+                          className="w-full text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                          onClick={() => handleRemovePokemon(poke.id || poke.pokemon_id)}
+                          disabled={isLoading}
                         >
-                          📊 DETAILS
-                        </VintageButton>
+                          <span className="mr-1">❌</span>
+                          Retirer
+                        </ModernButton>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    </ModernCard>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-6xl mb-4 opacity-50">👥</div>
+                  <h3 className="text-white font-bold text-lg mb-2">Équipe Vide</h3>
+                  <p className="text-white/70">
+                    Ajoutez des Pokémon depuis la liste ci-dessous
+                  </p>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-6xl mb-4 opacity-50">🔍</div>
-              <VintageTitle level={3} className="mb-2">
-                AUCUN POKEMON TROUVE
-              </VintageTitle>
-              <p className="font-pokemon text-xs text-pokemon-blue uppercase">
-                MODIFIEZ VOS FILTRES POUR VOIR PLUS DE POKEMON
-              </p>
-            </div>
-          )}
-        </VintageCard>
+          </ModernCard>
 
-        {/* Actions finales */}
-        <VintageCard>
-          <div className="flex flex-col md:flex-row gap-4 justify-center">
-            <VintageButton
-              href="/dashboard/teams"
-              variant="blue"
-              size="lg"
-              className="flex-1 md:flex-none"
-            >
-              ✅ TERMINER MODIFICATION
-            </VintageButton>
+          {/* Filters */}
+          <ModernCard variant="glass" size="lg" className="shadow-2xl">
+            <div className="p-6">
+              <h2 className="text-white font-bold text-xl mb-6 flex items-center space-x-2">
+                <span>🔍</span>
+                <span>Filtres de Recherche</span>
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-white font-medium mb-2">
+                    Rechercher par nom
+                  </label>
+                  <input
+                    type="text"
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    placeholder="Pikachu, Dracaufeu..."
+                    className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-white font-medium mb-2">
+                    Filtrer par type
+                  </label>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  >
+                    <option value="all">Tous les types</option>
+                    {availableTypes.map(type => (
+                      <option key={type} value={type}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </ModernCard>
+
+          {/* Pokemon List */}
+          <ModernCard variant="glass" size="lg" className="shadow-2xl">
+            <div className="p-6">
+              <h2 className="text-white font-bold text-xl mb-6 flex items-center space-x-2">
+                <span>📚</span>
+                <span>Pokémon Disponibles</span>
+                <span className="text-sm font-normal">({filteredPokemon.length})</span>
+              </h2>
+              
+              {filteredPokemon.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredPokemon.map((poke) => {
+                    const isInTeam = teamPokemonIds.includes(poke.id);
+                    const canAdd = teamPokemonCount < maxPokemonPerTeam && !isInTeam;
+                    
+                    return (
+                      <ModernCard 
+                        key={poke.id} 
+                        variant="glass" 
+                        className={`transition-all duration-200 ${
+                          isInTeam ? 'bg-yellow-500/20 border-yellow-400/50' : 'bg-white/5 hover:bg-white/10 hover:scale-105'
+                        }`}
+                      >
+                        <div className="p-4">
+                          <div className="text-center mb-4">
+                            <img
+                              src={poke.sprite_url || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png`}
+                              alt={poke.name_fr}
+                              className="w-20 h-20 object-contain mx-auto mb-3"
+                              style={{ imageRendering: 'pixelated' }}
+                            />
+                            <h3 className="text-white font-medium text-lg mb-1">
+                              {poke.name_fr}
+                            </h3>
+                            <p className="text-white/70 text-sm">
+                              #{poke.id.toString().padStart(3, '0')}
+                            </p>
+                          </div>
+                          
+                          {/* Type Badge */}
+                          <div className="flex justify-center mb-4">
+                            <span className="px-3 py-1 rounded-full bg-purple-500/30 border border-purple-400/50 text-purple-200 text-sm font-medium">
+                              {poke.type.charAt(0).toUpperCase() + poke.type.slice(1)}
+                            </span>
+                          </div>
+                          
+                          {/* Action Buttons */}
+                          <div className="space-y-2">
+                            {isInTeam ? (
+                              <ModernButton
+                                variant="secondary"
+                                size="sm"
+                                className="w-full text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                                onClick={() => handleRemovePokemon(poke.id)}
+                                disabled={isLoading}
+                              >
+                                <span className="mr-2">❌</span>
+                                Retirer de l'équipe
+                              </ModernButton>
+                            ) : (
+                              <ModernButton
+                                variant={canAdd ? "pokemon" : "secondary"}
+                                size="sm"
+                                className={`w-full ${!canAdd ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                onClick={() => canAdd && handleAddPokemon(poke.id)}
+                                disabled={!canAdd || isLoading}
+                              >
+                                {canAdd ? (
+                                  <>
+                                    <span className="mr-2">➕</span>
+                                    Ajouter à l'équipe
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="mr-2">❌</span>
+                                    Équipe complète
+                                  </>
+                                )}
+                              </ModernButton>
+                            )}
+                            
+                            <Link to={`/dashboard/pokemon/${poke.id}`}>
+                              <ModernButton
+                                variant="secondary"
+                                size="sm"
+                                className="w-full"
+                              >
+                                <span className="mr-2">📊</span>
+                                Voir détails
+                              </ModernButton>
+                            </Link>
+                          </div>
+                        </div>
+                      </ModernCard>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4 opacity-50">🔍</div>
+                  <h3 className="text-white font-bold text-lg mb-2">Aucun Pokémon trouvé</h3>
+                  <p className="text-white/70">
+                    Modifiez vos filtres pour voir plus de Pokémon
+                  </p>
+                </div>
+              )}
+            </div>
+          </ModernCard>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/dashboard/teams">
+              <ModernButton
+                variant="pokemon"
+                size="lg"
+                className="w-full sm:w-auto"
+              >
+                <span className="mr-2">✅</span>
+                Terminer la modification
+              </ModernButton>
+            </Link>
             
             {teamPokemonCount > 0 && (
-              <VintageButton
-                href="/dashboard/battle"
-                variant="green"
-                size="lg"
-                className="flex-1 md:flex-none"
-              >
-                ⚔️ ALLER AU COMBAT
-              </VintageButton>
+              <Link to="/dashboard/battle">
+                <ModernButton
+                  variant="secondary"
+                  size="lg"
+                  className="w-full sm:w-auto"
+                >
+                  <span className="mr-2">⚔️</span>
+                  Aller au combat
+                </ModernButton>
+              </Link>
             )}
           </div>
-        </VintageCard>
-
+        </div>
       </div>
     </div>
   );

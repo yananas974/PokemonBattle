@@ -1,9 +1,10 @@
-import { Get } from "../../db/crud/crud.js";
-import { friendships } from "../../db/schema.js";
+import { Get, GetMany } from "../../db/crud/crud.js";
+import { friendships, Team } from "../../db/schema.js";
 import { eq, and, or } from "drizzle-orm";
 import type { FriendshipDB, TeamDB } from '@pokemon-battle/shared';
 import { z } from "zod";
 import { mapTeamToApi } from '../../mapper/team.mapper.js';
+import { getTeamPokemon } from '../pokemonTeamService/pokemonTeamService.js';
 
 // ✅ Schémas Zod
 const getFriendTeamsSchema = z.object({
@@ -31,10 +32,6 @@ export class FriendTeamsService {
     }
     
     // Récupérer les équipes de l'ami
-    const { Team } = await import('../../db/schema.js');
-    const { GetMany } = await import('../../db/crud/crud.js');
-    const { getTeamPokemon } = await import('../pokemonTeamService/pokemonTeamService.js');
-
     const teamsDB = await GetMany<TeamDB>(Team, eq(Team.user_id, friendId));
     
     // Ajoute les pokémon à chaque équipe
@@ -57,6 +54,6 @@ export class FriendTeamsService {
       throw new Error('Invalid friend ID');
     }
 
-    return await this.getFriendTeams(friendId, userId);
+    return await FriendTeamsService.getFriendTeams(friendId, userId);
   }
 } 

@@ -40,9 +40,7 @@ export class FriendRequestService {
     const friendshipToCreate = {
       user_id: userId,
       friend_id: data.friendId,
-      status: 'pending' as const,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      status: 'pending' as const
     };
     
     const friendshipDB = await Create<FriendshipDB>(friendships, friendshipToCreate);
@@ -75,7 +73,7 @@ export class FriendRequestService {
     const updatedFriendship = await Update<FriendshipDB>(
       friendships, 
       eq(friendships.id, friendshipId), 
-      { status: 'accepted', updated_at: new Date().toISOString() }
+      { status: 'accepted' }
     );
 
     console.log(`✅ Amitié acceptée:`, updatedFriendship);
@@ -97,7 +95,8 @@ export class FriendRequestService {
 
     const requestsWithDetails = await Promise.all(
       pendingRequests.map(async (friendship) => {
-        const senderId = friendship.userId;
+        // Utiliser user_id (snake_case) car c'est ce que retourne la base de données
+        const senderId = (friendship as any).user_id;
         const sender = await Get<typeof users.$inferSelect>(users, eq(users.id, senderId));
         
         console.log(`👤 Expéditeur trouvé: ${sender?.username} (ID: ${senderId})`);
@@ -118,18 +117,26 @@ export class FriendRequestService {
   }
 
   static async getSentFriendRequests(userId: number): Promise<Friendship[]> {
+    console.log(`📤 Récupération demandes envoyées pour userId=${userId}`);
+    
     // ✅ Validation centralisée
     ValidationService.validateUserId(userId);
     
+    // Récupérer SEULEMENT les demandes envoyées en attente
     const sentRequests = await GetMany<FriendshipDB>(
       friendships,
       and(eq(friendships.user_id, userId), eq(friendships.status, 'pending'))!
     );
 
+    console.log(`📊 Demandes envoyées trouvées:`, sentRequests.length);
+
     const requestsWithDetails = await Promise.all(
       sentRequests.map(async (friendship) => {
-        const recipientId = friendship.friendId;
+        // Utiliser friend_id (snake_case) car c'est ce que retourne la base de données
+        const recipientId = (friendship as any).friend_id;
         const recipient = await Get<typeof users.$inferSelect>(users, eq(users.id, recipientId));
+        
+        console.log(`👤 Destinataire trouvé: ${recipient?.username} (ID: ${recipientId}) pour demande ID: ${friendship.id}`);
         
         return {
           ...mapFriendshipToApi(friendship),
@@ -142,6 +149,7 @@ export class FriendRequestService {
       })
     );
 
+    console.log(`✅ Demandes envoyées avec détails:`, requestsWithDetails.length);
     return requestsWithDetails;
   }
 
@@ -166,7 +174,7 @@ export class FriendRequestService {
     const updatedFriendship = await Update<FriendshipDB>(
       friendships, 
       eq(friendships.id, friendshipId), 
-      { status, updated_at: new Date().toISOString() }
+      { status }
     );
     
     return mapFriendshipToApi(updatedFriendship);

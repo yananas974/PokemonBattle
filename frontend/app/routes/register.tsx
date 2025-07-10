@@ -1,32 +1,32 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
 import { json, redirect } from '@remix-run/node';
-import { Form, Link, useActionData, useNavigation } from '@remix-run/react';
-import { getUserFromSession, createUserSession } from '~/sessions';
+import { Form, Link, useActionData, useNavigation, useSearchParams } from '@remix-run/react';
 import { authService } from '~/services/authService';
-import { 
-  VintageCard, 
-  VintageTitle, 
-  VintageButton,
-  VintageInput,
-  StatusIndicator
-} from '~/components';
+import { getUserFromSession, createUserSession } from '~/sessions';
+import { ModernCard } from '~/components/ui/ModernCard';
+import { ModernButton } from '~/components/ui/ModernButton';
+import type { RegisterRequest, AuthResponse } from '~/types/shared';
+import { authValidators } from '~/types/shared';
 
 export const meta: MetaFunction = () => {
   return [
     { title: 'Inscription - Pokemon Battle' },
     { name: 'description', content: 'Créez votre compte Pokemon Battle' },
+    { name: 'robots', content: 'noindex' },
   ];
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { userId } = await getUserFromSession(request);
+  const { user } = await getUserFromSession(request);
   
-  // Si déjà connecté, rediriger vers l'app
-  if (userId) {
+  if (user) {
     throw redirect('/dashboard');
   }
+
+  const url = new URL(request.url);
+  const redirectTo = url.searchParams.get('redirectTo') || '/dashboard';
   
-  return json({});
+  return json({ redirectTo });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -34,179 +34,252 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   const username = formData.get('username') as string;
+  const redirectTo = formData.get('redirectTo') as string || '/dashboard';
 
-  if (!email || !password || !username) {
-    return json(
-      { error: 'Tous les champs sont requis' },
-      { status: 400 }
-    );
-  }
-
-  if (password.length < 6) {
-    return json(
-      { error: 'Le mot de passe doit contenir au moins 6 caractères' },
-      { status: 400 }
-    );
-  }
-
+  // ✅ Validation avec les schémas partagés
+  const registerData: RegisterRequest = { email, password, username };
+  
   try {
-    const result = await authService.signup({ email, password, username });
+    const validatedData = authValidators.register.parse(registerData);
     
-    // Le token est déjà dans result.user.token
-    const userWithToken = {
-      ...result.user,
-      backendToken: result.user?.token // Garder une copie pour compatibilité
-    };
+    // ✅ Inscription
+    const authResponse: AuthResponse = await authService.signup(validatedData);
     
-    return createUserSession(result.user?.id.toString() || '', userWithToken, '/dashboard');
-  } catch (error) {
-    return json(
-      { error: 'Erreur lors de la création du compte. Vérifiez que l\'email n\'est pas déjà utilisé.' },
-      { status: 400 }
+    if (!authResponse.success || !authResponse.user) {
+      return json({
+        errors: { general: authResponse.error || 'Erreur lors de la création du compte' },
+        success: false,
+        email,
+        username
+      }, { status: 400 });
+    }
+
+    // ✅ Créer session et rediriger
+    return createUserSession(
+      authResponse.user.id.toString(),
+      authResponse.user,
+      redirectTo
     );
+
+  } catch (error: any) {
+    // ✅ Gestion d'erreurs de validation
+    if (error.errors) {
+      const fieldErrors: Record<string, string> = {};
+      error.errors.forEach((err: any) => {
+        if (err.path && err.path.length > 0) {
+          fieldErrors[err.path[0]] = err.message;
+        }
+      });
+      
+      return json({
+        errors: fieldErrors,
+        success: false,
+        email,
+        username
+      }, { status: 400 });
+    }
+
+    console.error('Register error:', error);
+    
+    return json({
+      errors: { 
+        general: error instanceof Error 
+          ? error.message 
+          : 'Erreur lors de la création du compte. Veuillez réessayer.' 
+      },
+      success: false,
+      email,
+      username
+    }, { status: 500 });
   }
 };
 
 export default function Register() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
+  const [searchParams] = useSearchParams();
+  
   const isSubmitting = navigation.state === 'submitting';
+  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+  const defaultEmail = actionData?.email || '';
+  const defaultUsername = actionData?.username || '';
 
   return (
-    <div className="pokemon-vintage-bg min-h-screen flex items-center justify-center py-8 px-4">
-      <div className="max-w-md w-full space-y-8">
-        
-        {/* Header vintage Pokemon */}
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      {/* Background effects */}
+      <div className="absolute inset-0 bg-black bg-opacity-20" />
+      
+      <div className="max-w-md w-full space-y-8 relative z-10">
+        {/* Header */}
         <div className="text-center">
-          <div className="text-8xl mb-4 animate-pokemon-bounce">⚡</div>
-          <VintageTitle level={1} className="mb-4">
-            POKEMON BATTLE
-          </VintageTitle>
-          <p className="font-pokemon text-xs text-pokemon-blue uppercase tracking-wider">
-            NOUVEAU DRESSEUR
+          <div className="mx-auto mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-green-400 to-blue-500 rounded-full shadow-2xl">
+              <span className="text-3xl">⭐</span>
+            </div>
+          </div>
+          
+          <h1 className="text-4xl font-bold text-white mb-2 bg-gradient-to-r from-green-300 to-blue-400 bg-clip-text text-transparent">
+            Pokemon Battle
+          </h1>
+          
+          <h2 className="text-xl text-gray-300 mb-6">
+            Nouveau Dresseur
+          </h2>
+          
+          <p className="text-sm text-gray-400">
+            Déjà un compte ?{' '}
+            <Link
+              to={`/login${redirectTo !== '/dashboard' ? `?redirectTo=${redirectTo}` : ''}`}
+              className="text-green-400 hover:text-green-300 transition-colors font-semibold"
+            >
+              Se connecter ici
+            </Link>
           </p>
         </div>
 
-        {/* Message d'erreur vintage */}
-        {actionData?.error && (
-          <StatusIndicator
-            type="error"
-            title="ERREUR INSCRIPTION"
-            message={actionData.error}
-            animate
-          />
-        )}
+        {/* Main Card */}
+        <ModernCard variant="glass" size="lg" className="shadow-2xl">
+          <Form method="post" className="space-y-6" replace>
+            <input type="hidden" name="redirectTo" value={redirectTo} />
+            
+            {/* Error message */}
+            {actionData?.errors?.general && (
+              <div className="bg-red-500 bg-opacity-20 border border-red-500 text-red-300 p-4 rounded-xl backdrop-blur-sm">
+                <div className="flex items-center">
+                  <span className="mr-2 text-lg">⚠️</span>
+                  <p className="text-sm font-medium">
+                    {actionData.errors.general}
+                  </p>
+                </div>
+              </div>
+            )}
 
-        {/* Formulaire d'inscription vintage */}
-        <VintageCard padding="lg">
-          <div className="space-y-6">
-            <VintageTitle level={2} className="text-center mb-6">
-              ➕ CREATION COMPTE
-            </VintageTitle>
-
-            <Form method="post" className="space-y-6">
-              {/* Nom d'utilisateur vintage */}
-              <VintageInput
-                id="username"
-                name="username"
-                type="text"
-                label="NOM DE DRESSEUR"
-                placeholder="VOTRE PSEUDO"
-                icon="👤"
-                autoComplete="username"
-                required
-              />
-
-              {/* Email vintage */}
-              <VintageInput
-                id="email"
-                name="email"
-                type="email"
-                label="ADRESSE EMAIL"
-                placeholder="VOTRE@EMAIL.COM"
-                icon="📧"
-                autoComplete="email"
-                required
-              />
-
-              {/* Mot de passe vintage */}
+            {/* Form fields */}
+            <div className="space-y-6">
               <div>
-                <VintageInput
+                <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
+                  👤 Nom de Dresseur
+                </label>
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  required
+                  autoComplete="username"
+                  defaultValue={defaultUsername}
+                  className="w-full px-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent backdrop-blur-sm transition-all"
+                  placeholder="Votre pseudo"
+                />
+                {actionData?.errors?.username && (
+                  <p className="mt-2 text-red-400 text-sm">
+                    {actionData.errors.username}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                  📧 Adresse Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  defaultValue={defaultEmail}
+                  className="w-full px-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent backdrop-blur-sm transition-all"
+                  placeholder="dresseur@pokemon.com"
+                />
+                {actionData?.errors?.email && (
+                  <p className="mt-2 text-red-400 text-sm">
+                    {actionData.errors.email}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                  🔑 Mot de Passe
+                </label>
+                <input
                   id="password"
                   name="password"
                   type="password"
-                  label="MOT DE PASSE"
-                  placeholder="••••••••"
-                  icon="🔑"
-                  autoComplete="new-password"
                   required
+                  autoComplete="new-password"
+                  className="w-full px-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent backdrop-blur-sm transition-all"
+                  placeholder="Mot de passe (min. 8 caractères)"
                 />
-                <p className="mt-2 font-pokemon text-xs text-pokemon-blue uppercase">
-                  ⚠️ MINIMUM 6 CARACTERES
+                {actionData?.errors?.password && (
+                  <p className="mt-2 text-red-400 text-sm">
+                    {actionData.errors.password}
+                  </p>
+                )}
+                <p className="mt-2 text-gray-400 text-xs">
+                  ⚠️ Minimum 8 caractères recommandés
                 </p>
               </div>
+            </div>
 
-              {/* Bouton d'inscription vintage */}
-              <VintageButton
+            {/* Submit button */}
+            <div className="space-y-4">
+              <ModernButton
                 type="submit"
-                variant="green"
+                variant="grass"
                 size="lg"
                 disabled={isSubmitting}
+                loading={isSubmitting}
                 className="w-full"
               >
-                {isSubmitting ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <span className="animate-pokemon-blink">⏳</span>
-                    <span>CREATION EN COURS...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center space-x-2">
-                    <span>🎯</span>
-                    <span>CREER MON COMPTE</span>
-                  </div>
-                )}
-              </VintageButton>
-            </Form>
-
-            {/* Séparateur vintage */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t-2 border-pokemon-blue-dark"></div>
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-pokemon-cream px-3 font-pokemon text-pokemon-blue-dark">
-                  DEJA DRESSEUR ?
-                </span>
-              </div>
+                {isSubmitting ? 'Création...' : 'Créer mon Compte'}
+              </ModernButton>
             </div>
+          </Form>
+        </ModernCard>
 
-            {/* Lien vers connexion vintage */}
-            <div className="text-center">
-              <VintageButton
-                href="/login"
-                variant="blue"
-                size="md"
-                className="w-full"
-              >
-                <div className="flex items-center justify-center space-x-2">
-                  <span>🚀</span>
-                  <span>SE CONNECTER</span>
-                </div>
-              </VintageButton>
-            </div>
-          </div>
-        </VintageCard>
-       
-
-        {/* Footer vintage */}
+        {/* Footer */}
         <div className="text-center">
-          <p className="font-pokemon text-xs text-pokemon-blue opacity-75 uppercase">
-            © 2024 POKEMON BATTLE SYSTEM
-          </p>
-         
+          <div className="flex justify-center items-center space-x-6 text-gray-400 text-sm">
+            <span className="flex items-center">
+              <span className="mr-1">🌟</span>
+              Créer
+            </span>
+            <span className="flex items-center">
+              <span className="mr-1">⚡</span>
+              Combattre
+            </span>
+            <span className="flex items-center">
+              <span className="mr-1">🏆</span>
+              Gagner
+            </span>
+          </div>
+          <div className="mt-4 text-xs text-gray-500">
+            © 2024 Pokemon Battle - Tous droits réservés
+          </div>
         </div>
-
       </div>
+    </div>
+  );
+}
+
+export function ErrorBoundary() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+      <ModernCard variant="glass" size="lg" className="max-w-md w-full">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🚨</div>
+          <h2 className="text-2xl font-bold text-white mb-4">
+            Erreur d'Inscription
+          </h2>
+          <p className="text-gray-300 mb-6">
+            Une erreur inattendue s'est produite
+          </p>
+          <ModernButton href="/register" variant="grass">
+            Réessayer
+          </ModernButton>
+        </div>
+      </ModernCard>
     </div>
   );
 } 

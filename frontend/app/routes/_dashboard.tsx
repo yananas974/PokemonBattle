@@ -1,11 +1,13 @@
 import type { LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
 import { json, redirect } from '@remix-run/node';
 import { Outlet, useLoaderData, Form, Link, useNavigate, useRouteError } from '@remix-run/react';
+import { useEffect } from 'react';
 import { getUserFromSession } from '~/sessions';
 import BottomNavigation from '~/components/BottomNavigation';
 import { PokemonAudioPlayer } from '~/components/PokemonAudioPlayer';
 import ClientOnly from '~/components/ClientOnly';
 import { isRouteErrorResponse } from '@remix-run/react';
+import { useGlobalAudio } from '~/hooks/useGlobalAudio';
 
 export const meta: MetaFunction = () => {
   return [
@@ -31,9 +33,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export default function DashboardLayout() {
   const { user, currentPath } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
+  const { playDashboard } = useGlobalAudio();
 
   console.log('🔍 Dashboard Layout rendering for user:', user?.username);
   console.log('📍 Current path:', currentPath);
+
+  // Démarrer automatiquement la musique dashboard
+  useEffect(() => {
+    console.log('🎵 Dashboard Layout: Démarrage automatique de la musique dashboard');
+    playDashboard();
+  }, [playDashboard]);
 
   return (
     <div className="pokemon-vintage-bg min-h-screen">

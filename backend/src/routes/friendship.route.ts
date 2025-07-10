@@ -10,7 +10,7 @@ const friendshipRoutes = new Hono();
 friendshipRoutes.post('/send', authMiddleware, friendshipValidators.sendRequest, friendshipHandlers.sendRequest);
 friendshipRoutes.post('/accept/:id', authMiddleware, friendshipValidators.acceptRequest, friendshipHandlers.acceptRequest);
 friendshipRoutes.post('/block/:id', authMiddleware, friendshipValidators.blockRequest, friendshipHandlers.blockRequest);
-friendshipRoutes.get('/friends', authMiddleware, friendshipHandlers.getFriends);
+friendshipRoutes.get('/', authMiddleware, friendshipHandlers.getFriends);
 friendshipRoutes.get('/requests/received', authMiddleware, friendshipHandlers.getPendingRequests);
 friendshipRoutes.get('/requests/sent', authMiddleware, friendshipHandlers.getSentRequests);
 friendshipRoutes.delete('/:id', authMiddleware, friendshipHandlers.removeFriend);

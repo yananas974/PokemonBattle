@@ -70,11 +70,22 @@ export const teamHandlers: TeamHandler = {
   createTeam: authAsyncHandler(async (c: Context) => {
     const user = c.get('user');
     const body = await c.req.json();
-    const data = createTeamRequestSchema.parse(body);
     
-    const team = await TeamService.createTeam(data, user.id);
+    console.log('📝 Données reçues pour création équipe:', body);
+    console.log('👤 Utilisateur:', user);
     
-    return c.json(formatTeamResponse(TEAM_MESSAGES.CREATED, { team }));
+    try {
+      const data = createTeamRequestSchema.parse(body);
+      console.log('✅ Données validées:', data);
+      
+      const team = await TeamService.createTeam(data, user.id);
+      console.log('✅ Équipe créée:', team);
+      
+      return c.json(formatTeamResponse(TEAM_MESSAGES.CREATED, { team }));
+    } catch (error) {
+      console.error('❌ Erreur création équipe:', error);
+      throw error;
+    }
   }),
 
   deleteTeam: withTeamOwnership(async (c: Context, team: any) => {

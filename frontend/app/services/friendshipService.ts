@@ -26,13 +26,19 @@ interface FriendshipResponse {
 }
 
 interface FriendsResponse {
+  success: boolean;
   message: string;
-  friends: Friendship[];
+  data: {
+    friends: Friendship[];
+  };
 }
 
 interface UsersResponse {
+  success: boolean;
   message: string;
-  users: User[];
+  data: {
+    users: User[];
+  };
 }
 
 // ✅ HELPER DRY POUR LES APPELS API côté serveur (loaders)
@@ -102,9 +108,9 @@ export const friendshipService = {
   // ✅ Récupérer tous les amis
   async getFriends(requestOrToken?: Request | string): Promise<FriendsResponse> {
     if (requestOrToken instanceof Request) {
-      return makeApiCallServer('/api/friends/friends', requestOrToken);
+      return makeApiCallServer('/api/friends', requestOrToken);
     } else {
-      return makeApiCall('/api/friends/friends', {}, requestOrToken);
+      return makeApiCall('/api/friends', {}, requestOrToken);
     }
   },
 
@@ -149,7 +155,7 @@ export const friendshipService = {
   },
 
   // ✅ Récupérer les équipes d'un ami
-  async getFriendTeams(friendId: number, requestOrToken?: Request | string): Promise<{ message: string; teams: any[] }> {
+  async getFriendTeams(friendId: number, requestOrToken?: Request | string): Promise<{ success: boolean; message: string; data: any[] }> {
     if (requestOrToken instanceof Request) {
       return makeApiCallServer(`/api/friends/teams/${friendId}`, requestOrToken);
     } else {

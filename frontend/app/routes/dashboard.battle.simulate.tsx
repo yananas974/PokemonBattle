@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
 import { json } from '@remix-run/node';
-import { useLoaderData } from '@remix-run/react';
+import { useLoaderData, useNavigate } from '@remix-run/react';
 import { getUserFromSession } from '~/sessions';
 import { teamService } from '~/services/teamService';
 import { battleSimulationService } from '~/services/battleSimulationService';
@@ -10,6 +10,9 @@ import { VintageCard } from '~/components/VintageCard';
 import { VintageTitle } from '~/components/VintageTitle';
 import { VintageButton } from '~/components/VintageButton';
 import { StatusIndicator } from '~/components/StatusIndicator';
+import { PokemonAudioPlayer } from '~/components/PokemonAudioPlayer';
+import { BattleResultModal } from '~/components/BattleResultModal';
+import { useGlobalAudio } from '~/hooks/useGlobalAudio';
 
 export const meta: MetaFunction = () => {
   return [
@@ -27,7 +30,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   // Récupérer les paramètres d'URL
   const url = new URL(request.url);
-  const preselectedTeam1Id = url.searchParams.get('team1');
+  const playerTeamId = url.searchParams.get('playerTeamId');
+  const enemyTeamId = url.searchParams.get('enemyTeamId');
 
   try {
     const teamsData = await teamService.getMyTeams(user.backendToken);
@@ -35,73 +39,123 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       team.pokemon && team.pokemon.length >= 1
     );
 
+    // Si les équipes sont spécifiées en paramètres, les pré-sélectionner
+    let preselectedPlayer = null;
+    let preselectedEnemy = null;
+    
+    if (playerTeamId && enemyTeamId) {
+      preselectedPlayer = readyTeams.find((team: any) => team.id === parseInt(playerTeamId));
+      preselectedEnemy = readyTeams.find((team: any) => team.id === parseInt(enemyTeamId));
+    }
+
     return json({
       user,
       teams: readyTeams,
-      preselectedTeam1Id: preselectedTeam1Id ? parseInt(preselectedTeam1Id) : null
+      preselectedPlayer,
+      preselectedEnemy
     });
   } catch (error) {
     return json({
       user,
       teams: [],
-      preselectedTeam1Id: null
+      preselectedPlayer: null,
+      preselectedEnemy: null
     });
   }
 };
 
+// Types pour les étapes de progression
+type BattleStep = 'team-selection' | 'mode-selection' | 'enemy-selection' | 'battle-ready' | 'battle-result';
+
 export default function BattleSimulation() {
-  const { user, teams, preselectedTeam1Id } = useLoaderData<typeof loader>();
-  const [team1, setTeam1] = useState<any>(null);
-  const [team2, setTeam2] = useState<any>(null);
-  const [battleType, setBattleType] = useState<'team' | 'turnbased'>('team');
+  const { user, teams, preselectedPlayer, preselectedEnemy } = useLoaderData<typeof loader>();
+  const navigate = useNavigate();
+  const { playDashboard } = useGlobalAudio();
+  
+  // État de progression - démarrer à l'étape appropriée
+  const [currentStep, setCurrentStep] = useState<BattleStep>(
+    preselectedPlayer && preselectedEnemy ? 'mode-selection' : 'team-selection'
+  );
+  const [selectedTeam, setSelectedTeam] = useState<any>(preselectedPlayer || null);
+  const [battleMode, setBattleMode] = useState<'team' | 'turnbased'>('team');
+  const [enemyTeam, setEnemyTeam] = useState<any>(preselectedEnemy || null);
+  const [useWeather, setUseWeather] = useState(false);
+  const [location, setLocation] = useState<{ lat: number; lon: number } | null>(null);
+  
+  // État de combat
   const [isSimulating, setIsSimulating] = useState(false);
   const [battleResult, setBattleResult] = useState<BattleResult | TurnBasedResult | null>(null);
-  const [location, setLocation] = useState<{ lat: number; lon: number } | null>(null);
-  const [useWeather, setUseWeather] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
 
-  // Pré-sélectionner l'équipe si elle est passée en paramètre
+  // Auto-start dashboard music
   useEffect(() => {
-    if (preselectedTeam1Id && teams.length > 0) {
-      const preselectedTeam = teams.find((team: any) => team.id === preselectedTeam1Id);
-      if (preselectedTeam) {
-        setTeam1(preselectedTeam);
-      }
-    }
-  }, [preselectedTeam1Id, teams]);
+    playDashboard();
+  }, [playDashboard]);
 
-  // Obtenir la géolocalisation au chargement
+  // Géolocalisation
   useEffect(() => {
     if (useWeather) {
       battleSimulationService.getCurrentLocation().then(setLocation);
     }
   }, [useWeather]);
 
-  const handleSimulateBattle = async () => {
-    if (!team1 || !team2) {
-      alert('Veuillez sélectionner deux équipes');
+  // Navigation entre étapes
+  const handleTeamSelection = (team: any) => {
+    setSelectedTeam(team);
+    setCurrentStep('mode-selection');
+  };
+
+  const handleModeSelection = (mode: 'team' | 'turnbased') => {
+    setBattleMode(mode);
+    setCurrentStep('enemy-selection');
+  };
+
+  const handleEnemySelection = (enemy: any) => {
+    setEnemyTeam(enemy);
+    setCurrentStep('battle-ready');
+  };
+
+  const handleBackToStep = (step: BattleStep) => {
+    setCurrentStep(step);
+    if (step === 'team-selection') {
+      setSelectedTeam(null);
+      setEnemyTeam(null);
+      setBattleResult(null);
+    } else if (step === 'mode-selection') {
+      setEnemyTeam(null);
+      setBattleResult(null);
+    } else if (step === 'enemy-selection') {
+      setBattleResult(null);
+    }
+  };
+
+  const handleStartBattle = async () => {
+    if (!selectedTeam || !enemyTeam) {
+      alert('Équipes manquantes');
       return;
     }
 
+    console.log('🚀 Démarrage du combat simulé');
     setIsSimulating(true);
     setBattleResult(null);
 
     try {
       const request: TeamBattleRequest = {
         team1: {
-          id: team1.id,
-          teamName: team1.teamName || team1.name,
-          pokemon: team1.pokemon
+          id: selectedTeam.id,
+          teamName: selectedTeam.teamName || selectedTeam.name,
+          pokemon: selectedTeam.pokemon
         },
         team2: {
-          id: team2.id,
-          teamName: team2.teamName || team2.name,
-          pokemon: team2.pokemon
+          id: enemyTeam.id,
+          teamName: enemyTeam.teamName || enemyTeam.name,
+          pokemon: enemyTeam.pokemon
         },
         ...(useWeather && location ? { lat: location.lat, lon: location.lon } : {})
       };
 
       let result;
-      if (battleType === 'team') {
+      if (battleMode === 'team') {
         result = await battleSimulationService.simulateTeamBattle(request, user.backendToken);
       } else {
         result = await battleSimulationService.simulateTurnBasedBattle(
@@ -110,393 +164,496 @@ export default function BattleSimulation() {
         );
       }
 
+      console.log('✅ Résultat du combat reçu:', result);
       setBattleResult(result);
-    } catch (error) {
-      console.error('Erreur lors de la simulation:', error);
-      alert('Erreur lors de la simulation du combat');
+      console.log('🔄 État du modal avant:', showResultModal);
+      setShowResultModal(true);
+      console.log('🔄 État du modal après:', true);
+      setCurrentStep('battle-result');
+      console.log('🎯 Modal devrait être visible maintenant');
+    } catch (error: any) {
+      console.error('💥 Erreur lors de la simulation:', error);
+      alert(`Erreur lors de la simulation du combat: ${error?.message || error}`);
     } finally {
       setIsSimulating(false);
     }
   };
 
-  const formatBattleLog = (result: BattleResult | TurnBasedResult) => {
-    if ('battleLog' in result) {
-      return result.battleLog;
-    } else if ('combatLog' in result) {
-      return result.combatLog;
-    }
-    return [];
+  // Nouvelle bataille
+  const handleNewBattle = () => {
+    setCurrentStep('team-selection');
+    setSelectedTeam(null);
+    setEnemyTeam(null);
+    setBattleResult(null);
+    setIsSimulating(false);
+    setShowResultModal(false);
+  };
+
+  // Fermer le modal
+  const handleCloseModal = () => {
+    setShowResultModal(false);
+  };
+
+  // Retour au menu
+  const handleReturnToMenu = () => {
+    setShowResultModal(false);
+    navigate('/dashboard/battle');
+  };
+
+
+
+  // Helper pour les étapes
+  const getStepStatus = (step: BattleStep) => {
+    const steps = ['team-selection', 'mode-selection', 'enemy-selection', 'battle-ready', 'battle-result'];
+    const currentIndex = steps.indexOf(currentStep);
+    const stepIndex = steps.indexOf(step);
+    
+    if (stepIndex < currentIndex) return 'completed';
+    if (stepIndex === currentIndex) return 'current';
+    return 'pending';
   };
 
   return (
     <div className="space-y-6">
+      <PokemonAudioPlayer />
+      
       {/* Header */}
       <VintageCard>
         <VintageTitle level={1}>
           ⚔️ SIMULATION DE COMBAT
         </VintageTitle>
         <p className="font-pokemon text-pokemon-blue text-sm text-center">
-          SIMULEZ DES COMBATS AUTOMATIQUES ENTRE VOS ÉQUIPES
+          CONFIGUREZ ET LANCEZ VOS COMBATS AUTOMATIQUES
         </p>
-        {preselectedTeam1Id && team1 && (
-          <div className="mt-3 bg-pokemon-green text-white p-2 rounded text-center">
-            <div className="font-pokemon text-xs">
-              ✅ ÉQUIPE "{team1.teamName || team1.name}" PRÉ-SÉLECTIONNÉE
+        {preselectedPlayer && preselectedEnemy && (
+          <div className="mt-3 bg-green-100 border border-green-400 p-3 rounded text-center">
+            <div className="font-pokemon text-xs text-green-800">
+              ✅ ÉQUIPES PRÉ-SÉLECTIONNÉES
             </div>
+                         <div className="text-xs text-green-700">
+               {preselectedPlayer.teamName || 'Équipe du Joueur'} VS {preselectedEnemy.teamName || 'Équipe Adverse'}
+             </div>
           </div>
         )}
       </VintageCard>
 
-      {/* Configuration du combat */}
-      <VintageCard>
-        <VintageTitle level={2}>
-          ⚙️ CONFIGURATION
-        </VintageTitle>
-        
-        <div className="space-y-4">
-          {/* Type de combat */}
-          <div>
-            <label className="block font-pokemon text-pokemon-blue text-xs mb-2">
-              TYPE DE SIMULATION
-            </label>
-            <div className="flex gap-2">
-              <VintageButton
-                variant={battleType === 'team' ? 'blue' : 'gray'}
-                onClick={() => setBattleType('team')}
-                className="flex-1"
-              >
-                🏆 COMBAT D'ÉQUIPE
-              </VintageButton>
-              <VintageButton
-                variant={battleType === 'turnbased' ? 'blue' : 'gray'}
-                onClick={() => setBattleType('turnbased')}
-                className="flex-1"
-              >
-                🎮 TOUR PAR TOUR
-              </VintageButton>
-            </div>
-          </div>
-
-          {/* Effets météo */}
-          <div className="flex items-center justify-between">
-            <label className="font-pokemon text-pokemon-blue text-xs">
-              UTILISER EFFETS MÉTÉO
-            </label>
-            <button
-              onClick={() => setUseWeather(!useWeather)}
-              className={`w-12 h-6 rounded-full transition-colors ${
-                useWeather ? 'bg-pokemon-blue' : 'bg-gray-300'
-              }`}
-            >
-              <div
-                className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  useWeather ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
-          </div>
-
-          {useWeather && location && (
-            <div className="text-xs font-pokemon text-pokemon-green">
-              📍 Géolocalisation: {location.lat.toFixed(2)}, {location.lon.toFixed(2)}
-            </div>
-          )}
-        </div>
-      </VintageCard>
-
-      {/* Instructions et progression */}
+      {/* Barre de progression */}
       <VintageCard variant="highlighted">
-        <div className="text-center space-y-3">
-          <div className="font-pokemon text-pokemon-blue text-sm mb-2">
-            📋 PROGRESSION
+        <div className="text-center space-y-4">
+          <div className="font-pokemon text-pokemon-blue text-sm mb-3">
+            📋 PROGRESSION DU COMBAT
           </div>
           
-          {/* Barre de progression */}
-          <div className="flex items-center justify-center space-x-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-pokemon ${
-              team1 ? 'bg-pokemon-blue text-white' : 'bg-gray-300 text-gray-600'
-            }`}>
-              {team1 ? '✓' : '1'}
+          <div className="flex items-center justify-center space-x-2 overflow-x-auto">
+            {/* Étape 1: Sélection équipe */}
+            <div className="flex items-center space-x-2">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-pokemon ${
+                getStepStatus('team-selection') === 'completed' ? 'bg-pokemon-green text-white' :
+                getStepStatus('team-selection') === 'current' ? 'bg-pokemon-blue text-white' :
+                'bg-gray-300 text-gray-600'
+              }`}>
+                {getStepStatus('team-selection') === 'completed' ? '✓' : '1'}
+              </div>
+              <span className="text-xs font-pokemon hidden sm:block">ÉQUIPE</span>
             </div>
-            <div className={`w-12 h-1 ${team1 ? 'bg-pokemon-blue' : 'bg-gray-300'}`}></div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-pokemon ${
-              team2 ? 'bg-pokemon-red text-white' : team1 ? 'bg-yellow-400 text-black' : 'bg-gray-300 text-gray-600'
-            }`}>
-              {team2 ? '✓' : '2'}
+
+            <div className="w-8 h-1 bg-gray-300"></div>
+
+            {/* Étape 2: Mode de combat */}
+            <div className="flex items-center space-x-2">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-pokemon ${
+                getStepStatus('mode-selection') === 'completed' ? 'bg-pokemon-green text-white' :
+                getStepStatus('mode-selection') === 'current' ? 'bg-pokemon-blue text-white' :
+                'bg-gray-300 text-gray-600'
+              }`}>
+                {getStepStatus('mode-selection') === 'completed' ? '✓' : '2'}
+              </div>
+              <span className="text-xs font-pokemon hidden sm:block">MODE</span>
             </div>
-            <div className={`w-12 h-1 ${team1 && team2 ? 'bg-pokemon-green' : 'bg-gray-300'}`}></div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-pokemon ${
-              team1 && team2 ? 'bg-pokemon-green text-white' : 'bg-gray-300 text-gray-600'
-            }`}>
-              {team1 && team2 ? '✓' : '🚀'}
+
+            <div className="w-8 h-1 bg-gray-300"></div>
+
+            {/* Étape 3: Sélection ennemi */}
+            <div className="flex items-center space-x-2">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-pokemon ${
+                getStepStatus('enemy-selection') === 'completed' ? 'bg-pokemon-green text-white' :
+                getStepStatus('enemy-selection') === 'current' ? 'bg-pokemon-blue text-white' :
+                'bg-gray-300 text-gray-600'
+              }`}>
+                {getStepStatus('enemy-selection') === 'completed' ? '✓' : '3'}
+              </div>
+              <span className="text-xs font-pokemon hidden sm:block">ENNEMI</span>
             </div>
-          </div>
-          
-          <div className="text-xs font-pokemon text-pokemon-blue-dark">
-            {!team1 && !team2 && "1️⃣ SÉLECTIONNEZ D'ABORD VOTRE ÉQUIPE"}
-            {team1 && !team2 && "2️⃣ MAINTENANT CHOISISSEZ L'ÉQUIPE ADVERSE"}
-            {team1 && team2 && "✅ PRÊT ! CLIQUEZ SUR 'LANCER LA SIMULATION'"}
+
+            <div className="w-8 h-1 bg-gray-300"></div>
+
+            {/* Étape 4: Combat */}
+            <div className="flex items-center space-x-2">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-pokemon ${
+                getStepStatus('battle-ready') === 'completed' ? 'bg-pokemon-green text-white' :
+                getStepStatus('battle-ready') === 'current' ? 'bg-pokemon-red text-white' :
+                'bg-gray-300 text-gray-600'
+              }`}>
+                {getStepStatus('battle-ready') === 'completed' ? '✓' : '⚔️'}
+              </div>
+              <span className="text-xs font-pokemon hidden sm:block">COMBAT</span>
+            </div>
           </div>
 
-          {/* Debug info */}
-          <div className="bg-gray-100 p-2 rounded text-xs">
-            <div>🔍 Debug: {teams.length} équipes disponibles</div>
-            <div>Équipe 1: {team1 ? `${team1.teamName || team1.name} (ID: ${team1.id})` : 'Aucune'}</div>
-            <div>Équipe 2: {team2 ? `${team2.teamName || team2.name} (ID: ${team2.id})` : 'Aucune'}</div>
-            <div>Équipes adverses disponibles: {teams.filter((t: any) => t.id !== team1?.id).length}</div>
+          {/* Indicateur textuel */}
+          <div className="text-xs font-pokemon text-pokemon-blue-dark">
+            {currentStep === 'team-selection' && "1️⃣ SÉLECTIONNEZ VOTRE ÉQUIPE"}
+            {currentStep === 'mode-selection' && "2️⃣ CHOISISSEZ LE MODE DE COMBAT"}
+            {currentStep === 'enemy-selection' && "3️⃣ SÉLECTIONNEZ L'ÉQUIPE ADVERSE"}
+            {currentStep === 'battle-ready' && "4️⃣ PRÊT POUR LE COMBAT !"}
+            {currentStep === 'battle-result' && "🏆 RÉSULTATS DU COMBAT"}
           </div>
         </div>
       </VintageCard>
 
-      {/* Sélection des équipes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Équipe 1 */}
-        <VintageCard variant={team1 ? "highlighted" : "default"}>
+      {/* Étape 1: Sélection de l'équipe */}
+      {currentStep === 'team-selection' && (
+        <VintageCard>
           <VintageTitle level={2}>
-            🔵 VOTRE ÉQUIPE
+            🔵 SÉLECTIONNEZ VOTRE ÉQUIPE
           </VintageTitle>
-          <p className="font-pokemon text-pokemon-blue text-xs mb-3">
-            CHOISISSEZ VOTRE ÉQUIPE POUR CE COMBAT
+          <p className="font-pokemon text-pokemon-blue text-xs mb-4">
+            CHOISISSEZ L'ÉQUIPE QUI VOUS REPRÉSENTERA
           </p>
           
           {teams.length > 0 ? (
-            <div className="space-y-3">
-              {team1 ? (
-                <div className="bg-pokemon-blue text-white p-3 rounded">
+            <div className="grid gap-3">
+              {teams.map((team: any) => (
+                <button
+                  key={team.id}
+                  onClick={() => handleTeamSelection(team)}
+                  className="p-4 rounded border-2 border-pokemon-blue hover:bg-pokemon-blue hover:text-white transition-colors text-left"
+                >
                   <div className="font-pokemon text-sm">
-                    ✓ {team1.teamName || team1.name}
+                    {team.teamName || team.name}
                   </div>
                   <div className="text-xs opacity-75">
-                    {team1.pokemon?.length || 0} Pokémon
+                    {team.pokemon?.length || 0} Pokémon
+                  </div>
+                  <div className="text-xs text-pokemon-green mt-1">
+                    👆 Cliquez pour sélectionner
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <StatusIndicator
+              status="warning"
+              showLabel={true}
+              label="Aucune équipe disponible - Créez des équipes pour commencer"
+            />
+          )}
+        </VintageCard>
+      )}
+
+      {/* Étape 2: Sélection du mode */}
+      {currentStep === 'mode-selection' && (
+        <VintageCard>
+          <VintageTitle level={2}>
+            ⚙️ CHOISISSEZ LE MODE DE COMBAT
+          </VintageTitle>
+          <p className="font-pokemon text-pokemon-blue text-xs mb-4">
+            ÉQUIPE SÉLECTIONNÉE: {selectedTeam?.teamName || selectedTeam?.name}
+          </p>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                onClick={() => handleModeSelection('team')}
+                className="p-6 rounded border-2 border-pokemon-green hover:bg-pokemon-green hover:text-white transition-colors"
+              >
+                <div className="text-center">
+                  <div className="text-3xl mb-2">🏆</div>
+                  <div className="font-pokemon text-sm mb-2">COMBAT D'ÉQUIPE</div>
+                  <div className="text-xs opacity-75">
+                    Simulation rapide et automatique entre équipes complètes
                   </div>
                 </div>
-              ) : (
-                <div className="bg-gray-200 text-gray-600 p-3 rounded border-2 border-dashed border-gray-400">
-                  <div className="font-pokemon text-sm text-center">
-                    👆 SÉLECTIONNEZ VOTRE ÉQUIPE
+              </button>
+              
+              <button
+                onClick={() => handleModeSelection('turnbased')}
+                className="p-6 rounded border-2 border-pokemon-red hover:bg-pokemon-red hover:text-white transition-colors"
+              >
+                <div className="text-center">
+                  <div className="text-3xl mb-2">🎮</div>
+                  <div className="font-pokemon text-sm mb-2">TOUR PAR TOUR</div>
+                  <div className="text-xs opacity-75">
+                    Simulation détaillée avec log complet de chaque action
                   </div>
-                  <div className="text-xs text-center opacity-75">
-                    Cliquez sur une équipe ci-dessous
-                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Options météo */}
+            <div className="bg-gray-50 p-4 rounded">
+              <div className="flex items-center justify-between mb-3">
+                <label className="font-pokemon text-pokemon-blue text-xs">
+                  UTILISER EFFETS MÉTÉO
+                </label>
+                <button
+                  onClick={() => setUseWeather(!useWeather)}
+                  className={`w-12 h-6 rounded-full transition-colors ${
+                    useWeather ? 'bg-pokemon-blue' : 'bg-gray-300'
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                      useWeather ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              
+              {useWeather && location && (
+                <div className="text-xs font-pokemon text-pokemon-green">
+                  📍 Géolocalisation: {location.lat.toFixed(2)}, {location.lon.toFixed(2)}
                 </div>
               )}
+            </div>
+
+            <div className="text-center">
+              <VintageButton
+                onClick={() => handleBackToStep('team-selection')}
+                variant="gray"
+                className="mr-2"
+              >
+                ← RETOUR
+              </VintageButton>
+            </div>
+          </div>
+        </VintageCard>
+      )}
+
+      {/* Étape 3: Sélection de l'ennemi */}
+      {currentStep === 'enemy-selection' && (
+        <VintageCard>
+          <VintageTitle level={2}>
+            🔴 SÉLECTIONNEZ L'ÉQUIPE ADVERSE
+          </VintageTitle>
+          <p className="font-pokemon text-pokemon-blue text-xs mb-4">
+            MODE: {battleMode === 'team' ? '🏆 Combat d\'équipe' : '🎮 Tour par tour'}
+          </p>
+          
+          {teams.filter((t: any) => t.id !== selectedTeam?.id).length > 0 ? (
+            <div className="space-y-3">
+              {teams.filter((t: any) => t.id !== selectedTeam?.id).map((team: any) => (
+                <button
+                  key={team.id}
+                  onClick={() => handleEnemySelection(team)}
+                  className="w-full p-4 rounded border-2 border-pokemon-red hover:bg-pokemon-red hover:text-white transition-colors text-left"
+                >
+                  <div className="font-pokemon text-sm">
+                    {team.teamName || team.name}
+                  </div>
+                  <div className="text-xs opacity-75">
+                    {team.pokemon?.length || 0} Pokémon
+                  </div>
+                  <div className="text-xs text-pokemon-red mt-1">
+                    👆 Cliquez pour sélectionner comme adversaire
+                  </div>
+                </button>
+              ))}
               
-              <div className="grid gap-2">
-                {teams.map((team: any) => (
-                  <button
-                    key={team.id}
-                    onClick={() => setTeam1(team)}
-                    disabled={team2?.id === team.id}
-                    className={`p-2 rounded border text-left transition-colors ${
-                      team1?.id === team.id
-                        ? 'border-pokemon-blue bg-pokemon-blue text-white'
-                        : team2?.id === team.id
-                        ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'border-gray-300 hover:border-pokemon-blue'
-                    }`}
-                  >
-                    <div className="font-pokemon text-xs">
-                      {team.teamName || team.name}
-                    </div>
-                    <div className="text-xs opacity-75">
-                      {team.pokemon?.length || 0} Pokémon
-                    </div>
-                  </button>
-                ))}
+              <div className="text-center mt-4">
+                <VintageButton
+                  onClick={() => handleBackToStep('mode-selection')}
+                  variant="gray"
+                >
+                  ← RETOUR
+                </VintageButton>
               </div>
             </div>
           ) : (
-            <StatusIndicator
-              type="warning"
-              title="Aucune équipe disponible"
-              message="Créez des équipes pour commencer"
-              icon="⚠️"
-            />
-          )}
-        </VintageCard>
-
-        {/* Équipe 2 */}
-        <VintageCard variant={team2 ? "highlighted" : "default"}>
-          <VintageTitle level={2}>
-            🔴 ÉQUIPE ADVERSE
-          </VintageTitle>
-          <p className="font-pokemon text-pokemon-blue text-xs mb-3">
-            SÉLECTIONNEZ L'ÉQUIPE QUI VOUS AFFRONTERA
-          </p>
-          
-          {teams.length > 0 ? (
-            <div className="space-y-3">
-              {team2 ? (
-                <div className="bg-pokemon-red text-white p-3 rounded">
-                  <div className="font-pokemon text-sm">
-                    ✓ {team2.teamName || team2.name}
-                  </div>
-                  <div className="text-xs opacity-75">
-                    {team2.pokemon?.length || 0} Pokémon
-                  </div>
+            <div className="text-center space-y-4">
+              <div className="bg-yellow-100 border border-yellow-400 p-4 rounded">
+                <div className="font-pokemon text-xs text-yellow-800">
+                  ⚠️ AUCUNE ÉQUIPE ADVERSE DISPONIBLE
                 </div>
-              ) : (
-                <div className="bg-gray-200 text-gray-600 p-3 rounded border-2 border-dashed border-gray-400">
-                  <div className="font-pokemon text-sm text-center">
-                    👆 SÉLECTIONNEZ UNE ÉQUIPE ADVERSE
-                  </div>
-                  <div className="text-xs text-center opacity-75">
-                    Cliquez sur une équipe ci-dessous
-                  </div>
+                <div className="text-xs text-yellow-700 mt-1">
+                  Vous devez avoir au moins 2 équipes pour faire un combat
                 </div>
-              )}
+              </div>
               
-              {teams.filter((t: any) => t.id !== team1?.id).length === 0 ? (
-                <div className="bg-yellow-100 border border-yellow-400 p-3 rounded">
-                  <div className="font-pokemon text-xs text-yellow-800 text-center">
-                    ⚠️ AUCUNE ÉQUIPE ADVERSE DISPONIBLE
-                  </div>
-                  <div className="text-xs text-yellow-700 text-center mt-1">
-                    Vous devez avoir au moins 2 équipes pour faire un combat
-                  </div>
-                  <div className="mt-2 text-center">
-                    <VintageButton href="/dashboard/teams/create" variant="yellow" className="text-xs">
-                      🏗️ CRÉER UNE AUTRE ÉQUIPE
-                    </VintageButton>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid gap-2">
-                  {teams.map((team: any) => {
-                    const isTeam1Selected = team1?.id === team.id;
-                    const isTeam2Selected = team2?.id === team.id;
-                    const isDisabled = isTeam1Selected;
-
-                    return (
-                      <button
-                        key={team.id}
-                        onClick={() => {
-                          console.log('Clic sur équipe adverse:', team.teamName || team.name, 'ID:', team.id);
-                          console.log('Team1 sélectionnée:', team1?.id);
-                          console.log('Est désactivé:', isDisabled);
-                          if (!isDisabled) {
-                            setTeam2(team);
-                          }
-                        }}
-                        disabled={isDisabled}
-                        className={`p-2 rounded border text-left transition-colors ${
-                          isTeam2Selected
-                            ? 'border-pokemon-red bg-pokemon-red text-white'
-                            : isDisabled
-                            ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'border-gray-300 hover:border-pokemon-red cursor-pointer'
-                        }`}
-                      >
-                        <div className="font-pokemon text-xs">
-                          {team.teamName || team.name}
-                          {isDisabled && ' (DÉJÀ SÉLECTIONNÉE)'}
-                        </div>
-                        <div className="text-xs opacity-75">
-                          {team.pokemon?.length || 0} Pokémon
-                        </div>
-                        {!isDisabled && !isTeam2Selected && (
-                          <div className="text-xs text-pokemon-red mt-1">
-                            👆 Cliquez pour sélectionner
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <div className="space-x-2">
+                <VintageButton
+                  onClick={() => handleBackToStep('mode-selection')}
+                  variant="gray"
+                >
+                  ← RETOUR
+                </VintageButton>
+                <VintageButton 
+                  onClick={() => navigate('/dashboard/teams/create')} 
+                  variant="yellow"
+                >
+                  🏗️ CRÉER UNE ÉQUIPE
+                </VintageButton>
+              </div>
             </div>
-          ) : (
-            <StatusIndicator
-              type="warning"
-              title="Aucune équipe disponible"
-              message="Créez des équipes pour commencer"
-              icon="⚠️"
-            />
           )}
         </VintageCard>
-      </div>
-
-      {/* Bouton de simulation */}
-      {team1 && team2 && (
-        <div className="text-center">
-          <VintageButton
-            onClick={handleSimulateBattle}
-            disabled={isSimulating}
-            variant="green"
-            className="px-8 py-4 text-lg"
-          >
-            {isSimulating ? '⏳ SIMULATION EN COURS...' : '🚀 LANCER LA SIMULATION'}
-          </VintageButton>
-        </div>
       )}
 
-      {/* Résultats */}
-      {battleResult && (
+      {/* Étape 4: Prêt pour le combat */}
+      {currentStep === 'battle-ready' && (
         <VintageCard variant="highlighted">
           <VintageTitle level={2}>
-            🏆 RÉSULTATS DU COMBAT
+            🚀 PRÊT POUR LE COMBAT !
           </VintageTitle>
           
           <div className="space-y-4">
-            {/* Winner */}
-            <div className="text-center">
-              <div className="bg-pokemon-yellow text-pokemon-blue-dark p-4 rounded-lg">
-                <div className="font-pokemon text-lg">
-                  🏆 VAINQUEUR: {
-                    'winner' in battleResult 
-                      ? battleResult.winner 
-                      : battleResult.battleState.winner
-                  }
+            {/* Récapitulatif */}
+            <div className="bg-white/50 p-4 rounded">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="text-center">
+                  <div className="font-pokemon text-sm text-pokemon-blue mb-2">
+                    🔵 VOTRE ÉQUIPE
+                  </div>
+                  <div className="bg-pokemon-blue text-white p-3 rounded">
+                    <div className="font-pokemon text-sm">
+                      {selectedTeam?.teamName || selectedTeam?.name}
+                    </div>
+                    <div className="text-xs opacity-75">
+                      {selectedTeam?.pokemon?.length || 0} Pokémon
+                    </div>
+                  </div>
                 </div>
-                <div className="text-sm">
-                  Combat terminé en {
-                    'totalTurns' in battleResult 
-                      ? battleResult.totalTurns 
-                      : battleResult.battleState.turn
-                  } tours
+                
+                <div className="text-center">
+                  <div className="font-pokemon text-sm text-pokemon-red mb-2">
+                    🔴 ÉQUIPE ADVERSE
+                  </div>
+                  <div className="bg-pokemon-red text-white p-3 rounded">
+                    <div className="font-pokemon text-sm">
+                      {enemyTeam?.teamName || enemyTeam?.name}
+                    </div>
+                    <div className="text-xs opacity-75">
+                      {enemyTeam?.pokemon?.length || 0} Pokémon
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-center mt-4">
+                <div className="font-pokemon text-xs text-pokemon-blue-dark">
+                  MODE: {battleMode === 'team' ? '🏆 Combat d\'équipe' : '🎮 Tour par tour'}
+                  {useWeather && ' | 🌤️ Effets météo activés'}
                 </div>
               </div>
             </div>
 
-            {/* Effets météo si présents */}
-            {battleResult && 'weatherEffects' in battleResult && battleResult.weatherEffects && (
-              <div className="bg-blue-50 p-3 rounded">
-                <div className="font-pokemon text-xs text-blue-800 mb-2">☁️ EFFETS MÉTÉO</div>
-                {battleResult.weatherEffects.map((effect, index) => (
-                  <div key={index} className="text-xs text-blue-700">
-                    • {effect.name}: {effect.description}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Journal de combat */}
-            <div>
-              <div className="font-pokemon text-pokemon-blue text-sm mb-2">
-                📜 JOURNAL DE COMBAT
-              </div>
-              <div className="max-h-60 overflow-y-auto bg-gray-50 p-3 rounded space-y-1">
-                {formatBattleLog(battleResult).map((action, index) => (
-                  <div key={index} className="text-xs border-b pb-1">
-                    <div className="flex justify-between items-center">
-                      <span className="font-pokemon text-pokemon-blue-dark">
-                        Tour {action.turn}: {action.attacker}
-                      </span>
-                      <span className={`text-xs ${action.isCritical ? 'text-red-600 font-bold' : ''}`}>
-                        {action.damage} dégâts
-                      </span>
-                    </div>
-                    <div className="text-gray-600">
-                      {action.move} ({action.moveType})
-                      {action.isCritical && ' - CRITIQUE!'}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            {/* Boutons d'action */}
+            <div className="text-center space-x-3">
+              <VintageButton
+                onClick={() => handleBackToStep('enemy-selection')}
+                variant="gray"
+                disabled={isSimulating}
+              >
+                ← RETOUR
+              </VintageButton>
+              
+              <VintageButton
+                onClick={handleStartBattle}
+                disabled={isSimulating}
+                variant="green"
+                className="px-8 py-4 text-lg"
+              >
+                {isSimulating ? '⏳ SIMULATION EN COURS...' : '🚀 LANCER LE COMBAT !'}
+              </VintageButton>
             </div>
           </div>
         </VintageCard>
       )}
+
+
+
+      {/* Diagnostics (uniquement en développement) */}
+      {process.env.NODE_ENV === 'development' && (
+        <VintageCard>
+          <VintageTitle level={2}>
+            🔧 DIAGNOSTICS (DEV)
+          </VintageTitle>
+          <div className="space-y-3">
+            <VintageButton
+              onClick={async () => {
+                try {
+                  const isConnected = await battleSimulationService.testBackendConnection(user.backendToken);
+                  alert(isConnected ? '✅ Backend accessible !' : '❌ Backend non accessible');
+                } catch (error) {
+                  alert('❌ Erreur lors du test de connectivité');
+                }
+              }}
+              variant="blue"
+              className="w-full"
+            >
+              🔍 TESTER LA CONNECTIVITÉ BACKEND
+            </VintageButton>
+
+            <VintageButton
+              onClick={() => {
+                console.log('🔍 Test modal - États actuels:');
+                console.log('- showResultModal:', showResultModal);
+                console.log('- battleResult:', battleResult);
+                console.log('- selectedTeam:', selectedTeam?.name);
+                console.log('- enemyTeam:', enemyTeam?.name);
+                
+                // Force l'affichage du modal avec des données de test
+                setBattleResult({
+                  success: true,
+                  winner: 'Test Team',
+                  totalTurns: 5,
+                  battleLog: [
+                    {
+                      turn: 1,
+                      attacker: 'Pikachu',
+                      move: 'Éclair',
+                      moveType: 'Électrik',
+                      damage: 25,
+                      description: 'Test attack',
+                      isCritical: false,
+                      typeEffectiveness: 1,
+                      stab: true
+                    }
+                  ]
+                });
+                setShowResultModal(true);
+                console.log('🎯 Modal de test activé');
+              }}
+              variant="yellow"
+              className="w-full"
+            >
+              🧪 TESTER LE MODAL (DONNÉES FICTIVES)
+            </VintageButton>
+
+            <div className="text-xs bg-gray-100 p-3 rounded">
+              <div><strong>Étape actuelle:</strong> {currentStep}</div>
+              <div><strong>Équipe sélectionnée:</strong> {selectedTeam?.name || 'Aucune'}</div>
+              <div><strong>Mode:</strong> {battleMode}</div>
+              <div><strong>Équipe ennemie:</strong> {enemyTeam?.name || 'Aucune'}</div>
+              <div><strong>Token:</strong> {user.backendToken ? '✅ Présent' : '❌ Manquant'}</div>
+              <div><strong>Modal visible:</strong> {showResultModal ? '✅ Oui' : '❌ Non'}</div>
+              <div><strong>Résultat combat:</strong> {battleResult ? '✅ Présent' : '❌ Absent'}</div>
+            </div>
+          </div>
+        </VintageCard>
+      )}
+
+      {/* Modal des résultats de combat */}
+      <BattleResultModal
+        isVisible={showResultModal}
+        onClose={handleCloseModal}
+        onNewBattle={handleNewBattle}
+        onReturnToMenu={handleReturnToMenu}
+        battleResult={battleResult}
+        playerTeamName={selectedTeam?.teamName || selectedTeam?.name || 'Votre équipe'}
+        enemyTeamName={enemyTeam?.teamName || enemyTeam?.name || 'Équipe adverse'}
+        battleMode={battleMode}
+      />
     </div>
   );
 } 

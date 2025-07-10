@@ -14,9 +14,7 @@ export const teamSchema = z.object({
 
 // ✅ Schémas pour la gestion des équipes
 export const createTeamRequestSchema = z.object({
-  teamName: teamNameSchema,
-  description: z.string().max(500).optional(),
-  isPublic: z.boolean().default(false)
+  teamName: teamNameSchema
 });
 
 export const updateTeamRequestSchema = z.object({

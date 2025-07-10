@@ -46,7 +46,7 @@ export interface TeamWithPokemon extends Team {
 
 // ✅ REQUÊTES ET RÉPONSES API
 export interface CreateTeamRequest {
-  name: string;
+  teamName: string;
 }
 
 export interface CreateTeamResponse {

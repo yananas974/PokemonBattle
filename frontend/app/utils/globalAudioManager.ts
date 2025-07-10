@@ -4,6 +4,8 @@ class GlobalAudioManager {
   private currentTrack: string | null = null;
   private volume: number = 0.3;
   private isInitialized: boolean = false;
+  private autoplayBlocked: boolean = false;
+  private pendingTrack: string | null = null;
 
   private constructor() {
     // Singleton
@@ -24,8 +26,31 @@ class GlobalAudioManager {
     this.currentAudio.loop = true;
     this.currentAudio.volume = this.volume;
     
+    // Écouter les événements d'interaction utilisateur pour débloquer l'autoplay
+    this.setupAutoplayUnlock();
+    
     console.log('🎵 Audio Manager initialisé');
     this.isInitialized = true;
+  }
+
+  private setupAutoplayUnlock() {
+    const unlockAudio = () => {
+      if (this.currentAudio && this.autoplayBlocked && this.pendingTrack) {
+        console.log('🔓 Déblocage audio suite à interaction utilisateur');
+        this.currentAudio.play().catch(console.warn);
+        this.autoplayBlocked = false;
+        this.pendingTrack = null;
+        
+        // Retirer les listeners une fois débloqué
+        document.removeEventListener('click', unlockAudio);
+        document.removeEventListener('keydown', unlockAudio);
+        document.removeEventListener('touchstart', unlockAudio);
+      }
+    };
+
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('keydown', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
   }
 
   async switchTrack(src: string, trackName: string) {
@@ -33,7 +58,7 @@ class GlobalAudioManager {
     if (!this.currentAudio) return;
 
     // Si c'est déjà la même piste, ne rien faire
-    if (this.currentTrack === trackName) {
+    if (this.currentTrack === trackName && !this.autoplayBlocked) {
       console.log(`🎵 Piste "${trackName}" déjà en cours (${src})`);
       return;
     }
@@ -49,9 +74,18 @@ class GlobalAudioManager {
     try {
       await this.currentAudio.play();
       console.log(`✅ Lecture démarrée: ${trackName} - ${src}`);
+      this.autoplayBlocked = false;
     } catch (error) {
-      console.warn('❌ Erreur lecture audio:', error);
-      console.warn(`   Fichier: ${src}`);
+      const err = error as Error;
+      if (err.name === 'NotAllowedError') {
+        console.warn('🔒 Autoplay bloqué par le navigateur - interaction utilisateur requise');
+        console.warn('   Cliquez n\'importe où pour démarrer l\'audio');
+        this.autoplayBlocked = true;
+        this.pendingTrack = trackName;
+      } else {
+        console.warn('❌ Erreur lecture audio:', error);
+        console.warn(`   Fichier: ${src}`);
+      }
     }
   }
 
@@ -92,6 +126,14 @@ class GlobalAudioManager {
 
   getCurrentTrack(): string | null {
     return this.currentTrack;
+  }
+
+  isAutoplayBlocked(): boolean {
+    return this.autoplayBlocked;
+  }
+
+  getPendingTrack(): string | null {
+    return this.pendingTrack;
   }
 }
 

@@ -37,7 +37,8 @@
     "drizzle-orm": "^0.44.2",
     "hono": "^4.0.0",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.16.0"
+    "pg": "^8.16.0",
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@types/pg": "^8.10.9",
