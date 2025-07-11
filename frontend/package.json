@@ -4,9 +4,12 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
+    "prebuild": "cd ../shared && npm run build",
     "build": "remix vite:build",
+    "predev": "cd ../shared && npm run build",
     "dev": "remix vite:dev --host 0.0.0.0 --port 3000",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
+    "prestart": "cd ../shared && npm run build",
     "start": "remix-serve ./build/server/index.js",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf build .cache node_modules/.cache",

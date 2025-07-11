@@ -1,0 +1,40 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copier les package.json du workspace racine et des sous-projets
+COPY package*.json ./
+COPY shared/package*.json ./shared/
+COPY frontend/package*.json ./frontend/
+
+# Installer les dépendances du workspace racine
+RUN npm install
+
+# Installer les dépendances du shared
+WORKDIR /app/shared
+RUN npm install
+
+# Installer les dépendances du frontend
+WORKDIR /app/frontend
+RUN npm install
+
+# Copier et rendre exécutable le script d'initialisation
+COPY frontend/scripts/docker-init.sh /app/frontend/scripts/docker-init.sh
+RUN chmod +x /app/frontend/scripts/docker-init.sh
+
+# Créer les dossiers pour les volumes
+RUN mkdir -p /app/shared/dist
+RUN mkdir -p /app/frontend/node_modules
+
+# Exposer le port
+EXPOSE 3000
+
+# Variables d'environnement
+ENV NODE_ENV=development
+ENV PORT=3000
+
+# Aller dans le dossier frontend par défaut
+WORKDIR /app/frontend
+
+# Le command sera défini dans docker-compose.yml pour construire shared puis démarrer frontend
+CMD ["npm", "run", "dev"] 

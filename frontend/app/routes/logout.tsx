@@ -6,6 +6,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return logout(request);
 };
 
-export const loader = async () => {
-  return redirect('/login');
+export const loader = async ({ request }: { request: Request }) => {
+  return logout(request);
 }; 

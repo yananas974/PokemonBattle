@@ -4,7 +4,7 @@ import { weatherHandlers, weatherValidators } from '../handlers/weather.handler.
 const weatherRoutes = new Hono();
 
 // ✅ Routes météo avec la nouvelle structure
-weatherRoutes.get('/effects', weatherValidators.weatherQuery, weatherHandlers.getWeatherEffects);
+weatherRoutes.get('/effects', weatherHandlers.getWeatherEffects);
 weatherRoutes.post('/simulate-battle', weatherValidators.simulateBattle, weatherHandlers.simulateBattle);
 
 // ✅ Nouvelles routes utilitaires

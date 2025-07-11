@@ -30,7 +30,7 @@ export const ModernDashboard: React.FC<ModernDashboardProps> = ({
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 p-6">
       {/* Header avec salutation */}
-      <div className="max-w-7xl mx-auto mb-8">
+      <div className="max-w-7xl mx-auto mb-8 pt-20">
         <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
           <div className="text-center">
             <h1 className="text-5xl font-bold text-white mb-4">

@@ -26,6 +26,7 @@ export {
 // ✅ EXPORTS UTILITAIRES
 export * from './utils/battleHelpers.js';
 export * from './utils/formatters.js';
+export * from './utils/weatherHelpers.js';
 
 // ✅ EXPORTS ENUMS (avec résolution de conflits)
 export { 

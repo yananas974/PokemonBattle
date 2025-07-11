@@ -12,10 +12,10 @@ export const coordinatesSchema = z.object({
 // ✅ Validation flexible - les types seront validés côté service avec la DB
 const pokemonTypeSchema = z.string().min(1, "Le type Pokemon est requis");
 
-// ✅ Schémas pour les requêtes météo
+// ✅ Schémas pour les requêtes météo (query strings sont des strings)
 export const weatherQuerySchema = z.object({
-  lat: z.number().min(-90).max(90).optional().default(48.8566),
-  lon: z.number().min(-180).max(180).optional().default(2.3522)
+  lat: z.string().optional().transform(val => val ? parseFloat(val) : 48.8566).pipe(z.number().min(-90).max(90)),
+  lon: z.string().optional().transform(val => val ? parseFloat(val) : 2.3522).pipe(z.number().min(-180).max(180))
 });
 
 // ✅ Schéma pour simuler un combat avec météo

@@ -96,19 +96,17 @@ const formatWeatherResponse = (message: string, data?: any) => {
 
 // ✅ VALIDATORS GROUPÉS
 export const weatherValidators = {
-  weatherQuery: zValidator('query', weatherQuerySchema),
   simulateBattle: zValidator('json', simulateBattleWithWeatherSchema)
 };
 
 // ✅ HANDLERS GROUPÉS
 export const weatherHandlers: WeatherHandler = {
   getWeatherEffects: asyncHandler(async (c: Context) => {
-    const query = weatherQuerySchema.parse({
-      lat: c.req.query('lat') ? parseFloat(c.req.query('lat')!) : undefined,
-      lon: c.req.query('lon') ? parseFloat(c.req.query('lon')!) : undefined
+    // Parse and validate query parameters
+    const { lat, lon } = weatherQuerySchema.parse({
+      lat: c.req.query('lat'),
+      lon: c.req.query('lon')
     });
-    
-    const { lat, lon } = query;
     
     // Validation des coordonnées
     if (!validateCoordinates(lat, lon)) {

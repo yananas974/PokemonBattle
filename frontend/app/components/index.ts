@@ -11,6 +11,7 @@ export { VintageInput } from './VintageInput';
 export { VintageTitle } from './VintageTitle';
 export { StatCard } from './StatCard';
 export { QuickActions } from './QuickActions';
+export { default as QuickActionsNavbar } from './QuickActionsNavbar';
 export { TeamCard } from './TeamCard';
 export { PokemonAudioPlayer } from './PokemonAudioPlayer';
 
@@ -37,6 +38,7 @@ export { WeatherEffect } from './WeatherEffect';
 // ===== DEFAULT EXPORTS =====
 export { default as ClientOnly } from './ClientOnly';
 export { default as SimpleWeatherWidget } from './SimpleWeatherWidget';
+export { ModernWeatherWidget } from './ModernWeatherWidget';
 export { default as BottomNavigation } from './BottomNavigation';
 
 // ===== TYPES =====

@@ -57,8 +57,8 @@ services:
   frontend:
     container_name: pokemon-frontend
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./frontend/Dockerfile.monorepo
     ports:
       - "3000:3000"
     environment:
@@ -69,8 +69,11 @@ services:
     networks:
       - pokemon-network
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend:/app/frontend
+      - ./shared:/app/shared
+      - /app/frontend/node_modules
+      - /app/shared/node_modules
+    command: sh /app/frontend/scripts/docker-init.sh
 
   pgadmin:
     container_name: pokemon-pgadmin

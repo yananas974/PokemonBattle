@@ -1,8 +1,5 @@
-import type { LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
-import { json, redirect } from '@remix-run/node';
-import { useLoaderData, Link } from '@remix-run/react';
-import { config } from '~/config/env';
-import type { Pokemon } from '~/types/pokemon';
+import type { MetaFunction } from '@remix-run/node';
+import { redirect } from '@remix-run/node';
 
 export const meta: MetaFunction = () => {
   return [

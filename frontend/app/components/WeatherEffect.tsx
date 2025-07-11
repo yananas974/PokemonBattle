@@ -68,7 +68,7 @@ export const WeatherEffect: React.FC<WeatherEffectProps> = ({
     };
   };
 
-  const config = getWeatherConfig(weather.condition || weather.description || '');
+  const config = getWeatherConfig(weather.name || weather.description || '');
 
   return (
     <div className={`relative bg-gradient-to-r ${config.color} p-3 text-white`}>
@@ -95,7 +95,7 @@ export const WeatherEffect: React.FC<WeatherEffectProps> = ({
       <div className="relative z-10 flex items-center justify-center space-x-3">
         <span className="text-2xl">{config.icon}</span>
         <div className="text-center">
-          <div className="font-bold text-lg">{weather.condition || 'Temps inconnu'}</div>
+          <div className="font-bold text-lg">{weather.name || 'Temps inconnu'}</div>
           <div className="text-sm opacity-90">{weather.description}</div>
           {weather.multiplier !== 1 && (
             <div className="text-xs opacity-75">

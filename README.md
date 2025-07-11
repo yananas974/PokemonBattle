@@ -1,271 +1,444 @@
-# 🎮 Pokemon Battle - Application Full-Stack
+# 🎮 Pokemon Battle - Application de Combat Pokémon
 
-Une application de combat Pokémon développée avec une architecture moderne full-stack permettant aux utilisateurs de créer des équipes, défier leurs amis et simuler des combats épiques !
+Une application complète de combat Pokémon développée avec TypeScript, React, et Hono. L'application permet de créer des équipes, simuler des combats, et gérer des amis avec des effets météo en temps réel.
 
-## 🚀 Fonctionnalités
+## 📋 Table des matières
 
-- **🔐 Système d'authentification** : Inscription, connexion et gestion des sessions
-- **👥 Système d'amis** : Ajout d'amis, demandes d'amitié et gestion des relations
-- **⚔️ Combats Pokémon** : Système de combat au tour par tour avec effets météo
-- **🎲 Équipes personnalisées** : Création et gestion d'équipes Pokémon
-- **🌤️ Effets météorologiques** : Intégration avec l'API météo pour des combats dynamiques
-- **📊 Interface moderne** : Interface utilisateur réactive avec Tailwind CSS
+- [🎮 Pokemon Battle - Application de Combat Pokémon](#-pokemon-battle---application-de-combat-pokémon)
+  - [📋 Table des matières](#-table-des-matières)
+  - [✨ Fonctionnalités](#-fonctionnalités)
+  - [🏗️ Architecture](#️-architecture)
+  - [📋 Prérequis](#-prérequis)
+  - [🚀 Installation rapide](#-installation-rapide)
+  - [📦 Installation détaillée](#-installation-détaillée)
+  - [🐳 Utilisation avec Docker (Recommandé)](#-utilisation-avec-docker-recommandé)
+  - [💻 Développement local](#-développement-local)
+  - [🌍 Configuration des variables d'environnement](#-configuration-des-variables-denvironnement)
+  - [🗄️ Base de données](#️-base-de-données)
+  - [🔧 Scripts disponibles](#-scripts-disponibles)
+  - [🧪 Tests](#-tests)
+  - [📱 Utilisation de l'application](#-utilisation-de-lapplication)
+  - [🔍 Débogage](#-débogage)
+  - [🚀 Déploiement](#-déploiement)
+  - [🤝 Contribution](#-contribution)
+  - [📄 Licence](#-licence)
 
-## 🛠️ Technologies Utilisées
+## ✨ Fonctionnalités
 
-### Backend
-- **Node.js** avec **TypeScript**
-- **Hono** - Framework web ultra-rapide
-- **PostgreSQL** - Base de données relationnelle
-- **Drizzle ORM** - ORM TypeScript moderne
-- **JWT** - Authentification par tokens
-- **Zod** - Validation de schémas
+- **🎯 Système de combat complet** : Combats interactifs et simulés
+- **👥 Gestion d'équipes** : Création et gestion d'équipes Pokémon
+- **🌦️ Effets météo** : Intégration avec OpenWeatherMap pour des effets réalistes
+- **👫 Système d'amis** : Ajout d'amis et consultation de leurs équipes
+- **🔐 Authentification** : Système complet avec JWT
+- **📊 Statistiques** : Analyses détaillées des combats
+- **🎨 Interface moderne** : Design responsive avec Tailwind CSS
+- **🔊 Effets sonores** : Ambiance audio pour les combats
 
-### Frontend
-- **React** avec **TypeScript**
-- **Remix** - Framework full-stack React
-- **Tailwind CSS** - Framework CSS utilitaire
-- **Vite** - Outil de build moderne
+## 🏗️ Architecture
 
-### Infrastructure
-- **Docker & Docker Compose** - Conteneurisation
-- **pgAdmin** - Interface d'administration PostgreSQL
+```
+pokemon-battle/
+├── frontend/          # Application React (Remix)
+├── backend/           # API REST (Hono)
+├── shared/            # Types et utilitaires partagés
+├── database/          # Scripts de base de données
+├── pgadmin/           # Configuration PgAdmin
+└── docker-compose.yml # Orchestration Docker
+```
 
 ## 📋 Prérequis
 
-- **Node.js** >= 20.0.0
-- **Docker** et **Docker Compose**
-- **Git**
+- **Node.js** : Version 20.0.0 ou supérieure
+- **npm** : Version 10.0.0 ou supérieure
+- **Docker** : Version 20.0.0 ou supérieure (optionnel mais recommandé)
+- **Docker Compose** : Version 2.0.0 ou supérieure
+- **PostgreSQL** : Version 15 ou supérieure (si pas Docker)
 
-## 🚀 Installation
+## 🚀 Installation rapide
+
+```bash
+# 1. Cloner le repository
+git clone https://github.com/votre-username/pokemon-battle.git
+cd pokemon-battle
+
+# 2. Lancer avec Docker (recommandé)
+make docker-up
+
+# 3. Ou installation manuelle
+make install
+make db-setup
+make dev
+```
+
+L'application sera disponible sur :
+- **Frontend** : http://localhost:3000
+- **Backend** : http://localhost:3001
+- **PgAdmin** : http://localhost:5050
+
+> **🌱 Seed automatique** : Lors du premier lancement avec Docker, la base de données sera automatiquement remplie avec 151 Pokémon, leurs attaques et toutes les données nécessaires. Aucune configuration manuelle requise !
+
+## 📦 Installation détaillée
 
 ### 1. Cloner le repository
 
 ```bash
-git clone <url-du-repository>
-cd pokemonTest
+git clone https://github.com/votre-username/pokemon-battle.git
+cd pokemon-battle
 ```
 
-### 2. Démarrer l'application avec Docker
+### 2. Installer les dépendances
 
 ```bash
-# Construire et démarrer tous les services
-docker-compose up --build
+# Installation de toutes les dépendances (monorepo)
+npm install
 
-# Ou en arrière-plan
-docker-compose up -d --build
+# Ou utiliser le Makefile
+make install
 ```
 
-### 3. Accéder aux services
-
-- **Frontend** : http://localhost:3000
-- **Backend API** : http://localhost:3001
-- **pgAdmin** : http://localhost:5050
-  - Email : `admin@pokemon.com`
-  - Mot de passe : `lOgan`
-
-## 🏗️ Développement Local
-
-### Installation des dépendances
+### 3. Configuration des variables d'environnement
 
 ```bash
-# Dépendances racine
-npm install
-
-# Backend
-cd backend
-npm install
-
-# Frontend
-cd ../frontend
-npm install
+# Copier le fichier d'exemple
+cp backend/.env.example backend/.env
 ```
 
-### Démarrage en mode développement
+Éditez le fichier `backend/.env` avec vos valeurs :
+
+```env
+# Base de données
+DATABASE_URL=postgresql://pokemon_user:lOgan@localhost:5432/pokemon_battle
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=pokemon_battle
+DB_USER=pokemon_user
+DB_PASSWORD=lOgan
+
+# JWT
+JWT_SECRET=votre_cle_secrete_jwt_super_securisee_ici_123456789
+
+# OpenWeatherMap API (optionnel)
+OPENWEATHER_API_KEY=votre_cle_api_ici
+
+# Serveur
+PORT=3001
+NODE_ENV=development
+```
+
+## 🐳 Utilisation avec Docker (Recommandé)
+
+### Lancement rapide
 
 ```bash
-# Backend (port 3001)
-cd backend
-npm run dev
+# Lancer tous les services
+make docker-up
 
-# Frontend (port 3000)
-cd frontend
-npm run dev
+# Ou manuellement
+docker-compose up -d
 ```
 
-## 🗄️ Base de Données
+### Services disponibles
+
+- **PostgreSQL** : Base de données (port 5432)
+- **Backend** : API REST (port 3001)
+- **Frontend** : Interface utilisateur (port 3000)
+- **PgAdmin** : Interface d'administration DB (port 5050)
+
+### Commandes Docker utiles
+
+```bash
+# Voir les logs
+make docker-logs
+
+# Arrêter les services
+make docker-down
+
+# Rebuild les images
+make docker-build
+```
+
+## 💻 Développement local
+
+### Sans Docker
+
+```bash
+# 1. Installer PostgreSQL localement
+# 2. Créer la base de données
+createdb pokemon_battle
+
+# 3. Configurer la base de données
+make db-setup
+
+# 4. Lancer en mode développement
+make dev
+```
+
+### Développement par service
+
+```bash
+# Lancer seulement le backend
+make dev-backend
+
+# Lancer seulement le frontend
+make dev-frontend
+
+# Compiler shared en mode watch
+make dev-shared
+```
+
+## 🌍 Configuration des variables d'environnement
+
+### Backend (.env)
+
+```env
+# Base de données
+DATABASE_URL=postgresql://pokemon_user:lOgan@localhost:5432/pokemon_battle
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=pokemon_battle
+DB_USER=pokemon_user
+DB_PASSWORD=lOgan
+
+# Authentification
+JWT_SECRET=votre_cle_secrete_jwt_super_securisee_ici_123456789
+
+# API externe
+OPENWEATHER_API_KEY=votre_cle_api_openweathermap
+
+# Serveur
+PORT=3001
+NODE_ENV=development
+
+# Docker
+DOCKER_AUTO_SEED=true
+FIRST_INSTALL_THRESHOLD=0
+```
+
+### Obtenir une clé OpenWeatherMap
+
+1. Allez sur [OpenWeatherMap API](https://openweathermap.org/api)
+2. Créez un compte gratuit
+3. Obtenez votre clé API (1000 appels/jour gratuits)
+4. Ajoutez-la dans votre fichier `.env`
+
+> **Note** : L'application fonctionne sans clé API mais utilisera des données météo par défaut.
+
+## 🗄️ Base de données
+
+### Configuration initiale
+
+```bash
+# Setup complet de la DB
+make db-setup
+
+# Ou manuellement
+npm run db:generate
+npm run db:migrate
+npm run seed
+```
 
 ### Commandes utiles
 
 ```bash
-cd backend
+# Reset de la base de données
+make db-reset
 
-# Réinitialiser la base de données
-npm run db:reset
+# Seed des données
+make db-seed
 
-# Générer les migrations
-npm run db:generate
-
-# Appliquer les migrations
-npm run db:migrate
-
-# Réinitialisation complète + seed
-npm run seed:force
-
-# Interface Drizzle Studio
-npm run db:studio
+# Ouvrir Drizzle Studio
+make db-studio
 ```
 
-### Configuration
+### Accès PgAdmin
 
-La base de données PostgreSQL est configurée avec :
-- **Nom** : `pokemon_battle`
-- **Utilisateur** : `pokemon_user`
-- **Mot de passe** : `lOgan`
-- **Port** : `5432`
+- **URL** : http://localhost:5050
+- **Email** : admin@pokemon.com
+- **Mot de passe** : lOgan
 
-## 🔧 Configuration
+## 🔧 Scripts disponibles
 
-### Variables d'environnement
+### Scripts principaux
 
-Le projet utilise les variables d'environnement suivantes :
+```bash
+# Développement
+make dev              # Lancer tout en développement
+make dev-backend      # Backend seulement
+make dev-frontend     # Frontend seulement
 
-#### Backend
-```env
-NODE_ENV=development
-DATABASE_URL=postgresql://pokemon_user:lOgan@postgres:5432/pokemon_battle
-PORT=3001
-JWT_SECRET=votre_cle_secrete_jwt_super_securisee_ici_123456789
+# Build
+make build            # Build complet
+make build-backend    # Build backend
+make build-frontend   # Build frontend
+
+# Production
+make start            # Lancer en production
+make start-backend    # Backend en production
+make start-frontend   # Frontend en production
+
+# Maintenance
+make clean            # Nettoyer les builds
+make reset            # Reset complet
+make typecheck        # Vérification TypeScript
+make lint             # Linting du code
 ```
 
-#### Frontend
-```env
-NODE_ENV=development
-API_URL=http://backend:3001
+### Scripts npm
+
+```bash
+# Développement
+npm run dev                    # Lancer tout
+npm run dev:backend           # Backend seulement
+npm run dev:frontend          # Frontend seulement
+
+# Build
+npm run build                 # Build complet
+npm run build:backend         # Build backend
+npm run build:frontend        # Build frontend
+
+# Base de données
+npm run db:setup              # Setup DB
+npm run db:reset              # Reset DB
+npm run seed                  # Seed DB
+npm run db:studio             # Drizzle Studio
 ```
-
-## 📡 API Endpoints
-
-### Authentification
-- `POST /api/auth/signup` - Inscription
-- `POST /api/auth/login` - Connexion
-
-### Équipes
-- `GET /api/teams` - Liste des équipes
-- `POST /api/teams` - Créer une équipe
-- `GET /api/teams/:id` - Détails d'une équipe
-
-### Amis
-- `GET /api/friends` - Liste des amis
-- `POST /api/friends/request` - Demande d'amitié
-- `PUT /api/friends/accept/:id` - Accepter une demande
-
-### Combats
-- `POST /api/battles` - Créer un combat
-- `GET /api/battles/:id` - État d'un combat
-
-## 🎮 Utilisation
-
-1. **Inscription/Connexion** : Créez un compte ou connectez-vous
-2. **Création d'équipe** : Composez votre équipe de Pokémon
-3. **Ajout d'amis** : Recherchez et ajoutez des amis
-4. **Combat** : Défiez vos amis en combat au tour par tour
-5. **Météo** : Les conditions météo influencent les combats
 
 ## 🧪 Tests
 
 ```bash
-# Backend
-cd backend
-npm test
+# Lancer tous les tests
+make test
 
-# Frontend
-cd frontend
-npm test
+# Tests par service
+npm run test --workspace=backend
+npm run test --workspace=frontend
 ```
 
-## 📁 Structure du Projet
+## 📱 Utilisation de l'application
 
+### 1. Créer un compte
+
+1. Allez sur http://localhost:3000
+2. Cliquez sur "S'inscrire"
+3. Remplissez le formulaire
+
+### 2. Créer une équipe
+
+1. Allez dans "Équipes"
+2. Cliquez sur "Créer une équipe"
+3. Sélectionnez vos Pokémon
+4. Sauvegardez votre équipe
+
+### 3. Lancer un combat
+
+1. Allez dans "Combats"
+2. Choisissez le type de combat :
+   - **Interactif** : Contrôlez chaque tour
+   - **Simulé** : Combat automatique
+3. Sélectionnez vos équipes
+4. Profitez du combat !
+
+### 4. Gérer des amis
+
+1. Allez dans "Amis"
+2. Recherchez des utilisateurs
+3. Envoyez des demandes d'amitié
+4. Consultez les équipes de vos amis
+
+## 🔍 Débogage
+
+### Logs Docker
+
+```bash
+# Voir tous les logs
+make docker-logs
+
+# Logs d'un service spécifique
+docker-compose logs -f backend
+docker-compose logs -f frontend
+docker-compose logs -f postgres
 ```
-pokemonTest/
-├── backend/                 # API Backend (Hono + TypeScript)
-│   ├── src/
-│   │   ├── controllers/     # Contrôleurs
-│   │   ├── services/        # Logique métier
-│   │   ├── routes/          # Définition des routes
-│   │   ├── models/          # Interfaces et types
-│   │   ├── db/              # Configuration base de données
-│   │   └── utils/           # Utilitaires
-│   └── drizzle/             # Migrations de base de données
-├── frontend/                # Interface utilisateur (Remix + React)
-│   ├── app/
-│   │   ├── components/      # Composants React
-│   │   ├── routes/          # Pages de l'application
-│   │   ├── services/        # Services API
-│   │   └── types/           # Types TypeScript
-├── database/                # Scripts de base de données
-└── docker-compose.yml       # Configuration Docker
+
+### Vérification des services
+
+```bash
+# Vérifier que tous les services sont up
+docker-compose ps
+
+# Tester la connexion backend
+curl http://localhost:3001/health
+
+# Tester la connexion frontend
+curl http://localhost:3000
+```
+
+### Problèmes courants
+
+1. **Port déjà utilisé** : Modifiez les ports dans `docker-compose.yml`
+2. **Base de données non accessible** : Vérifiez que PostgreSQL est démarré
+3. **Erreur de build** : Lancez `make clean` puis `make install`
+
+## 🚀 Déploiement
+
+### Production avec Docker
+
+```bash
+# Build pour la production
+make build
+
+# Lancer en production
+make start
+
+# Ou avec Docker
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+### Variables d'environnement production
+
+```env
+NODE_ENV=production
+DATABASE_URL=postgresql://user:password@host:5432/database
+JWT_SECRET=votre_cle_secrete_production_tres_securisee
+OPENWEATHER_API_KEY=votre_cle_api_production
 ```
 
 ## 🤝 Contribution
 
 1. Forkez le projet
-2. Créez une branche pour votre fonctionnalité (`git checkout -b feature/ma-fonctionnalite`)
-3. Commitez vos changements (`git commit -m 'Ajout de ma fonctionnalité'`)
-4. Pushez vers la branche (`git push origin feature/ma-fonctionnalite`)
+2. Créez une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Committez vos changements (`git commit -m 'Add some AmazingFeature'`)
+4. Poussez vers la branche (`git push origin feature/AmazingFeature`)
 5. Ouvrez une Pull Request
 
-## 📜 Conventions de Code
+### Standards de code
 
-- **TypeScript** : Typage strict activé
-- **Composants** : Composants fonctionnels avec hooks
-- **Nommage** : camelCase pour les variables, PascalCase pour les composants
-- **Styling** : Tailwind CSS avec classes utilitaires
-
-## 🐛 Résolution de Problèmes
-
-### Problèmes courants
-
-1. **Erreur de connexion à la base de données**
-   - Vérifiez que PostgreSQL est démarré
-   - Contrôlez les variables d'environnement
-
-2. **Port déjà utilisé**
-   ```bash
-   # Arrêter tous les conteneurs
-   docker-compose down
-   
-   # Redémarrer
-   docker-compose up --build
-   ```
-
-3. **Problèmes de migrations**
-   ```bash
-   cd backend
-   npm run db:fresh
-   ```
-
-## 📋 TODO
-
-- [ ] Tests unitaires et d'intégration
-- [ ] Système de notifications en temps réel
-- [ ] Mode spectateur pour les combats
-- [ ] Statistiques de combat avancées
-- [ ] Intégration avec l'API Pokémon officielle
-- [ ] Mode tournoi
-- [ ] Chat en temps réel
-
-## 📞 Support
-
-Pour toute question ou problème, n'hésitez pas à :
-- Ouvrir une issue GitHub
-- Consulter la documentation des API utilisées
-- Vérifier les logs des conteneurs Docker
+- **TypeScript** : Strict mode activé
+- **ESLint** : Configuration fournie
+- **Prettier** : Formatage automatique
+- **Tests** : Obligatoires pour les nouvelles fonctionnalités
 
 ## 📄 Licence
 
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
+Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
 
 ---
 
-⚡ **Développé avec passion pour la communauté Pokémon !** ⚡ 
+## 🆘 Support
+
+Si vous rencontrez des problèmes :
+
+1. Vérifiez les [issues GitHub](https://github.com/votre-username/pokemon-battle/issues)
+2. Consultez la documentation des technologies utilisées
+3. Ouvrez une nouvelle issue avec un maximum de détails
+
+## 🔗 Liens utiles
+
+- [Documentation Remix](https://remix.run/docs)
+- [Documentation Hono](https://hono.dev/)
+- [Documentation Drizzle ORM](https://orm.drizzle.team/)
+- [Documentation Tailwind CSS](https://tailwindcss.com/)
+- [OpenWeatherMap API](https://openweathermap.org/api)
+
+---
+
+**Développé avec ❤️ par l'équipe Pokemon Battle** 
