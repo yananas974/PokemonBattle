@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, Form } from '@remix-run/react';
 import { useWeather } from '../hooks/useWeather';
 import { useGlobalAudio } from '../hooks/useGlobalAudio';
+import { useScrollNavigation } from '../hooks/useScrollNavigation';
 import { 
   getWeatherIcon, 
   getWeatherGradient, 
@@ -28,6 +29,7 @@ const QuickActionsNavbar: React.FC<QuickActionsNavbarProps> = ({ user }) => {
     resume,
     setVolume
   } = useGlobalAudio();
+  const { isVisible } = useScrollNavigation();
 
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const buttonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
@@ -311,8 +313,12 @@ const QuickActionsNavbar: React.FC<QuickActionsNavbarProps> = ({ user }) => {
   };
 
   return (
-    <div className="fixed top-4 left-4 right-4 z-40">
-      <div className="bg-white/90 quick-actions-navbar rounded-lg shadow-lg border border-gray-200 px-4 py-2">
+    <div 
+      className={`fixed top-0 left-0 right-0 z-40 p-4 transition-transform duration-300 ease-in-out ${
+        isVisible ? 'translate-y-0' : '-translate-y-full'
+      }`}
+    >
+      <div className="bg-white quick-actions-navbar rounded-lg shadow-lg border border-gray-200 px-4 py-2 hover:shadow-xl transition-shadow duration-200">
         <div className="flex items-center justify-between">
           {/* Logo/Titre */}
           <Link to="/dashboard" className="flex items-center space-x-2">

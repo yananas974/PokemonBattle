@@ -5,7 +5,6 @@ import { coordinatesSchema } from './weather.schemas.js';
 export const initBattleSchema = z.object({
   playerTeamId: teamIdSchema,
   enemyTeamId: teamIdSchema,
-  token: z.string().optional(),
   ...coordinatesSchema.shape
 });
 
@@ -20,8 +19,7 @@ export const battleStateQuerySchema = z.object({
 
 export const executePlayerMoveSchema = z.object({
   battleId: z.string().min(1, "Battle ID is required"),
-  moveIndex: z.number().min(0).max(3),
-  token: z.string().optional()
+  moveIndex: z.number().min(0).max(3)
 });
 
 export type InitBattleRequest = z.infer<typeof initBattleSchema>;

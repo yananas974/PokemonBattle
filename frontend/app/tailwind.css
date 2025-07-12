@@ -851,3 +851,14 @@ input[type="range"]::-moz-range-thumb {
   transform: translateY(-10px);
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
+
+/* Styles pour la navigation centralisée */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (max-width: 640px) {
+  body {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  }
+}

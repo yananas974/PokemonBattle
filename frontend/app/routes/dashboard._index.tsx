@@ -6,7 +6,6 @@ import { getUserFromSession } from '~/sessions';
 import { teamService } from '~/services/teamService';
 import { pokemonService } from '~/services/pokemonService';
 import { ModernDashboard } from '~/components/ModernDashboard';
-import { QuickActionsNavbar } from '~/components';
 import { useGlobalAudio } from '~/hooks/useGlobalAudio';
 
 export const meta: MetaFunction = () => {
@@ -86,18 +85,12 @@ export default function DashboardIndex() {
   const { playDashboard } = useGlobalAudio();
 
   useEffect(() => {
-    // Auto-start dashboard music when component mounts
     playDashboard();
   }, [playDashboard]);
 
   return (
-    <div className="relative min-h-screen">
-      {/* Nouvelle navbar avec dropdowns */}
-      <QuickActionsNavbar user={user} />
-
-      
-      {/* Dashboard principal avec marge pour la navbar */}
-      <div>
+    <div className="relative">
+      <div className="px-4 py-4">
         <ModernDashboard 
           stats={stats}
           recentBattles={recentBattles}

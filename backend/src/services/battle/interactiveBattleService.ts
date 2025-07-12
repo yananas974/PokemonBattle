@@ -58,8 +58,18 @@ export class InteractiveBattleService {
       const playerPokemon = preparePokemonForBattle(team1.pokemon[0], BATTLE_TEAMS.TEAM1, 0);
       const enemyPokemon = preparePokemonForBattle(team2.pokemon[0], BATTLE_TEAMS.TEAM2, 0);
       
-      // Récupérer les attaques du Pokémon joueur
-      const availableMoves = await PokemonMoveService.getPokemonMoves(playerPokemon.pokemon_id);
+      // ✅ Récupérer les attaques avec fallback
+      let availableMoves;
+      try {
+        availableMoves = await PokemonMoveService.getPokemonMoves(playerPokemon.pokemon_id);
+        if (!availableMoves || availableMoves.length === 0) {
+          console.warn(`⚠️ Aucune attaque trouvée pour ${playerPokemon.name_fr}, utilisation des attaques par défaut`);
+          availableMoves = [getDefaultMove()];
+        }
+      } catch (error) {
+        console.error(`❌ Erreur lors de la récupération des attaques:`, error);
+        availableMoves = [getDefaultMove()];
+      }
       
       const interactiveState: InteractiveBattleState = {
         battleId,
@@ -158,23 +168,18 @@ export class InteractiveBattleService {
       // ✅ Utiliser le helper du shared pour déterminer le vainqueur
       newState.winner = determineWinner(newState.team1Pokemon, newState.team2Pokemon);
       
-      // ✅ Gestion des hacks avec les constantes du shared
-      // Les hacks ne se déclenchent QUE pour le joueur humain (team1), jamais pour l'IA (team2)
-      // IMPORTANT : Une fois qu'un hack est résolu, plus aucun hack ne peut se déclencher dans ce combat
+      // ✅ Gestion des hacks avec protection contre les boucles
       const hasResolvedHack = (newState as any).lastHackTurn !== undefined;
+      const turnsSinceLastHack = hasResolvedHack ? (newState.turn - (newState as any).lastHackTurn) : 999;
       
-      console.log(`🔍 Hack check: turn=${newState.turn}, isPlayerTurn=${newState.isPlayerTurn}, hasResolvedHack=${hasResolvedHack}`);
+      console.log(`🔍 Hack check: turn=${newState.turn}, isPlayerTurn=${newState.isPlayerTurn}, hasResolvedHack=${hasResolvedHack}, turnsSinceLastHack=${turnsSinceLastHack}`);
       
-      // DÉSACTIVATION COMPLÈTE : Pas de nouveaux hacks si un a déjà été résolu
-      if (hasResolvedHack) {
-        console.log('🚫 HACKS DÉSACTIVÉS - Un hack a déjà été résolu dans ce combat');
+      // Protection contre les hacks consécutifs (minimum 3 tours d'écart)
+      if (hasResolvedHack && turnsSinceLastHack < 3) {
+        console.log('🛡️ Protection anti-hack active - trop tôt pour un nouveau hack');
       } else if (!newState.winner && !newState.isHackActive && newState.isPlayerTurn && shouldTriggerHack()) {
         console.log('🚨 Hack déclenché pour le JOUEUR !');
         await this.triggerHackChallenge(newState);
-      } else {
-        if (!newState.isPlayerTurn) {
-          console.log('🤖 Tour de l\'IA - pas de hack possible');
-        }
       }
       
       // Continuer le combat normalement si pas de hack actif
@@ -456,5 +461,7 @@ export class InteractiveBattleService {
     
     // ✅ Marquer le tour où le hack a été résolu pour éviter les hacks consécutifs
     (battleState as any).lastHackTurn = battleState.turn;
+    
+    console.log(`🔄 Hack state reset - retour au tour du joueur (turn: ${battleState.turn})`);
   }
 } 

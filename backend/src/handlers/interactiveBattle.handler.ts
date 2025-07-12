@@ -33,22 +33,12 @@ interface BattleResponseData {
   isHackActive: boolean;
 }
 
-// ✅ HELPERS
-const authenticateUser = async (c: Context, token?: string) => {
-  if (token) {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as { sub: string };
-    const user = await getUserById(Number(payload.sub));
-    if (!user) {
-      throw new UnauthorizedError('Invalid token');
-    }
-    c.set('user', user);
-  }
-  
+// ✅ HELPERS - Fonction d'authentification simplifiée (l'auth est gérée par le middleware)
+const getAuthenticatedUser = (c: Context) => {
   const user = c.get('user');
   if (!user) {
     throw new UnauthorizedError('User not authenticated');
   }
-  
   return user;
 };
 
@@ -114,28 +104,6 @@ const formatBattleState = (battleState: any): BattleResponseData => ({
   isHackActive: battleState.isHackActive || false
 });
 
-const extractTokenFromRequest = async (c: Context) => {
-  let token;
-  
-  // Essayer d'abord le body
-  try {
-    const body = await c.req.json();
-    token = body.token;
-  } catch {
-    // Si pas de body JSON, continuer
-  }
-  
-  // Puis l'header Authorization
-  if (!token) {
-    const authHeader = c.req.header('authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      token = authHeader.replace('Bearer ', '');
-    }
-  }
-  
-  return token;
-};
-
 const formatInteractiveBattleResponse = (message: string, data?: any) => {
   return formatResponse(message, data);
 };
@@ -149,14 +117,14 @@ export const interactiveBattleValidators = {
 
 // ✅ HANDLERS GROUPÉS
 export const interactiveBattleHandlers: InteractiveBattleHandler = {
-  initBattle: asyncHandler(async (c: Context) => {
+  initBattle: authAsyncHandler(async (c: Context) => {
     console.log('🎮 === HANDLER COMBAT INTERACTIF ===');
     
     const body = await c.req.json();
-    const { playerTeamId, enemyTeamId, token, lat, lon } = initBattleSchema.parse(body);
+    const { playerTeamId, enemyTeamId, lat = 48.8566, lon = 2.3522 } = initBattleSchema.parse(body);
     
-    // Authentification
-    const user = await authenticateUser(c, token);
+    // Authentification - L'utilisateur est déjà authentifié par le middleware
+    const user = getAuthenticatedUser(c);
     
     // Récupérer les équipes
     const allTeamsWithPokemon = await PokemonTeamService.getTeamsWithPokemon(user.id);
@@ -187,12 +155,12 @@ export const interactiveBattleHandlers: InteractiveBattleHandler = {
     }));
   }),
 
-  executePlayerMove: asyncHandler(async (c: Context) => {
+  executePlayerMove: authAsyncHandler(async (c: Context) => {
     const body = await c.req.json();
-    const { battleId, moveIndex, token } = body;
+    const { battleId, moveIndex } = body;
     
-    // Authentification
-    const user = await authenticateUser(c, token);
+    // Authentification - L'utilisateur est déjà authentifié par le middleware
+    const user = getAuthenticatedUser(c);
     
     // Validation
     const { battleId: validatedBattleId, moveIndex: validatedMoveIndex } = playerMoveSchema.parse({ battleId, moveIndex });
@@ -223,34 +191,38 @@ export const interactiveBattleHandlers: InteractiveBattleHandler = {
     }
     
     return c.json(formatInteractiveBattleResponse('Battle state retrieved', {
-      battleState: {
-        battleId: battleState.battleId,
-        turn: battleState.turn,
-        phase: battleState.phase,
-        winner: battleState.winner,
-        isPlayerTurn: battleState.isPlayerTurn,
-        waitingForPlayerMove: battleState.waitingForPlayerMove,
-        currentPlayerPokemon: battleState.currentTeam1Pokemon,
-        currentEnemyPokemon: battleState.currentTeam2Pokemon,
-        availableMoves: battleState.availableMoves,
-        battleLog: battleState.battleLog,
-        weatherEffects: battleState.weatherEffects
-      }
+      battle: formatBattleState(battleState)
     }));
   }),
 
-  forfeitBattle: asyncHandler(async (c: Context) => {
+  // ✅ NOUVEAU : Route pour récupérer l'état via /state/{battleId}
+  getBattleStateByPath: authAsyncHandler(async (c: Context) => {
     const battleId = c.req.param('battleId');
     
     if (!battleId) {
       throw new ValidationError('ID de combat requis');
     }
     
-    // Récupérer le token depuis différentes sources
-    const token = await extractTokenFromRequest(c);
+    const battleState = InteractiveBattleService.getBattleState(battleId);
     
-    // Authentification
-    const user = await authenticateUser(c, token);
+    if (!battleState) {
+      throw new NotFoundError('Combat non trouvé');
+    }
+    
+    return c.json(formatInteractiveBattleResponse('Battle state retrieved', {
+      battle: formatBattleState(battleState)
+    }));
+  }),
+
+  forfeitBattle: authAsyncHandler(async (c: Context) => {
+    const battleId = c.req.param('battleId');
+    
+    if (!battleId) {
+      throw new ValidationError('ID de combat requis');
+    }
+    
+    // Authentification - L'utilisateur est déjà authentifié par le middleware
+    const user = getAuthenticatedUser(c);
     
     // Abandonner le combat
     const success = InteractiveBattleService.forfeitBattle(battleId, user.id);
@@ -264,23 +236,33 @@ export const interactiveBattleHandlers: InteractiveBattleHandler = {
     }));
   }),
 
-  solveHackChallenge: asyncHandler(async (c: Context) => {
+  solveHackChallenge: authAsyncHandler(async (c: Context) => {
     const body = await c.req.json();
-    const { battleId, answer, token } = body;
+    const { battleId, answer } = body;
     
-    // Authentification
-    const user = await authenticateUser(c, token);
+    console.log('🧩 Handler solveHackChallenge:', { battleId, answer });
+    
+    // Authentification - L'utilisateur est déjà authentifié par le middleware
+    const user = getAuthenticatedUser(c);
     
     // Résoudre le challenge
     const result = await InteractiveBattleService.solveHackChallenge(battleId, answer);
     
+    console.log('🎯 Résultat du service:', result);
+    
+    // Formater la réponse de manière cohérente
     if (result.battleState) {
-      return c.json({
-        ...result,
+      const response = {
+        success: result.success,
+        message: result.message,
         battle: formatBattleState(result.battleState)
-      });
+      };
+      
+      console.log('📤 Réponse formatée:', response);
+      return c.json(response);
     }
     
+    console.log('📤 Réponse directe:', result);
     return c.json(result);
   })
 };

@@ -146,14 +146,14 @@ export const battleSimulationService = {
     }
     
     try {
-      const response = await apiCall('/api/battle/team-battle', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request)
-      }, token);
-      
+    const response = await apiCall('/api/battle/team-battle', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request)
+    }, token);
+    
       console.log('📡 Réponse HTTP reçue:', response.status, response.statusText);
       console.log('📡 Headers de réponse:', Object.fromEntries(response.headers.entries()));
       
@@ -164,7 +164,7 @@ export const battleSimulationService = {
         throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
       }
       
-      const data = await response.json();
+    const data = await response.json();
       console.log('✅ Données JSON reçues:', JSON.stringify(data, null, 2));
       
       // Vérifier le format de la réponse
@@ -174,7 +174,7 @@ export const battleSimulationService = {
       }
       
       console.log('✅ Combat d\'équipe simulé avec succès');
-      return data;
+    return data;
       
     } catch (error: any) {
       console.error('💥 Erreur dans simulateTeamBattle:', error);
@@ -198,14 +198,14 @@ export const battleSimulationService = {
     console.log('🔑 Token fourni:', token ? `${token.substring(0, 20)}...` : 'AUCUN');
     
     try {
-      const response = await apiCall('/api/battle/turn-based', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request)
-      }, token);
-      
+    const response = await apiCall('/api/battle/turn-based', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request)
+    }, token);
+    
       console.log('📡 Réponse HTTP reçue:', response.status, response.statusText);
       console.log('📡 Headers de réponse:', Object.fromEntries(response.headers.entries()));
       
@@ -216,7 +216,7 @@ export const battleSimulationService = {
         throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
       }
       
-      const data = await response.json();
+    const data = await response.json();
       console.log('✅ Données JSON reçues:', JSON.stringify(data, null, 2));
       
       // Vérifier le format de la réponse
@@ -226,7 +226,7 @@ export const battleSimulationService = {
       }
       
       console.log('✅ Combat tour par tour simulé avec succès');
-      return data;
+    return data;
       
     } catch (error: any) {
       console.error('💥 Erreur dans simulateTurnBasedBattle:', error);

@@ -19,7 +19,7 @@ export const HackChallengeModal: React.FC<HackChallengeModalProps> = ({
   const [hackAnswer, setHackAnswer] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Réinitialiser la réponse quand le modal s'ouvre/ferme
+
   useEffect(() => {
     if (!isVisible) {
       setHackAnswer('');
@@ -33,8 +33,7 @@ export const HackChallengeModal: React.FC<HackChallengeModalProps> = ({
     setIsLoading(true);
     try {
       await onSubmit(answer.trim());
-      // Fermer le modal après soumission
-      onClose();
+      // Ne pas fermer automatiquement - laissons la logique parent décider
     } catch (error) {
       console.error('Erreur lors de la soumission du hack:', error);
     } finally {

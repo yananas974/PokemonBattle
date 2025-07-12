@@ -34,6 +34,8 @@ export { HackChallengeModal } from './HackChallengeModal';
 // ===== UTILITY COMPONENTS =====
 export { PokemonSprite } from './PokemonSprite';
 export { WeatherEffect } from './WeatherEffect';
+export { default as PokemonParticles } from './PokemonParticles';
+export { default as SimplePokemonParticles } from './SimplePokemonParticles';
 
 // ===== DEFAULT EXPORTS =====
 export { default as ClientOnly } from './ClientOnly';

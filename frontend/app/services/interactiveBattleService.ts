@@ -9,23 +9,46 @@ import type {
 export const interactiveBattleService = {
   // Initialiser un nouveau combat interactif
   async initBattle(request: InitBattleRequest, token?: string): Promise<BattleResponse> {
-    console.log('🚀 Initialisation du combat interactif:', request);
+    console.log('🚀 Frontend: Initialisation du combat interactif:', request);
+    console.log('🔑 Token utilisé:', token ? token.substring(0, 20) + '...' : 'AUCUN');
     
     const response = await apiCall('/api/interactive-battle/init', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
       },
-      body: JSON.stringify({
-        ...request,
-        token
-      })
+      body: JSON.stringify(request)
     }, token);
     
-    await handleApiError(response);
-    const data = await response.json();
-    console.log('✅ Combat initialisé:', data);
-    return data;
+    console.log('📡 Réponse HTTP:', response.status, response.statusText);
+    
+    try {
+      await handleApiError(response);
+      const data = await response.json();
+      console.log('✅ Frontend: Combat initialisé, données reçues:', data);
+      
+      // ✅ Validation supplémentaire
+      if (!data.success) {
+        console.error('🚨 API a retourné success=false:', data);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('🚨 ERREUR dans initBattle service:', error);
+      console.error('📡 Statut de la réponse:', response.status);
+      console.error('📄 Headers de la réponse:', Object.fromEntries(response.headers.entries()));
+      
+      // ✅ Essayer de lire le body en cas d'erreur
+      try {
+        const errorBody = await response.text();
+        console.error('📄 Body de la réponse d\'erreur:', errorBody);
+      } catch (bodyError) {
+        console.error('❌ Impossible de lire le body d\'erreur:', bodyError);
+      }
+      
+      throw error;
+    }
   },
 
   // Exécuter une action (attaque ou fuite)
@@ -36,11 +59,11 @@ export const interactiveBattleService = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
       },
       body: JSON.stringify({
         battleId: request.battleId,
-        moveIndex: request.action.moveId,
-        token
+        moveIndex: request.action.moveId
       })
     }, token);
     
@@ -69,13 +92,36 @@ export const interactiveBattleService = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
       },
-      body: JSON.stringify({ token })
+      body: JSON.stringify({})
     }, token);
     
     await handleApiError(response);
     const data = await response.json();
     console.log('✅ Combat abandonné:', data);
+    return data;
+  },
+
+  // Résoudre un défi de hack
+  async solveHackChallenge(battleId: string, answer: string, token?: string): Promise<BattleResponse> {
+    console.log('🧩 Résolution du défi de hack:', { battleId, answer });
+    
+    const response = await apiCall('/api/interactive-battle/solve-hack', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: JSON.stringify({
+        battleId,
+        answer: answer.trim()
+      })
+    }, token);
+    
+    await handleApiError(response);
+    const data = await response.json();
+    console.log('✅ Défi de hack résolu:', data);
     return data;
   }
 }; 

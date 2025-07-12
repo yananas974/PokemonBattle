@@ -28,9 +28,9 @@ export const ModernDashboard: React.FC<ModernDashboardProps> = ({
   const winRate = stats.battlesTotal > 0 ? (stats.battlesWon / stats.battlesTotal) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 p-6">
+    <div className="min-h-screen p-6">
       {/* Header avec salutation */}
-      <div className="max-w-7xl mx-auto mb-8 pt-20">
+      <div className="max-w-7xl mx-auto mb-8">
         <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
           <div className="text-center">
             <h1 className="text-5xl font-bold text-white mb-4">
@@ -45,7 +45,7 @@ export const ModernDashboard: React.FC<ModernDashboardProps> = ({
 
       {/* Statistiques principales */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
           {/* Pokémon capturés */}
           <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 shadow-xl transform hover:scale-105 transition-all duration-200">
             <div className="flex items-center justify-between">
@@ -65,28 +65,6 @@ export const ModernDashboard: React.FC<ModernDashboardProps> = ({
                 <p className="text-4xl font-bold text-white">{stats.totalTeams}</p>
               </div>
               <div className="text-5xl opacity-80">🛡️</div>
-            </div>
-          </div>
-
-          {/* Combats gagnés */}
-          <div className="bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl p-6 shadow-xl transform hover:scale-105 transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white opacity-80 text-sm font-medium">Victoires</p>
-                <p className="text-4xl font-bold text-white">{stats.battlesWon}</p>
-              </div>
-              <div className="text-5xl opacity-80">🏆</div>
-            </div>
-          </div>
-
-          {/* Taux de victoire */}
-          <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 shadow-xl transform hover:scale-105 transition-all duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white opacity-80 text-sm font-medium">Taux de victoire</p>
-                <p className="text-4xl font-bold text-white">{winRate.toFixed(1)}%</p>
-              </div>
-              <div className="text-5xl opacity-80">📊</div>
             </div>
           </div>
         </div>
@@ -136,50 +114,8 @@ export const ModernDashboard: React.FC<ModernDashboardProps> = ({
         </div>
       </div>
 
-      {/* Combats récents et Actions rapides */}
+      {/* Actions rapides */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Combats récents */}
-        <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
-          <h3 className="text-2xl font-bold text-white mb-6 flex items-center">
-            <span className="mr-3">📜</span>
-            Combats récents
-          </h3>
-          
-          {recentBattles.length > 0 ? (
-            <div className="space-y-4">
-              {recentBattles.slice(0, 3).map((battle, index) => (
-                <div key={battle.id} className="bg-white bg-opacity-10 rounded-xl p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <span className={`text-2xl ${battle.result === 'win' ? '🏆' : '💔'}`}>
-                        {battle.result === 'win' ? '🏆' : '💔'}
-                      </span>
-                      <div>
-                        <p className="text-white font-semibold">VS {battle.opponent}</p>
-                        <p className="text-white opacity-60 text-sm">{battle.date}</p>
-                      </div>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                      battle.result === 'win' 
-                        ? 'bg-green-500 bg-opacity-20 text-green-300' 
-                        : 'bg-red-500 bg-opacity-20 text-red-300'
-                    }`}>
-                      {battle.result === 'win' ? 'VICTOIRE' : 'DÉFAITE'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-2">🎯</div>
-              <p className="text-white opacity-70">Aucun combat récent</p>
-              <p className="text-white opacity-50 text-sm">Lancez votre premier combat !</p>
-            </div>
-          )}
-        </div>
-
-        {/* Actions rapides */}
         <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
           <h3 className="text-2xl font-bold text-white mb-6 flex items-center">
             <span className="mr-3">⚡</span>

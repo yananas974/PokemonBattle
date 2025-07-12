@@ -232,7 +232,7 @@ export default function BattleSimulation() {
             </div>
                          <div className="text-xs text-green-700">
                {preselectedPlayer.teamName || 'Équipe du Joueur'} VS {preselectedEnemy.teamName || 'Équipe Adverse'}
-             </div>
+            </div>
           </div>
         )}
       </VintageCard>
@@ -353,15 +353,15 @@ export default function BattleSimulation() {
 
       {/* Étape 2: Sélection du mode */}
       {currentStep === 'mode-selection' && (
-        <VintageCard>
-          <VintageTitle level={2}>
+      <VintageCard>
+        <VintageTitle level={2}>
             ⚙️ CHOISISSEZ LE MODE DE COMBAT
-          </VintageTitle>
+        </VintageTitle>
           <p className="font-pokemon text-pokemon-blue text-xs mb-4">
             ÉQUIPE SÉLECTIONNÉE: {selectedTeam?.teamName || selectedTeam?.name}
           </p>
-          
-          <div className="space-y-4">
+        
+        <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <button
                 onClick={() => handleModeSelection('team')}
@@ -386,37 +386,37 @@ export default function BattleSimulation() {
                   <div className="text-xs opacity-75">
                     Simulation détaillée avec log complet de chaque action
                   </div>
-                </div>
-              </button>
             </div>
+              </button>
+          </div>
 
             {/* Options météo */}
             <div className="bg-gray-50 p-4 rounded">
               <div className="flex items-center justify-between mb-3">
-                <label className="font-pokemon text-pokemon-blue text-xs">
-                  UTILISER EFFETS MÉTÉO
-                </label>
-                <button
-                  onClick={() => setUseWeather(!useWeather)}
-                  className={`w-12 h-6 rounded-full transition-colors ${
-                    useWeather ? 'bg-pokemon-blue' : 'bg-gray-300'
-                  }`}
-                >
-                  <div
-                    className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                      useWeather ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-              
-              {useWeather && location && (
-                <div className="text-xs font-pokemon text-pokemon-green">
-                  📍 Géolocalisation: {location.lat.toFixed(2)}, {location.lon.toFixed(2)}
-                </div>
-              )}
-            </div>
+            <label className="font-pokemon text-pokemon-blue text-xs">
+              UTILISER EFFETS MÉTÉO
+            </label>
+            <button
+              onClick={() => setUseWeather(!useWeather)}
+              className={`w-12 h-6 rounded-full transition-colors ${
+                useWeather ? 'bg-pokemon-blue' : 'bg-gray-300'
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                  useWeather ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
 
+          {useWeather && location && (
+            <div className="text-xs font-pokemon text-pokemon-green">
+              📍 Géolocalisation: {location.lat.toFixed(2)}, {location.lon.toFixed(2)}
+            </div>
+          )}
+          </div>
+          
             <div className="text-center">
               <VintageButton
                 onClick={() => handleBackToStep('team-selection')}
@@ -425,9 +425,9 @@ export default function BattleSimulation() {
               >
                 ← RETOUR
               </VintageButton>
-            </div>
           </div>
-        </VintageCard>
+        </div>
+      </VintageCard>
       )}
 
       {/* Étape 3: Sélection de l'ennemi */}
@@ -492,8 +492,8 @@ export default function BattleSimulation() {
                   variant="yellow"
                 >
                   🏗️ CRÉER UNE ÉQUIPE
-                </VintageButton>
-              </div>
+                    </VintageButton>
+                  </div>
             </div>
           )}
         </VintageCard>
@@ -510,20 +510,20 @@ export default function BattleSimulation() {
             {/* Récapitulatif */}
             <div className="bg-white/50 p-4 rounded">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="text-center">
+            <div className="text-center">
                   <div className="font-pokemon text-sm text-pokemon-blue mb-2">
                     🔵 VOTRE ÉQUIPE
                   </div>
                   <div className="bg-pokemon-blue text-white p-3 rounded">
                     <div className="font-pokemon text-sm">
                       {selectedTeam?.teamName || selectedTeam?.name}
-                    </div>
+                </div>
                     <div className="text-xs opacity-75">
                       {selectedTeam?.pokemon?.length || 0} Pokémon
-                    </div>
-                  </div>
                 </div>
-                
+              </div>
+            </div>
+
                 <div className="text-center">
                   <div className="font-pokemon text-sm text-pokemon-red mb-2">
                     🔴 ÉQUIPE ADVERSE
