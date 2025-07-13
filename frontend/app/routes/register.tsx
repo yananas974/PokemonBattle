@@ -2,11 +2,10 @@ import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from '@remi
 import { json, redirect } from '@remix-run/node';
 import { Form, Link, useActionData, useNavigation, useSearchParams } from '@remix-run/react';
 import { authService } from '~/services/authService';
-import { getUserFromSession, createUserSession } from '~/sessions';
+import { createUserSession } from '~/sessions.server';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
-import type { RegisterRequest, AuthResponse } from '~/types/shared';
-import { authValidators } from '~/types/shared';
+import type { RegisterRequest, AuthResponse } from '@pokemon-battle/shared';
 
 export const meta: MetaFunction = () => {
   return [
@@ -17,6 +16,7 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { getUserFromSession } = await import('~/sessions.server');
   const { user } = await getUserFromSession(request);
   
   if (user) {
@@ -40,10 +40,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const registerData: RegisterRequest = { email, password, username };
   
   try {
-    const validatedData = authValidators.register.parse(registerData);
+    // Validation simple
+    if (!email || !username || !password) {
+      return json({
+        errors: { general: 'Tous les champs sont requis' },
+        success: false,
+        email,
+        username
+      }, { status: 400 });
+    }
     
     // ✅ Inscription
-    const authResponse: AuthResponse = await authService.signup(validatedData);
+    const authResponse: AuthResponse = await authService.signup(registerData);
     
     if (!authResponse.success || !authResponse.user) {
       return json({

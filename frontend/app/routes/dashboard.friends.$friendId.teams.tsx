@@ -2,18 +2,32 @@ import type { LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
 import { json } from '@remix-run/node';
 import { useLoaderData, Link } from '@remix-run/react';
 import { useState } from 'react';
-import { getUserFromSession } from '~/sessions';
 import { friendshipService } from '~/services/friendshipService';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
 import { cn } from '~/utils/cn';
-import type { Team } from '~/types/team';
 
 // Import des types depuis le package shared
 import type { 
   User as SharedUser, 
-  FriendshipWithUser
+  FriendshipWithUser,
+  TeamWithPokemon
 } from '@pokemon-battle/shared';
+
+// Type local pour les Pokémon dans les équipes (correspond à la structure de TeamWithPokemon)
+type TeamPokemon = {
+  id: number;
+  name: string;
+  name_fr: string;
+  type: string;
+  level: number;
+  sprite_url: string;
+  hp: number;
+  attack: number;
+  defense: number;
+  speed: number;
+  pokemon_id?: number; // Ajout pour compatibilité avec les liens
+};
 
 // Types locaux pour compatibilité
 interface User {
@@ -37,7 +51,7 @@ interface Friendship {
 interface LoaderData {
   user: User;
   friend: User | null;
-  teams: Team[];
+  teams: TeamWithPokemon[];
   friendId: number;
   error?: string;
 }
@@ -50,6 +64,7 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
+  const { getUserFromSession } = await import('~/sessions.server');
   const { user } = await getUserFromSession(request);
   
   if (!user) {
@@ -93,7 +108,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     return json<LoaderData>({
       user,
       friend: friend.friend || null,
-      teams: teams as Team[],
+      teams: teams as TeamWithPokemon[],
       friendId: friendIdNumber
     });
   } catch (error) {
@@ -110,7 +125,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
 export default function FriendTeams() {
   const { user, friend, teams, friendId, error } = useLoaderData<LoaderData>();
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<TeamWithPokemon | null>(null);
 
   console.log('🎯 Component data:', { friend, teams: teams?.length, friendId, error });
 
@@ -292,17 +307,17 @@ export default function FriendTeams() {
 
                     {team.pokemon && team.pokemon.length > 0 ? (
                       <div className="grid grid-cols-3 gap-2 mb-4">
-                        {team.pokemon.slice(0, 6).map((pokemon, index) => (
+                        {team.pokemon.slice(0, 6).map((pokemon: TeamPokemon, index: number) => (
                           <div key={index} className="bg-white/20 rounded-lg p-2 text-center">
                             {pokemon.sprite_url && (
                               <img 
                                 src={pokemon.sprite_url} 
-                                alt={(pokemon as any).name || pokemon.name_fr || 'Pokemon'} 
+                                alt={pokemon.name_fr || pokemon.name || 'Pokemon'} 
                                 className="w-8 h-8 mx-auto mb-1" 
                               />
                             )}
                             <div className="text-white text-xs font-medium truncate">
-                              {(pokemon as any).name || pokemon.name_fr || 'Unknown'}
+                              {pokemon.name_fr || pokemon.name || 'Unknown'}
                             </div>
                             <div className="text-white/60 text-xs">
                               Nv. {pokemon.level || 1}
@@ -321,10 +336,10 @@ export default function FriendTeams() {
                       <div className="space-y-2 mt-4 pt-4 border-t border-white/20">
                         <h4 className="text-white font-medium text-sm mb-2">Actions disponibles:</h4>
                         <div className="grid grid-cols-2 gap-2">
-                          {team.pokemon.slice(0, 6).map((pokemon, index) => (
+                          {team.pokemon.slice(0, 6).map((pokemon: TeamPokemon, index: number) => (
                             <Link 
                               key={index}
-                              to={`/dashboard/pokemon/${pokemon.pokemon_id}`}
+                              to={`/dashboard/pokemon/${pokemon.pokemon_id || pokemon.id}`}
                               className="block"
                             >
                               <ModernButton 
@@ -332,7 +347,7 @@ export default function FriendTeams() {
                                 size="sm"
                                 className="w-full text-xs"
                               >
-                                👁️ Voir {(pokemon as any).name || pokemon.name_fr || 'Pokemon'}
+                                👁️ Voir {pokemon.name_fr || pokemon.name || 'Pokemon'}
                               </ModernButton>
                             </Link>
                           ))}

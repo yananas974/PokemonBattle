@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs, ActionFunctionArgs } from '@remix-run/node';
 import { json, redirect } from '@remix-run/node';
-import { getUserFromSession } from '~/sessions';
+import { getUserFromSession } from '~/sessions.server';
 import { interactiveBattleService } from '~/services/interactiveBattleService';
 import { teamService } from '~/services/teamService';
 

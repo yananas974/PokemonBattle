@@ -1,5 +1,4 @@
 import { config } from '~/config/env';
-import { getBackendTokenFromSession } from '~/sessions';
 
 // Configuration de base pour l'API
 const API_BASE_URL = config.apiUrl;
@@ -20,6 +19,21 @@ const getTokenFromBrowser = (): string | null => {
   return localStorage.getItem('backendToken') || null;
 };
 
+// ✅ Fonction pour récupérer le token depuis la session côté serveur
+const getBackendTokenFromSession = async (request: Request): Promise<string | null> => {
+  if (typeof window !== 'undefined') return null; // Côté client, retourner null
+  
+  try {
+    // Import dynamique pour éviter l'import côté client
+    const { getBackendTokenFromSession: getToken } = await import('~/sessions.server');
+    const token = await getToken(request);
+    return token && token !== 'undefined' && token !== 'null' ? token : null;
+  } catch (error) {
+    console.log('⚠️ Impossible de récupérer le token de la session:', error);
+    return null;
+  }
+};
+
 // ✅ Fonction améliorée pour les appels API avec gestion automatique du token
 export const apiCall = async (
   endpoint: string, 
@@ -38,15 +52,7 @@ export const apiCall = async (
        finalToken = getTokenFromBrowser() || undefined;
      } else if (request) {
       // Côté serveur : récupérer depuis la session
-      try {
-        finalToken = await getBackendTokenFromSession(request);
-        if (!finalToken || finalToken === 'undefined' || finalToken === 'null') {
-          finalToken = undefined;
-        }
-      } catch (error) {
-        console.log('⚠️ Impossible de récupérer le token de la session:', error);
-        finalToken = undefined;
-      }
+      finalToken = await getBackendTokenFromSession(request) || undefined;
     }
   }
   

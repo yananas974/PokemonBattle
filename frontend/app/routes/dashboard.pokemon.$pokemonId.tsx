@@ -1,66 +1,39 @@
 import type { LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
 import { json, redirect } from '@remix-run/node';
-import { useLoaderData, Link } from '@remix-run/react';
+import { useLoaderData } from '@remix-run/react';
 import { useEffect } from 'react';
-import { getUserFromSession } from '~/sessions';
-import type { PokemonDetail } from '@pokemon-battle/shared';
+import type { Pokemon, PokemonDetail } from '@pokemon-battle/shared';
+
 import { 
-  PokemonAudioPlayer, 
   VintageCard, 
-  VintageButton, 
-  StatusIndicator 
+  VintageButton,
+  PokemonSprite, 
 } from '~/components';
 import { useGlobalAudio } from '~/hooks/useGlobalAudio';
-import ClientOnly from '~/components/ClientOnly';
+import { getUserFromSession } from '~/sessions.server';
+import { apiCallWithRequest } from '~/utils/api';
 import { cn } from '~/utils/cn';
+import { getTypeGradient, getTypeEmoji } from '~/utils/pokemonTypes';
+import { getPokemonSprite } from '~/services/pokemonSpriteService';
 
-export const meta: MetaFunction<typeof loader> = ({ data }) => {
-  if (!data?.pokemon) {
-    return [
-      { title: 'Pokemon non trouvé - Pokemon Battle' },
-    ];
-  }
-  
-  return [
-    { title: `${data.pokemon.name_fr} - Pokédex National` },
-    { name: 'description', content: `Découvrez ${data.pokemon.name_fr}, un Pokemon de type ${data.pokemon.type}` },
-  ];
-};
-
+// Loader function
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  console.log('🔍 === POKEMON DETAIL LOADER START ===');
-  console.log('📋 URL:', request.url);
-  console.log('📋 Params:', params);
-  
   const { user } = await getUserFromSession(request);
-  console.log('👤 User from session:', user ? `${user.username} (${user.email})` : 'NULL');
   
   if (!user) {
-    console.log('❌ No user - redirecting to login');
     return redirect('/login');
   }
 
   const pokemonId = params.pokemonId;
-  console.log('🔍 Pokemon ID from params:', pokemonId);
   
   if (!pokemonId || isNaN(Number(pokemonId))) {
-    console.log('❌ Invalid Pokemon ID:', pokemonId);
     throw new Response('Pokemon ID invalide', { status: 400 });
   }
 
   try {
-    console.log(`🔍 Fetching Pokemon ${pokemonId}...`);
-    
-    const { apiCallWithRequest } = await import('~/utils/api');
-    const apiUrl = `/api/pokemon/${pokemonId}`;
-    console.log('📡 API URL:', apiUrl);
-    
-    const response = await apiCallWithRequest(apiUrl, request);
-    console.log(`📡 API response status: ${response.status}`);
-    console.log(`📡 API response ok: ${response.ok}`);
+    const response = await apiCallWithRequest(`/api/pokemon/${pokemonId}`, request);
 
     if (!response.ok) {
-      console.error(`❌ API Error ${response.status}:`, await response.text());
       if (response.status === 404) {
         throw new Response('Pokemon non trouvé', { status: 404 });
       }
@@ -68,27 +41,14 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     }
 
     const data = await response.json();
-    console.log(`✅ API Response data:`, data);
-    console.log(`✅ Pokemon object:`, data.data?.pokemon);
-    
-    // Fix: The API returns data in data.data.pokemon structure
     const pokemon = data.data?.pokemon || data.pokemon;
     
     if (!pokemon) {
-      console.error('❌ No pokemon in response data');
-      console.error('❌ Expected structure: data.data.pokemon or data.pokemon');
       throw new Response('Pokemon non trouvé dans la réponse', { status: 404 });
     }
     
-    console.log(`✅ Pokemon ${pokemonId} loaded successfully:`, pokemon.name_fr);
-    
-    return json({
-      pokemon: pokemon as PokemonDetail
-    });
+    return json({ pokemon: pokemon as PokemonDetail });
   } catch (error) {
-    console.error('❌ Erreur Pokemon detail:', error);
-    
-    // Return a fallback response instead of throwing to help debug
     return json({
       pokemon: null,
       error: error instanceof Error ? error.message : 'Erreur inconnue'
@@ -96,79 +56,20 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   }
 };
 
-// Pokemon type colors with modern gradients
-const getTypeGradient = (type: string) => {
-  const gradients: { [key: string]: string } = {
-    'Normal': 'from-gray-400 to-gray-600',
-    'Fire': 'from-red-500 to-orange-600',
-    'Water': 'from-blue-500 to-cyan-600',
-    'Electric': 'from-yellow-400 to-yellow-600',
-    'Grass': 'from-green-500 to-emerald-600',
-    'Ice': 'from-cyan-300 to-blue-400',
-    'Fighting': 'from-red-600 to-red-800',
-    'Poison': 'from-purple-500 to-purple-700',
-    'Ground': 'from-yellow-600 to-amber-700',
-    'Flying': 'from-indigo-400 to-blue-500',
-    'Psychic': 'from-pink-500 to-purple-600',
-    'Bug': 'from-green-600 to-lime-600',
-    'Rock': 'from-yellow-700 to-stone-600',
-    'Ghost': 'from-purple-600 to-indigo-800',
-    'Dragon': 'from-indigo-600 to-purple-700',
-    'Dark': 'from-gray-700 to-gray-900',
-    'Steel': 'from-gray-500 to-slate-600',
-    'Fairy': 'from-pink-400 to-rose-500'
-  };
-  return gradients[type] || 'from-gray-400 to-gray-600';
+export const meta: MetaFunction = ({ data }) => {
+  const loaderData = data as any;
+  if (!loaderData?.pokemon) {
+    return [
+      { title: 'Pokemon non trouvé - Pokemon Battle' },
+    ];
+  }
+  
+  return [
+    { title: `${loaderData.pokemon.name_fr} - Pokédex National` },
+    { name: 'description', content: `Découvrez ${loaderData.pokemon.name_fr}, un Pokemon de type ${loaderData.pokemon.type}` },
+  ];
 };
 
-// Type emoji mapping
-const getTypeEmoji = (type: string) => {
-  const emojis: { [key: string]: string } = {
-    'Fire': '🔥',
-    'Water': '💧',
-    'Electric': '⚡',
-    'Grass': '🌿',
-    'Ice': '❄️',
-    'Fighting': '👊',
-    'Poison': '☠️',
-    'Ground': '🌍',
-    'Flying': '🦅',
-    'Psychic': '🔮',
-    'Bug': '🐛',
-    'Rock': '🪨',
-    'Ghost': '👻',
-    'Dragon': '🐲',
-    'Dark': '🌙',
-    'Steel': '⚙️',
-    'Fairy': '✨',
-    'Normal': '⭐'
-  };
-  return emojis[type] || '⭐';
-};
-
-// Composant pour les particules d'arrière-plan
-const PokemonParticles = () => {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {Array.from({ length: 15 }).map((_, i) => (
-        <div
-          key={i}
-          className="absolute animate-pulse"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 3}s`,
-            animationDuration: `${2 + Math.random() * 3}s`
-          }}
-        >
-          {['⚡', '🔥', '💧', '🌿', '❄️', '✨'][Math.floor(Math.random() * 6)]}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// Composant pour les barres de stats modernes
 const ModernStatBar = ({ label, value, maxValue, emoji }: { 
   label: string; 
   value: number; 
@@ -203,8 +104,8 @@ const ModernStatBar = ({ label, value, maxValue, emoji }: {
 };
 
 export default function ModernPokemonDetail() {
-  const loaderData = useLoaderData<typeof loader>();
-  const { pokemon, error } = loaderData as { pokemon: PokemonDetail | null; error?: string; };
+  const loaderData = useLoaderData() as any;
+  const { pokemon, error } = loaderData as { pokemon: Pokemon | null; error?: string; };
   const { playDashboard } = useGlobalAudio();
   
   // Auto-start dashboard music
@@ -268,25 +169,10 @@ export default function ModernPokemonDetail() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative">
-      <PokemonAudioPlayer variant="compact" />
-      
-      {/* Particules d'arrière-plan */}
-      <ClientOnly>
-        <PokemonParticles />
-      </ClientOnly>
+  
+   
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Navigation moderne */}
-        <div className="mb-6">
-          <VintageButton 
-            variant="modern" 
-            href="/dashboard/pokemon"
-            className="inline-flex items-center space-x-2"
-          >
-            <span>🏠</span>
-            <span>Retour au Pokédex</span>
-          </VintageButton>
-        </div>
 
         {/* Header principal avec image et infos */}
         <VintageCard variant="glass" className="mb-8 overflow-hidden">
@@ -303,12 +189,8 @@ export default function ModernPokemonDetail() {
                 <div className="absolute inset-0 bg-white bg-opacity-20 rounded-full blur-2xl scale-150"></div>
                 <div className="relative bg-white bg-opacity-10 backdrop-blur-sm rounded-3xl p-8 border border-white border-opacity-30">
                   <img 
-                    src={pokemon.sprite_url || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`}
-                    alt={pokemon.name_fr || 'Pokémon'}
-                    className="w-48 h-48 object-contain drop-shadow-2xl"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`;
-                    }}
+                    src={pokemon.sprite_url}
+                    {...pokemon.sprite_url && {className: "w-50 h-50 object-contain mx-auto mb-3", style: { imageRendering: 'pixelated' }}}
                   />
                 </div>
               </div>
@@ -431,74 +313,6 @@ export default function ModernPokemonDetail() {
                     <span className="text-white font-semibold">{pokemon.height || 0}M × {pokemon.weight || 0}KG</span>
                   </div>
                 </div>
-              </div>
-            </VintageCard>
-
-            {/* Status et évaluation */}
-            <VintageCard variant="glass">
-              <h3 className="text-2xl font-bold text-white mb-4 flex items-center space-x-2">
-                <span>⭐</span>
-                <span>Évaluation</span>
-              </h3>
-              
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-white">Force de combat</span>
-                  <StatusIndicator 
-                    status={totalStats > 500 ? "success" : totalStats > 300 ? "warning" : "error"} 
-                    showLabel 
-                    label={totalStats > 500 ? "Excellent" : totalStats > 300 ? "Bon" : "Faible"}
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-white">Rareté</span>
-                  <StatusIndicator 
-                    status={(pokemon.id || 0) <= 151 ? "success" : "online"} 
-                    showLabel 
-                    label={(pokemon.id || 0) <= 151 ? "Légendaire" : "Standard"}
-                  />
-                </div>
-              </div>
-            </VintageCard>
-
-            {/* Actions */}
-            <VintageCard variant="glass">
-              <h3 className="text-2xl font-bold text-white mb-4 flex items-center space-x-2">
-                <span>🎮</span>
-                <span>Actions</span>
-              </h3>
-              
-              <div className="space-y-3">
-                <VintageButton 
-                  variant="pokemon" 
-                  href="/dashboard/teams/create"
-                  fullWidth
-                  className="justify-center"
-                >
-                  <span className="mr-2">➕</span>
-                  Ajouter à une équipe
-                </VintageButton>
-                
-                <VintageButton 
-                  variant="water" 
-                  href="/dashboard/battle"
-                  fullWidth
-                  className="justify-center"
-                >
-                  <span className="mr-2">⚔️</span>
-                  Aller au combat
-                </VintageButton>
-                
-                <VintageButton 
-                  variant="modern" 
-                  href="/dashboard/pokemon"
-                  fullWidth
-                  className="justify-center"
-                >
-                  <span className="mr-2">📚</span>
-                  Retour au Pokédex
-                </VintageButton>
               </div>
             </VintageCard>
           </div>

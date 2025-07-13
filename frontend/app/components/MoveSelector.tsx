@@ -1,5 +1,6 @@
 import React from 'react';
 import type { PokemonMove } from '~/types/battle';
+import { getTypeColor } from '~/utils/pokemonTypes';
 
 interface MoveSelectorProps {
   moves: PokemonMove[];
@@ -26,32 +27,6 @@ export const MoveSelector: React.FC<MoveSelectorProps> = ({
       pp: 0
     });
   }
-
-  // Types de Pokémon et leurs couleurs
-  const getTypeColor = (type: string): string => {
-    const typeColors: { [key: string]: string } = {
-      normal: 'bg-gray-500',
-      fire: 'bg-red-500',
-      water: 'bg-blue-500',
-      electric: 'bg-yellow-500',
-      grass: 'bg-green-500',
-      ice: 'bg-cyan-500',
-      fighting: 'bg-red-700',
-      poison: 'bg-purple-500',
-      ground: 'bg-yellow-700',
-      flying: 'bg-indigo-500',
-      psychic: 'bg-pink-500',
-      bug: 'bg-green-700',
-      rock: 'bg-yellow-800',
-      ghost: 'bg-purple-700',
-      dragon: 'bg-indigo-700',
-      dark: 'bg-gray-800',
-      steel: 'bg-gray-400',
-      fairy: 'bg-pink-300'
-    };
-    
-    return typeColors[type.toLowerCase()] || 'bg-gray-500';
-  };
 
   return (
     <div className="bg-gray-900 border-4 border-gray-600 rounded-lg p-4">

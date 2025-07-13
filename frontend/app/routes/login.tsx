@@ -2,11 +2,9 @@ import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from '@remi
 import { json, redirect } from '@remix-run/node';
 import { Form, Link, useActionData, useNavigation, useSearchParams } from '@remix-run/react';
 import { authService } from '~/services/authService';
-import { getUserFromSession, createUserSession } from '~/sessions';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
-import type { LoginRequest, AuthResponse } from '~/types/shared';
-import { authValidators } from '~/types/shared';
+import type { LoginRequest, AuthResponse } from '@pokemon-battle/shared';
 
 export const meta: MetaFunction = () => {
   return [
@@ -17,10 +15,12 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  // Import dynamique pour éviter l'import côté client
+  const { getUserFromSession } = await import('~/sessions.server');
   const { user } = await getUserFromSession(request);
   
   if (user) {
-    throw redirect('/dashboard');
+    return redirect('/dashboard');
   }
 
   const url = new URL(request.url);
@@ -30,6 +30,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  // Import dynamique pour éviter l'import côté client
+  const { createUserSession } = await import('~/sessions.server');
+  
   const formData = await request.formData();
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
@@ -39,10 +42,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const loginData: LoginRequest = { email, password };
   
   try {
-    const validatedData = authValidators.login.parse(loginData);
+    // Validation simple
+    if (!email || !password) {
+      return json({
+        errors: { general: 'Email et mot de passe requis' },
+        success: false,
+        email
+      }, { status: 400 });
+    }
     
     // ✅ Authentification
-    const authResponse: AuthResponse = await authService.login(validatedData);
+    const authResponse: AuthResponse = await authService.login(loginData);
     
     if (!authResponse.success || !authResponse.user) {
       return json({

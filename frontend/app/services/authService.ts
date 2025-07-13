@@ -1,5 +1,5 @@
 import { apiCall, handleApiError } from '~/utils/api';
-import type { RegisterRequest, LoginRequest, AuthResponse } from '~/types/shared';
+import type { RegisterRequest, LoginRequest, AuthResponse } from '@pokemon-battle/shared';
 
 interface BackendAuthResponse {
   success: boolean;
@@ -31,7 +31,6 @@ export const authService = {
           token: backendResponse.data.token,
           backendToken: backendResponse.data.token
         },
-        token: backendResponse.data.token,
         message: backendResponse.message
       };
     }
@@ -68,7 +67,6 @@ export const authService = {
       return {
         success: true,
         user: userWithToken,
-        token: backendResponse.data.token,
         message: backendResponse.message
       };
     }

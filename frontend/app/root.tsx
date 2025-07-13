@@ -93,14 +93,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
-      {/* Particules Pokémon en arrière-plan */}
-      <SimplePokemonParticles 
-        maxParticles={8} 
-        speed={0.4} 
-        minSize={35} 
-        maxSize={65} 
-      />
-      
+     
       {shouldShowNavigation && <QuickActionsNavbar user={user} />}
       {shouldShowNavigation && <NavbarSpacer />}
       <Outlet />

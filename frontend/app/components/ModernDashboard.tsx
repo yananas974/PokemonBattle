@@ -1,31 +1,22 @@
 import React from 'react';
 import { Link } from '@remix-run/react';
-import ClientOnly from '~/components/ClientOnly';
+
 
 interface DashboardStats {
   totalPokemon: number;
   totalTeams: number;
-  battlesWon: number;
-  battlesTotal: number;
+ 
 }
 
 interface ModernDashboardProps {
   stats: DashboardStats;
-  recentBattles?: Array<{
-    id: string;
-    opponent: string;
-    result: 'win' | 'loss';
-    date: string;
-  }>;
   userName?: string;
 }
 
 export const ModernDashboard: React.FC<ModernDashboardProps> = ({
   stats,
-  recentBattles = [],
   userName = 'Dresseur'
 }) => {
-  const winRate = stats.battlesTotal > 0 ? (stats.battlesWon / stats.battlesTotal) * 100 : 0;
 
   return (
     <div className="min-h-screen p-6">
@@ -164,24 +155,6 @@ export const ModernDashboard: React.FC<ModernDashboardProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Effets de particules flottantes */}
-      <ClientOnly>
-        <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          {Array.from({ length: 15 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-2 h-2 bg-white rounded-full opacity-20 animate-pulse"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 3}s`,
-                animationDuration: `${2 + Math.random() * 3}s`
-              }}
-            />
-          ))}
-        </div>
-      </ClientOnly>
     </div>
   );
 }; 

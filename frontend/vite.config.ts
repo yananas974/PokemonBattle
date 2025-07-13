@@ -19,6 +19,15 @@ export default defineConfig({
     }),
     tsconfigPaths(),
   ],
+  define: {
+    global: 'globalThis',
+  },
+  optimizeDeps: {
+    exclude: ['@remix-run/node'],
+  },
+  ssr: {
+    noExternal: ['@pokemon-battle/shared'],
+  },
   server: {
     host: true, // Permet l'accès depuis l'extérieur du conteneur
     port: 3000,

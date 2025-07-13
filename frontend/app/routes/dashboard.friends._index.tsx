@@ -1,8 +1,8 @@
-import { json, type LoaderFunctionArgs, type ActionFunctionArgs, redirect } from '@remix-run/node';
+// Import des fonctions serveur depuis le fichier .server.ts
+export { loader, action } from './server/dashboard.friends._index.server';
+
 import { useLoaderData, useActionData, useSubmit, useNavigation, useSearchParams, Link } from '@remix-run/react';
 import { useState, useEffect } from 'react';
-import { getUserFromSession } from '~/sessions';
-import { friendshipService } from '~/services/friendshipService';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
 import { cn } from '~/utils/cn';
@@ -51,118 +51,7 @@ interface ActionData {
   error?: string;
 }
 
-// Loader - Récupérer toutes les données d'amitié
-export async function loader({ request }: LoaderFunctionArgs): Promise<Response> {
-  const sessionData = await getUserFromSession(request);
-  if (!sessionData.user) {
-    throw new Response('Unauthorized', { status: 401 });
-  }
-
-  const user = sessionData.user;
-
-  try {
-    // Récupérer le token pour les appels API
-    const token = user.token || user.backendToken;
-    if (!token) {
-      throw new Error('Token manquant');
-    }
-    
-    // Récupération des données d'amitié
-    const friendsResponse = await friendshipService.getFriends(request);
-    const pendingResponse = await friendshipService.getPendingRequests(request);
-    const sentResponse = await friendshipService.getSentRequests(request);
-    const usersResponse = await friendshipService.searchUsers('', request);
-
-    // Extraction sécurisée des données avec fallback
-    const friends = friendsResponse?.data?.friends || [];
-    const pendingRequests = pendingResponse?.data?.friends || [];
-    const sentRequests = sentResponse?.data?.friends || [];
-    const availableUsers = usersResponse?.data?.users || [];
-
-    return json<LoaderData>({
-      user,
-      friends,
-      pendingRequests,
-      sentRequests,
-      availableUsers
-    });
-  } catch (error) {
-    return json<LoaderData>({
-      user,
-      friends: [],
-      pendingRequests: [],
-      sentRequests: [],
-      availableUsers: [],
-      error: error instanceof Error ? error.message : 'Erreur lors du chargement des données'
-    });
-  }
-}
-
-// Action - Gérer les actions d'amitié
-export async function action({ request }: ActionFunctionArgs): Promise<Response> {
-  const sessionData = await getUserFromSession(request);
-  if (!sessionData.user) {
-    return json<ActionData>({ success: false, error: 'Non autorisé' }, { status: 401 });
-  }
-
-  const user = sessionData.user;
-  const formData = await request.formData();
-  const actionType = formData.get('actionType') as string;
-  
-  // Conversion sécurisée des IDs
-  const friendshipIdStr = formData.get('friendshipId') as string;
-  const friendIdStr = formData.get('friendId') as string;
-  
-  const friendshipId = friendshipIdStr ? parseInt(friendshipIdStr) : undefined;
-  const friendId = friendIdStr ? parseInt(friendIdStr) : undefined;
-
-  // Récupérer le token pour les appels API
-  const token = user.token || user.backendToken;
-  if (!token) {
-    return json<ActionData>({ success: false, error: 'Token manquant' }, { status: 401 });
-  }
-
-  try {
-    switch (actionType) {
-      case 'sendRequest':
-        if (!friendId) {
-          return json<ActionData>({ success: false, error: 'ID ami manquant' }, { status: 400 });
-        }
-        const sendData: SendFriendRequestRequest = { friendId };
-        await friendshipService.sendFriendRequest(sendData, token);
-        return redirect('/dashboard/friends?tab=sent&success=request-sent');
-
-      case 'acceptRequest':
-        if (!friendshipId) {
-          return json<ActionData>({ success: false, error: 'ID amitié manquant' }, { status: 400 });
-        }
-        await friendshipService.acceptFriendRequest(friendshipId, token);
-        return redirect('/dashboard/friends?tab=friends&success=request-accepted');
-
-      case 'blockFriend':
-        if (!friendshipId) {
-          return json<ActionData>({ success: false, error: 'ID amitié manquant' }, { status: 400 });
-        }
-        await friendshipService.blockFriend(friendshipId, token);
-        return redirect('/dashboard/friends?success=user-blocked');
-
-      case 'removeFriend':
-        if (!friendshipId) {
-          return json<ActionData>({ success: false, error: 'ID amitié manquant' }, { status: 400 });
-        }
-        await friendshipService.removeFriend(friendshipId, token);
-        return redirect('/dashboard/friends?success=friend-removed');
-
-      default:
-        return json<ActionData>({ success: false, error: 'Action inconnue' }, { status: 400 });
-    }
-  } catch (error: any) {
-    return json<ActionData>({ 
-      success: false, 
-      error: error.message || 'Erreur lors de l\'action' 
-    }, { status: 500 });
-  }
-}
+// Les fonctions loader et action sont importées depuis le fichier .server.ts
 
 export default function FriendsPage() {
   const { user, friends, pendingRequests, sentRequests, availableUsers, error } = useLoaderData<LoaderData>();
@@ -307,16 +196,6 @@ export default function FriendsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative overflow-hidden">
-      {/* Decorative Elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 text-6xl animate-pulse">🤝</div>
-        <div className="absolute top-40 right-20 text-4xl animate-bounce delay-300">👥</div>
-        <div className="absolute bottom-32 left-20 text-5xl animate-pulse delay-700">💫</div>
-        <div className="absolute bottom-20 right-10 text-4xl animate-bounce delay-1000">🌟</div>
-        <div className="absolute top-1/3 left-1/4 text-3xl animate-pulse delay-500">🎮</div>
-        <div className="absolute top-2/3 right-1/3 text-3xl animate-bounce delay-1200">✨</div>
-      </div>
-
       <div className="relative z-10 p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           

@@ -2,15 +2,14 @@ import type { LoaderFunctionArgs, ActionFunctionArgs, MetaFunction } from '@remi
 import { json, redirect } from '@remix-run/node';
 import { useLoaderData, useActionData, useNavigation, useSubmit } from '@remix-run/react';
 import { useState, useEffect } from 'react';
-import { getUserFromSession } from '~/sessions';
 import { interactiveBattleService } from '~/services/interactiveBattleService';
 import { teamService } from '~/services/teamService';
 import { InteractiveBattle } from '~/components/InteractiveBattle';
 import type { BattleState, BattleAction } from '~/types/battle';
 import { useAudioContext } from '~/contexts/AudioContext';
 import { PokemonAudioPlayer } from '~/components/PokemonAudioPlayer';
-import { useAudioManager } from '~/hooks/useAudioManager';
 import { useGlobalAudio } from '~/hooks/useGlobalAudio';
+import { getUserFromSession } from '~/sessions.server';
 
 export const meta: MetaFunction = () => {
   return [
@@ -20,6 +19,7 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { getUserFromSession } = await import('~/sessions.server');
   const { userId, user } = await getUserFromSession(request);
   
   if (!userId || !user) {

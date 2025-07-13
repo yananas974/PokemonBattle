@@ -1,13 +1,13 @@
 // ✅ RÉEXPORT DES TYPES SHARED AVEC ADAPTATIONS FRONTEND
 export { 
-  Pokemon, 
-  PokemonInTeam, 
-  PokemonDetail, 
-  BattlePokemon, 
-  PokemonResponse, 
-  PokemonDetailResponse, 
-  CreatePokemonRequest,
-  PokemonType as PokemonTypeEnum 
+  type Pokemon, 
+  type PokemonInTeam, 
+  type PokemonDetail, 
+  type BattlePokemon, 
+  type PokemonResponse, 
+  type PokemonDetailResponse, 
+  type CreatePokemonRequest,
+  type PokemonType as PokemonTypeEnum 
 } from '@pokemon-battle/shared';
 
 // ✅ TYPES SPÉCIFIQUES AU FRONTEND (si nécessaire)

@@ -1,8 +1,5 @@
-import type { LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
-import { json } from '@remix-run/node';
+import type { MetaFunction } from '@remix-run/node';
 import { useLoaderData, useNavigate } from '@remix-run/react';
-import { getUserFromSession } from '~/sessions';
-import { teamService } from '~/services/teamService';
 import { battleSimulationService } from '~/services/battleSimulationService';
 import type { TeamBattleRequest, BattleResult, TurnBasedResult } from '~/services/battleSimulationService';
 import { useState, useEffect } from 'react';
@@ -14,6 +11,9 @@ import { PokemonAudioPlayer } from '~/components/PokemonAudioPlayer';
 import { BattleResultModal } from '~/components/BattleResultModal';
 import { useGlobalAudio } from '~/hooks/useGlobalAudio';
 
+// Import des fonctions serveur depuis le fichier .server.ts
+export { loader } from './server/dashboard.battle.simulate.server';
+
 export const meta: MetaFunction = () => {
   return [
     { title: 'Simulation de Combat - Pokemon Battle' },
@@ -21,54 +21,11 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user) {
-    throw new Response('Unauthorized', { status: 401 });
-  }
-
-  // Récupérer les paramètres d'URL
-  const url = new URL(request.url);
-  const playerTeamId = url.searchParams.get('playerTeamId');
-  const enemyTeamId = url.searchParams.get('enemyTeamId');
-
-  try {
-    const teamsData = await teamService.getMyTeams(user.backendToken);
-    const readyTeams = (teamsData.teams || []).filter((team: any) => 
-      team.pokemon && team.pokemon.length >= 1
-    );
-
-    // Si les équipes sont spécifiées en paramètres, les pré-sélectionner
-    let preselectedPlayer = null;
-    let preselectedEnemy = null;
-    
-    if (playerTeamId && enemyTeamId) {
-      preselectedPlayer = readyTeams.find((team: any) => team.id === parseInt(playerTeamId));
-      preselectedEnemy = readyTeams.find((team: any) => team.id === parseInt(enemyTeamId));
-    }
-
-    return json({
-      user,
-      teams: readyTeams,
-      preselectedPlayer,
-      preselectedEnemy
-    });
-  } catch (error) {
-    return json({
-      user,
-      teams: [],
-      preselectedPlayer: null,
-      preselectedEnemy: null
-    });
-  }
-};
-
 // Types pour les étapes de progression
 type BattleStep = 'team-selection' | 'mode-selection' | 'enemy-selection' | 'battle-ready' | 'battle-result';
 
 export default function BattleSimulation() {
-  const { user, teams, preselectedPlayer, preselectedEnemy } = useLoaderData<typeof loader>();
+  const { user, teams, preselectedPlayer, preselectedEnemy } = useLoaderData() as any;
   const navigate = useNavigate();
   const { playDashboard } = useGlobalAudio();
   

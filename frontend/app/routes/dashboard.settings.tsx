@@ -1,7 +1,8 @@
-import type { LoaderFunctionArgs, MetaFunction, ActionFunctionArgs } from '@remix-run/node';
-import { json } from '@remix-run/node';
+// Import des fonctions serveur depuis le dossier server/
+export { loader, action } from './server/dashboard.settings.server';
+
+import type { MetaFunction } from '@remix-run/react';
 import { useLoaderData, Form, useActionData, useNavigation, Link } from '@remix-run/react';
-import { getUserFromSession } from '~/sessions';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
 import { useState } from 'react';
@@ -13,37 +14,11 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user) {
-    throw new Response('Unauthorized', { status: 401 });
-  }
 
-  return json({ user });
-};
-
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user) {
-    throw new Response('Unauthorized', { status: 401 });
-  }
-
-  const formData = await request.formData();
-  const actionType = formData.get('action');
-
-  // Mock implementation - in real app, save to backend
-  if (actionType === 'save-settings') {
-    return json({ success: true, message: 'Paramètres sauvegardés avec succès !' });
-  }
-
-  return json({ success: false, message: 'Action non reconnue' });
-};
 
 export default function Settings() {
-  const { user } = useLoaderData<typeof loader>();
-  const actionData = useActionData<typeof action>();
+  const { user } = useLoaderData() as any;
+  const actionData = useActionData() as any;
   const navigation = useNavigation();
   
   const isSaving = navigation.state === 'submitting';

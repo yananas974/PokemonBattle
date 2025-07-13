@@ -1,12 +1,10 @@
 import type { LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
 import { json } from '@remix-run/node';
 import { Link, useLoaderData } from '@remix-run/react';
-import { getUserFromSession } from '~/sessions';
 import { teamService } from '~/services/teamService';
 import { useState, useEffect } from 'react';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
-import { PokemonAudioPlayer } from '~/components/PokemonAudioPlayer';
 import { useGlobalAudio } from '~/hooks/useGlobalAudio';
 import { cn } from '~/utils/cn';
 
@@ -18,6 +16,7 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { getUserFromSession } = await import('~/sessions.server');
   const { user } = await getUserFromSession(request);
   
   if (!user) {
@@ -57,52 +56,8 @@ export default function BattleHub() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative overflow-hidden">
-      {/* Decorative Elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 text-6xl animate-pulse">⚔️</div>
-        <div className="absolute top-40 right-20 text-4xl animate-bounce delay-300">🔥</div>
-        <div className="absolute bottom-32 left-20 text-5xl animate-pulse delay-700">⚡</div>
-        <div className="absolute bottom-20 right-10 text-4xl animate-bounce delay-1000">🏆</div>
-        <div className="absolute top-1/3 left-1/4 text-3xl animate-pulse delay-500">💥</div>
-        <div className="absolute top-2/3 right-1/3 text-3xl animate-bounce delay-1200">🎯</div>
-      </div>
-
       <div className="relative z-10 p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-8">
-          <PokemonAudioPlayer />
-          
-          {/* Navigation Header */}
-          <ModernCard variant="glass" className="backdrop-blur-xl bg-white/10">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-4">
-                  <Link 
-                    to="/dashboard"
-                    className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 transition-all duration-200 text-white hover:scale-105"
-                  >
-                    <span className="text-lg">🏠</span>
-                    <span className="font-medium">← Dashboard</span>
-                  </Link>
-                  <span className="text-white/60">→</span>
-                  <h1 className="text-white font-bold text-3xl flex items-center space-x-3">
-                    <span>⚔️</span>
-                    <span>Hub de Combat</span>
-                  </h1>
-                </div>
-                <div className="text-right">
-                  <div className="text-white font-bold text-lg">👤 {user.username}</div>
-                  <div className="text-white/70 text-sm">Dresseur Pokémon</div>
-                </div>
-              </div>
-              
-              <div className="text-center">
-                <p className="text-white/80 text-lg">
-                  Choisissez votre mode de combat et affrontez vos adversaires !
-                </p>
-              </div>
-            </div>
-          </ModernCard>
-
           {/* Team Selection */}
           <ModernCard variant="glass" size="xl" className="shadow-2xl">
             <div className="p-8">
@@ -424,10 +379,6 @@ export default function BattleHub() {
               </div>
             </ModernCard>
           )}
-
-          {/* Quick Actions */}
-       
-          
         </div>
       </div>
     </div>

@@ -1,13 +1,13 @@
-import type { LoaderFunctionArgs, ActionFunctionArgs, MetaFunction } from '@remix-run/node';
-import { json, redirect } from '@remix-run/node';
+// Import des fonctions serveur depuis le fichier .server.ts
+export { loader, action } from './server/dashboard.teams.$teamId.select-pokemon.server';
+
+import type { MetaFunction } from '@remix-run/node';
 import { useLoaderData, useActionData, useNavigation, useSubmit, Link } from '@remix-run/react';
-import { getUserFromSession } from '~/sessions';
-import { pokemonService } from '~/services/pokemonService';
-import { teamService as backendTeamService } from '~/services/teamService';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
-import type { Pokemon } from '~/types/shared';
+import type { Pokemon } from '@pokemon-battle/shared';
 import { useState } from 'react';
+import { getPokemonSprite } from '~/services/pokemonSpriteService';
 
 // Types pour les données
 interface LoaderData {
@@ -16,6 +16,7 @@ interface LoaderData {
   teamId: number;
   teamPokemonCount: number;
   maxPokemonPerTeam: number;
+  error?: string;
 }
 
 interface ActionData {
@@ -32,134 +33,10 @@ export const meta: MetaFunction = ({ params }) => {
   ];
 };
 
-export const loader = async ({ request, params }: LoaderFunctionArgs): Promise<Response> => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user) {
-    throw redirect('/login');
-  }
-  
-  const teamId = params.teamId;
-  if (!teamId || isNaN(Number(teamId))) {
-    throw new Response('ID d\'équipe invalide', { status: 400 });
-  }
-
-  try {
-    // Utiliser les services directement
-    console.log('🔄 Loader: Appel service Pokemon...');
-    const pokemonData = await pokemonService.getAllPokemon(request);
-    console.log('✅ Loader: Pokemon récupérés:', pokemonData.pokemon?.length);
-    
-    // Vérification de la structure des données Pokemon
-    if (!pokemonData || !pokemonData.pokemon || !Array.isArray(pokemonData.pokemon)) {
-      console.error('❌ Structure pokemonData invalide:', pokemonData);
-      throw new Response('Structure de données Pokemon invalide', { status: 500 });
-    }
-    
-    console.log('🔄 Loader: Appel service Teams...');
-    const teamData = await backendTeamService.getMyTeams(request);
-    console.log('✅ Loader: Teams récupérées:', teamData.teams?.length);
-    
-    // Vérification de la structure des données
-    if (!teamData || !teamData.teams || !Array.isArray(teamData.teams)) {
-      console.error('❌ Structure teamData invalide:', teamData);
-      throw new Response('Structure de données équipes invalide', { status: 500 });
-    }
-    
-    const team = teamData.teams.find((t: any) => t.id === Number(teamId));
-    
-    if (!team) {
-      throw new Response('Équipe non trouvée', { status: 404 });
-    }
-
-    return json<LoaderData>({
-      pokemon: pokemonData.pokemon,
-      team,
-      teamId: Number(teamId),
-      teamPokemonCount: team.pokemon ? team.pokemon.length : 0,
-      maxPokemonPerTeam: 6
-    });
-  } catch (error) {
-    console.error('Erreur lors du chargement de la sélection:', error);
-    throw new Response('Erreur lors du chargement', { status: 500 });
-  }
-};
-
-export const action = async ({ request, params }: ActionFunctionArgs): Promise<Response> => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user) {
-    return json<ActionData>({ error: 'Utilisateur non authentifié', success: false });
-  }
-
-  const teamId = params.teamId;
-  if (!teamId || isNaN(Number(teamId))) {
-    return json<ActionData>({ error: 'ID d\'équipe invalide', success: false });
-  }
-
-  const formData = await request.formData();
-  const intent = formData.get('intent') as string;
-
-  if (intent === 'addPokemon') {
-    const pokemonId = parseInt(formData.get('pokemonId') as string);
-    
-    if (!pokemonId) {
-      return json<ActionData>({ error: 'ID Pokémon requis', success: false });
-    }
-
-    try {
-      const result = await backendTeamService.addPokemonToTeam(
-        Number(teamId), 
-        pokemonId, 
-        user.backendToken || user.token
-      );
-      
-      return json<ActionData>({ 
-        success: true, 
-        message: 'Pokémon ajouté à l\'équipe avec succès !',
-        pokemon: (result as any).pokemon
-      });
-    } catch (error) {
-      console.error('Erreur lors de l\'ajout du Pokémon:', error);
-      return json<ActionData>({ 
-        error: error instanceof Error ? error.message : 'Erreur lors de l\'ajout du Pokémon',
-        success: false 
-      });
-    }
-  }
-
-  if (intent === 'removePokemon') {
-    const pokemonId = parseInt(formData.get('pokemonId') as string);
-    
-    if (!pokemonId) {
-      return json<ActionData>({ error: 'ID Pokémon requis', success: false });
-    }
-
-    try {
-      await backendTeamService.removePokemonFromTeam(
-        Number(teamId), 
-        pokemonId, 
-        user.backendToken || user.token
-      );
-      
-      return json<ActionData>({ 
-        success: true, 
-        message: 'Pokémon retiré de l\'équipe avec succès !',
-      });
-    } catch (error) {
-      console.error('Erreur lors du retrait du Pokémon:', error);
-      return json<ActionData>({ 
-        error: error instanceof Error ? error.message : 'Erreur lors du retrait du Pokémon',
-        success: false 
-      });
-    }
-  }
-
-  return json<ActionData>({ error: 'Action non reconnue', success: false });
-};
+// Les fonctions loader et action sont importées depuis le fichier .server.ts
 
 export default function SelectPokemon() {
-  const { pokemon, team, teamId, teamPokemonCount, maxPokemonPerTeam } = useLoaderData<LoaderData>();
+  const { pokemon, team, teamId, teamPokemonCount, maxPokemonPerTeam, error } = useLoaderData<LoaderData>();
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const submit = useSubmit();
@@ -168,12 +45,34 @@ export default function SelectPokemon() {
   const [typeFilter, setTypeFilter] = useState('all');
   
   const isLoading = navigation.state === 'submitting';
+
+  // Gestion d'erreur
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900 p-6">
+        <div className="max-w-4xl mx-auto">
+          <ModernCard variant="glass" className="bg-red-500/20 border border-red-400/30">
+            <div className="p-8 text-center">
+              <div className="text-8xl mb-6">⚠️</div>
+              <h1 className="text-white font-bold text-3xl mb-4">Erreur de chargement</h1>
+              <p className="text-red-200 mb-6">{error}</p>
+              <Link to="/dashboard/teams">
+                <ModernButton variant="secondary" size="lg">
+                  ← Retour aux équipes
+                </ModernButton>
+              </Link>
+            </div>
+          </ModernCard>
+        </div>
+      </div>
+    );
+  }
   
   // Pokémon dans l'équipe (IDs)
-  const teamPokemonIds = team.pokemon?.map((p: any) => p.id || p.pokemon_id) || [];
+  const teamPokemonIds = team?.pokemon?.map((p: any) => p.id || p.pokemon_id) || [];
   
   // Filtrage des Pokémon
-  const filteredPokemon = pokemon.filter(p => {
+  const filteredPokemon = (pokemon || []).filter(p => {
     const matchesSearch = !searchFilter || 
       p.name_fr?.toLowerCase().includes(searchFilter.toLowerCase())
     
@@ -184,7 +83,7 @@ export default function SelectPokemon() {
 
   // Types uniques pour le filtre
   const availableTypes = [...new Set(
-    pokemon.map(p => p.type)
+    (pokemon || []).map(p => p.type)
   )].sort();
 
   const handleAddPokemon = (pokemonId: number) => {
@@ -217,15 +116,6 @@ export default function SelectPokemon() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative overflow-hidden">
-      {/* Decorative Elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 text-6xl animate-pulse">👥</div>
-        <div className="absolute top-40 right-20 text-4xl animate-bounce delay-300">⚡</div>
-        <div className="absolute bottom-32 left-20 text-5xl animate-pulse delay-700">🔧</div>
-        <div className="absolute bottom-20 right-10 text-4xl animate-bounce delay-1000">🎯</div>
-        <div className="absolute top-1/3 left-1/4 text-3xl animate-pulse delay-500">⭐</div>
-        <div className="absolute top-2/3 right-1/3 text-3xl animate-bounce delay-1200">💎</div>
-      </div>
 
       <div className="relative z-10 p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-8">
@@ -249,7 +139,7 @@ export default function SelectPokemon() {
                 </div>
                 
                 <div className="text-right">
-                  <div className="text-white font-bold text-xl">{team.teamName || team.name}</div>
+                  <div className="text-white font-bold text-xl">{team?.teamName || team?.name || 'Équipe inconnue'}</div>
                   <div className="text-white/70 text-sm">
                     {teamPokemonCount}/{maxPokemonPerTeam} Pokémon
                   </div>
@@ -313,17 +203,12 @@ export default function SelectPokemon() {
               </div>
 
               {/* Team Pokemon */}
-              {team.pokemon && team.pokemon.length > 0 ? (
+              {team?.pokemon && team.pokemon.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  {team.pokemon.map((poke: any, index: number) => (
+                  {team.pokemon.map((poke: Pokemon, index: number) => (
                     <ModernCard key={index} variant="glass" className="bg-white/5 hover:bg-white/10 transition-all duration-200">
                       <div className="p-4 text-center">
-                        <img
-                          src={poke.sprite_url || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id || poke.pokemon_id}.png`}
-                          alt={poke.name_fr || poke.name_en}
-                          className="w-16 h-16 object-contain mx-auto mb-2"
-                          style={{ imageRendering: 'pixelated' }}
-                        />
+                      <img src={poke.sprite_url} {...poke.sprite_url && {className: "w-16 h-16 object-contain mx-auto mb-2", style: { imageRendering: 'pixelated' }}} />
                         <div className="text-white text-sm font-medium mb-3 truncate">
                           {poke.name_fr || poke.name_en}
                         </div>
@@ -331,7 +216,7 @@ export default function SelectPokemon() {
                           variant="secondary"
                           size="sm"
                           className="w-full text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                          onClick={() => handleRemovePokemon(poke.id || poke.pokemon_id)}
+                          onClick={() => handleRemovePokemon(poke.id || poke.id)}
                           disabled={isLoading}
                         >
                           <span className="mr-1">❌</span>
@@ -421,12 +306,7 @@ export default function SelectPokemon() {
                       >
                         <div className="p-4">
                           <div className="text-center mb-4">
-                            <img
-                              src={poke.sprite_url || `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id}.png`}
-                              alt={poke.name_fr}
-                              className="w-20 h-20 object-contain mx-auto mb-3"
-                              style={{ imageRendering: 'pixelated' }}
-                            />
+                            <img src={poke.sprite_url} {...poke.sprite_url && {className: "w-20 h-20 object-contain mx-auto mb-3", style: { imageRendering: 'pixelated' }}} />
                             <h3 className="text-white font-medium text-lg mb-1">
                               {poke.name_fr}
                             </h3>

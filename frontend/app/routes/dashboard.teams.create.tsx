@@ -1,11 +1,12 @@
-import type { LoaderFunctionArgs, MetaFunction, ActionFunctionArgs } from '@remix-run/node';
-import { json, redirect } from '@remix-run/node';
+// Import des fonctions serveur depuis le fichier .server.ts
+export { loader, action } from './server/dashboard.teams.create.server';
+
+import type { MetaFunction } from '@remix-run/node';
 import { useLoaderData, Link, Form, useActionData, useNavigation } from '@remix-run/react';
-import { getUserFromSession } from '~/sessions';
-import { teamService } from '~/services/teamService';
 import { useState } from 'react';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
+import AppLink from '~/components/AppLink';
 
 // Types pour les données
 interface LoaderData {
@@ -25,51 +26,7 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export const loader = async ({ request }: LoaderFunctionArgs): Promise<Response> => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user) {
-    throw new Response('Unauthorized', { status: 401 });
-  }
-
-  return json<LoaderData>({ user });
-};
-
-export const action = async ({ request }: ActionFunctionArgs): Promise<Response> => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user) {
-    throw new Response('Unauthorized', { status: 401 });
-  }
-
-  const formData = await request.formData();
-  const teamName = formData.get('teamName') as string;
-
-  if (!teamName || teamName.trim().length === 0) {
-    return json<ActionData>({
-      error: 'Le nom de l\'équipe est requis'
-    });
-  }
-
-  if (teamName.length > 30) {
-    return json<ActionData>({
-      error: 'Le nom de l\'équipe ne peut pas dépasser 30 caractères'
-    });
-  }
-
-  try {
-    const result = await teamService.createTeam(
-      { teamName: teamName.trim() }, // Fixed: using 'teamName' to match shared types
-      user.backendToken || user.token
-    );
-    
-    return redirect('/dashboard/teams');
-  } catch (error) {
-    return json<ActionData>({
-      error: 'Erreur lors de la création de l\'équipe. Veuillez réessayer.'
-    });
-  }
-};
+// Les fonctions loader et action sont importées depuis le fichier .server.ts
 
 export default function TeamsCreate() {
   const { user } = useLoaderData<LoaderData>();
@@ -251,10 +208,7 @@ export default function TeamsCreate() {
                     )}
                   </ModernButton>
                   
-                  <Link
-                    to="/dashboard/teams"
-                    className="flex-1"
-                  >
+                  <AppLink to="/dashboard/teams">
                     <ModernButton
                       variant="secondary"
                       size="lg"
@@ -263,7 +217,7 @@ export default function TeamsCreate() {
                       <span className="mr-2">❌</span>
                       Annuler
                     </ModernButton>
-                  </Link>
+                  </AppLink>
                 </div>
               </Form>
             </div>
