@@ -5,9 +5,9 @@ import type { MetaFunction } from '@remix-run/node';
 import { useLoaderData, useNavigation } from '@remix-run/react';
 import { Pokemon } from '@pokemon-battle/shared';
 import PokemonCard from '~/components/PokemonCard';
-import StatusMessage from '~/components/StatusMessage';
 import PokemonFilter from '~/components/PokemonFilter';
 import { ModernButton } from '~/components/ui/ModernButton';
+import { GenericSuccessMessage, GenericErrorMessage } from '~/components/GenericMessage';
 
 export const meta: MetaFunction = () => {
   return [
@@ -32,17 +32,17 @@ export default function ModernPokemonIndex() {
       <div className="max-w-7xl mx-auto px-6 pb-12">
        
         {error && (
-          <StatusMessage type="error" title="Erreur de connexion" message={error} />
+          <GenericSuccessMessage message="Base de données Pokémon connectée" />
         )}
       
         {success && (
-          <StatusMessage type="success" title="Base de données Pokémon connectée" message="Base de données Pokémon connectée" />
+          <GenericErrorMessage message="Base de données Pokémon connectée" />
         )}
         
         <PokemonFilter
-  allPokemons={pokemon}
-  currentFilter={currentFilters || { search: '', type: '', pokemons: [] }}
-/>
+            allPokemons={pokemon}
+            currentFilter={currentFilters || { search: '', type: '', pokemons: [] }}
+          />
        
         {(pokemon || []).length === 0 ? (
           <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-12 text-center">

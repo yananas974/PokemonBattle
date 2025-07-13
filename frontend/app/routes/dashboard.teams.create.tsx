@@ -50,20 +50,8 @@ export default function TeamsCreate() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative overflow-hidden">
-      {/* Decorative Elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 text-6xl animate-pulse">⚡</div>
-        <div className="absolute top-40 right-20 text-4xl animate-bounce delay-300">🔮</div>
-        <div className="absolute bottom-32 left-20 text-5xl animate-pulse delay-700">🎯</div>
-        <div className="absolute bottom-20 right-10 text-4xl animate-bounce delay-1000">🏆</div>
-        <div className="absolute top-1/3 left-1/4 text-3xl animate-pulse delay-500">⭐</div>
-        <div className="absolute top-2/3 right-1/3 text-3xl animate-bounce delay-1200">💎</div>
-      </div>
-
       <div className="relative z-10 p-4 md:p-8">
         <div className="max-w-4xl mx-auto space-y-8">
-          
-          {/* Navigation Header */}
           <ModernCard variant="glass" className="backdrop-blur-xl bg-white/10">
             <div className="p-6">
               <nav className="flex items-center space-x-4">
@@ -81,8 +69,6 @@ export default function TeamsCreate() {
               </nav>
             </div>
           </ModernCard>
-
-          {/* Error Message */}
           {actionData?.error && (
             <ModernCard variant="glass" className="border-l-4 border-red-400 bg-red-500/20">
               <div className="p-6">
