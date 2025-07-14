@@ -5,7 +5,7 @@ import type { MetaFunction } from '@remix-run/react';
 import { useLoaderData, Form, useActionData, useNavigation, Link } from '@remix-run/react';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
-import { useState } from 'react';
+import { useSettings } from '~/hooks/useSettings';
 
 export const meta: MetaFunction = () => {
   return [
@@ -23,41 +23,19 @@ export default function Settings() {
   
   const isSaving = navigation.state === 'submitting';
 
-  // Mock settings state - in real app, this would come from user preferences
-  const [settings, setSettings] = useState({
-    notifications: {
-      battles: true,
-      teams: true,
-      friends: false,
-      achievements: true
+  // Utilisation du hook useSettings
+  const settingsManager = useSettings({
+    onSave: async (settings) => {
+      // Ici on pourrait envoyer les settings au serveur
+      console.log('💾 Sauvegarde des paramètres:', settings);
     },
-    audio: {
-      masterVolume: 80,
-      musicVolume: 70,
-      sfxVolume: 90,
-      muteAll: false
-    },
-    display: {
-      theme: 'modern',
-      language: 'fr',
-      animations: true,
-      reducedMotion: false
-    },
-    privacy: {
-      profilePublic: true,
-      showOnline: true,
-      allowFriendRequests: true
+    onError: (error) => {
+      console.error('❌ Erreur lors de la sauvegarde:', error);
     }
   });
 
   const updateSetting = (category: string, key: string, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category as keyof typeof prev],
-        [key]: value
-      }
-    }));
+    settingsManager.updateSetting(category as any, key, value);
   };
 
   return (
@@ -143,7 +121,7 @@ export default function Settings() {
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={settings.notifications[notification.key as keyof typeof settings.notifications]}
+                            checked={settingsManager.settings.notifications[notification.key as keyof typeof settingsManager.settings.notifications]}
                             onChange={(e) => updateSetting('notifications', notification.key, e.target.checked)}
                             className="sr-only peer"
                           />
@@ -171,7 +149,7 @@ export default function Settings() {
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={settings.audio.muteAll}
+                          checked={settingsManager.settings.audio.muteAll}
                           onChange={(e) => updateSetting('audio', 'muteAll', e.target.checked)}
                           className="sr-only peer"
                         />
@@ -190,16 +168,16 @@ export default function Settings() {
                         <span className="text-xl">{volume.icon}</span>
                         <div className="flex-1">
                           <div className="text-white font-medium">{volume.label}</div>
-                          <div className="text-white/60 text-sm">{settings.audio[volume.key as keyof typeof settings.audio]}%</div>
+                          <div className="text-white/60 text-sm">{settingsManager.settings.audio[volume.key as keyof typeof settingsManager.settings.audio]}%</div>
                         </div>
                       </div>
                       <input
                         type="range"
                         min="0"
                         max="100"
-                        value={settings.audio[volume.key as keyof typeof settings.audio] as number}
+                        value={settingsManager.settings.audio[volume.key as keyof typeof settingsManager.settings.audio] as number}
                         onChange={(e) => updateSetting('audio', volume.key, parseInt(e.target.value))}
-                        disabled={settings.audio.muteAll}
+                        disabled={settingsManager.settings.audio.muteAll}
                         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer bg-gray-700"
                       />
                     </div>
@@ -220,7 +198,7 @@ export default function Settings() {
                   <div className="bg-white/5 rounded-lg p-4">
                     <label className="text-white font-medium block mb-2">Thème</label>
                     <select
-                      value={settings.display.theme}
+                      value={settingsManager.settings.display.theme}
                       onChange={(e) => updateSetting('display', 'theme', e.target.value)}
                       className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
                     >
@@ -233,7 +211,7 @@ export default function Settings() {
                   <div className="bg-white/5 rounded-lg p-4">
                     <label className="text-white font-medium block mb-2">Langue</label>
                     <select
-                      value={settings.display.language}
+                      value={settingsManager.settings.display.language}
                       onChange={(e) => updateSetting('display', 'language', e.target.value)}
                       className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-400"
                     >
@@ -256,7 +234,7 @@ export default function Settings() {
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={settings.display[display.key as keyof typeof settings.display] as boolean}
+                            checked={settingsManager.settings.display[display.key as keyof typeof settingsManager.settings.display] as boolean}
                             onChange={(e) => updateSetting('display', display.key, e.target.checked)}
                             className="sr-only peer"
                           />
@@ -292,7 +270,7 @@ export default function Settings() {
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={settings.privacy[privacy.key as keyof typeof settings.privacy]}
+                            checked={settingsManager.settings.privacy[privacy.key as keyof typeof settingsManager.settings.privacy]}
                             onChange={(e) => updateSetting('privacy', privacy.key, e.target.checked)}
                             className="sr-only peer"
                           />

@@ -9,53 +9,15 @@ import {
   VintageButton,
   PokemonSprite, 
 } from '~/components';
+import { ModernCard } from '~/components/ui/ModernCard';
+import { ModernButton } from '~/components/ui/ModernButton';
 import { useGlobalAudio } from '~/hooks/useGlobalAudio';
-import { getUserFromSession } from '~/sessions.server';
-import { apiCallWithRequest } from '~/utils/api';
+import { usePokemonDetail } from '~/hooks/usePokemonDetail';
 import { cn } from '~/utils/cn';
 import { getTypeGradient, getTypeEmoji } from '~/utils/pokemonTypes';
-import { getPokemonSprite } from '~/services/pokemonSpriteService';
-import { withAuthLoader } from '~/utils/withAuthLoader';
 
-// Loader function
-export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user) {
-    return redirect('/login');
-  }
+export { loader } from './server/dashboard.pokemon.$pokemonId.server';
 
-  const pokemonId = params.pokemonId;
-  
-  if (!pokemonId || isNaN(Number(pokemonId))) {
-    throw new Response('Pokemon ID invalide', { status: 400 });
-  }
-
-  try {
-    const response = await apiCallWithRequest(`/api/pokemon/${pokemonId}`, request);
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        throw new Response('Pokemon non trouvé', { status: 404 });
-      }
-      throw new Error(`API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const pokemon = data.data?.pokemon || data.pokemon;
-    
-    if (!pokemon) {
-      throw new Response('Pokemon non trouvé dans la réponse', { status: 404 });
-    }
-    
-    return json({ pokemon: pokemon as PokemonDetail });
-  } catch (error) {
-    return json({
-      pokemon: null,
-      error: error instanceof Error ? error.message : 'Erreur inconnue'
-    });
-  }
-};
 
 export const meta: MetaFunction = ({ data }) => {
   const loaderData = data as any;
@@ -71,16 +33,27 @@ export const meta: MetaFunction = ({ data }) => {
   ];
 };
 
-const ModernStatBar = ({ label, value, maxValue, emoji }: { 
+// Composant pour la barre de statistiques moderne  
+const ModernStatBar = ({ 
+  label, 
+  value, 
+  maxValue, 
+  emoji,
+  getStatColor,
+  getStatPercentage 
+}: { 
   label: string; 
   value: number; 
   maxValue: number; 
-  emoji: string; 
+  emoji: string;
+  getStatColor: (value: number, maxValue: number) => string;
+  getStatPercentage: (value: number, maxValue: number) => number;
 }) => {
-  const percentage = Math.min((value / maxValue) * 100, 100);
+  const percentage = getStatPercentage(value, maxValue);
+  const colorClass = getStatColor(value, maxValue);
   
   return (
-    <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4">
+    <ModernCard variant="glass" className="p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
           <span className="text-xl">{emoji}</span>
@@ -91,7 +64,7 @@ const ModernStatBar = ({ label, value, maxValue, emoji }: {
       
       <div className="relative h-3 bg-white bg-opacity-20 rounded-full overflow-hidden">
         <div 
-          className="absolute top-0 left-0 h-full bg-gradient-to-r from-white to-yellow-300 transition-all duration-1000 ease-out"
+          className={cn("absolute top-0 left-0 h-full bg-gradient-to-r transition-all duration-1000 ease-out", colorClass)}
           style={{ width: `${percentage}%` }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-pulse" />
@@ -100,222 +73,387 @@ const ModernStatBar = ({ label, value, maxValue, emoji }: {
       <div className="text-right mt-1">
         <span className="text-white text-xs opacity-75">{percentage.toFixed(1)}%</span>
       </div>
+    </ModernCard>
+  );
+};
+
+// Composant pour l'en-tête du Pokémon
+const PokemonHeader = ({ 
+  pokemonInfo, 
+  stats, 
+  typeGradient, 
+  typeEmoji 
+}: {
+  pokemonInfo: any;
+  stats: any;
+  typeGradient: string;
+  typeEmoji: string;
+}) => {
+  if (!pokemonInfo) return null;
+
+  return (
+    <VintageCard variant="glass" className="mb-8 overflow-hidden">
+      <div className={cn('bg-gradient-to-br', typeGradient, 'p-8 -m-8 mb-6')}>
+        {/* Background pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-16 translate-x-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-12 -translate-x-12"></div>
+        </div>
+
+        <div className="relative flex flex-col lg:flex-row items-center gap-8">
+          {/* Image Pokemon avec effets modernes */}
+          <div className="relative">
+            <div className="absolute inset-0 bg-white bg-opacity-20 rounded-full blur-2xl scale-150"></div>
+            <div className="relative bg-white bg-opacity-10 backdrop-blur-sm rounded-3xl p-8 border border-white border-opacity-30">
+              <img 
+                src={pokemonInfo.sprite_url}
+                alt={pokemonInfo.name}
+                className="w-50 h-50 object-contain mx-auto mb-3"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            </div>
+          </div>
+          
+          {/* Infos principales */}
+          <div className="flex-1 text-center lg:text-left text-white">
+            <div className="flex items-center justify-center lg:justify-start space-x-4 mb-4">
+              <span className="text-6xl">{typeEmoji}</span>
+              <div>
+                <h1 className="text-5xl font-bold drop-shadow-2xl mb-2">
+                  {pokemonInfo.name}
+                </h1>
+                <div className="flex items-center space-x-3">
+                  <span className="bg-white bg-opacity-20 text-white text-lg font-semibold px-4 py-2 rounded-full backdrop-blur-sm">
+                    #{pokemonInfo.formattedId}
+                  </span>
+                  <span className="bg-white bg-opacity-20 text-white text-lg font-semibold px-4 py-2 rounded-full backdrop-blur-sm">
+                    {pokemonInfo.type}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Informations physiques */}
+            <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <div className="text-3xl font-bold mb-1">{pokemonInfo.height}M</div>
+                <div className="text-sm opacity-75">Taille</div>
+              </div>
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <div className="text-3xl font-bold mb-1">{pokemonInfo.weight}KG</div>
+                <div className="text-sm opacity-75">Poids</div>
+              </div>
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <div className="text-3xl font-bold mb-1">{stats?.totalStats || 0}</div>
+                <div className="text-sm opacity-75">Total Stats</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </VintageCard>
+  );
+};
+
+// Composant pour les statistiques
+const PokemonStats = ({ 
+  stats, 
+  statNames, 
+  getStatColor, 
+  getStatPercentage,
+  showStats,
+  toggleStats,
+  statsExpanded,
+  toggleStatsExpanded
+}: {
+  stats: any;
+  statNames: any;
+  getStatColor: (value: number, maxValue: number) => string;
+  getStatPercentage: (value: number, maxValue: number) => number;
+  showStats: boolean;
+  toggleStats: (show: boolean) => void;
+  statsExpanded: boolean;
+  toggleStatsExpanded: (expanded: boolean) => void;
+}) => {
+  if (!stats) return null;
+
+  return (
+    <VintageCard variant="glass">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-3xl font-bold text-white flex items-center space-x-3">
+          <span>📊</span>
+          <span>Statistiques de Combat</span>
+        </h2>
+        <div className="flex space-x-2">
+          <ModernButton
+            onClick={() => toggleStats(!showStats)}
+            variant={showStats ? "primary" : "secondary"}
+            size="sm"
+          >
+            {showStats ? "Masquer" : "Afficher"}
+          </ModernButton>
+          {showStats && (
+            <ModernButton
+              onClick={() => toggleStatsExpanded(!statsExpanded)}
+              variant="secondary"
+              size="sm"
+            >
+              {statsExpanded ? "Réduire" : "Étendre"}
+            </ModernButton>
+          )}
+        </div>
+      </div>
+
+      {showStats && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Object.entries(stats.safeStats).map(([stat, value]) => (
+              <ModernStatBar
+                key={stat}
+                label={statNames[stat]?.label || stat}
+                value={Number(value)}
+                maxValue={stats.maxStat}
+                emoji={statNames[stat]?.emoji || '📈'}
+                getStatColor={getStatColor}
+                getStatPercentage={getStatPercentage}
+              />
+            ))}
+          </div>
+
+          {/* Résumé des stats */}
+          <div className="mt-8">
+            <ModernCard variant="glass" className="p-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-green-400">{stats.maxStat}</div>
+                  <div className="text-white text-sm opacity-75">Stat Max</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-blue-400">{stats.minStat}</div>
+                  <div className="text-white text-sm opacity-75">Stat Min</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-yellow-400">{stats.averageStat}</div>
+                  <div className="text-white text-sm opacity-75">Moyenne</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-purple-400">{stats.totalStats}</div>
+                  <div className="text-white text-sm opacity-75">Total</div>
+                </div>
+              </div>
+            </ModernCard>
+          </div>
+
+          {/* Statistiques étendues */}
+          {statsExpanded && (
+            <div className="mt-6">
+              <ModernCard variant="glass" className="p-6">
+                <h3 className="text-xl font-bold text-white mb-4">Analyse Détaillée</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-white/70">Stat dominante:</span>
+                      <span className="text-green-400 font-semibold">
+                        {Object.entries(stats.safeStats).find(([, value]) => value === stats.maxStat)?.[0]?.replace('base_', '').toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/70">Stat faible:</span>
+                      <span className="text-red-400 font-semibold">
+                        {Object.entries(stats.safeStats).find(([, value]) => value === stats.minStat)?.[0]?.replace('base_', '').toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-white/70">Écart stats:</span>
+                      <span className="text-white font-semibold">{stats.maxStat - stats.minStat}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/70">Équilibre:</span>
+                      <span className="text-white font-semibold">
+                        {stats.maxStat - stats.minStat < 30 ? 'Équilibré' : 'Spécialisé'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </ModernCard>
+            </div>
+          )}
+        </>
+      )}
+    </VintageCard>
+  );
+};
+
+// Composant pour les informations détaillées
+const PokemonInfo = ({ 
+  pokemonInfo, 
+  typeEmoji 
+}: {
+  pokemonInfo: any;
+  typeEmoji: string;
+}) => {
+  if (!pokemonInfo) return null;
+
+  return (
+    <VintageCard variant="glass">
+      <h3 className="text-2xl font-bold text-white mb-4 flex items-center space-x-2">
+        <span>ℹ️</span>
+        <span>Informations</span>
+      </h3>
+      
+      <div className="space-y-4">
+        <ModernCard variant="glass" className="p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-white opacity-75">Type</span>
+            <div className="flex items-center space-x-2">
+              <span className="text-xl">{typeEmoji}</span>
+              <span className="text-white font-semibold">{pokemonInfo.type}</span>
+            </div>
+          </div>
+        </ModernCard>
+        
+        <ModernCard variant="glass" className="p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-white opacity-75">Numéro National</span>
+            <span className="text-white font-semibold">#{pokemonInfo.formattedId}</span>
+          </div>
+        </ModernCard>
+        
+        <ModernCard variant="glass" className="p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-white opacity-75">Dimensions</span>
+            <span className="text-white font-semibold">{pokemonInfo.height}M × {pokemonInfo.weight}KG</span>
+          </div>
+        </ModernCard>
+      </div>
+
+     
+    </VintageCard>
+  );
+};
+
+// Composant pour les états de chargement/erreur
+const LoadingErrorState = ({ 
+  error, 
+  isLoading 
+}: { 
+  error: string | null; 
+  isLoading: boolean;
+}) => {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <ModernCard variant="glass" className="text-center max-w-md p-8">
+        {error ? (
+          <>
+            <div className="text-6xl mb-4">❌</div>
+            <h2 className="text-2xl font-bold text-white mb-2">Erreur de chargement</h2>
+            <p className="text-white opacity-75 mb-4">{error}</p>
+            <ModernButton 
+              href="/dashboard/pokemon"
+              variant="primary"
+              size="md"
+            >
+              Retour au Pokédex
+            </ModernButton>
+          </>
+        ) : (
+          <>
+            <div className="text-6xl mb-4 animate-spin">⏳</div>
+            <h2 className="text-2xl font-bold text-white mb-2">Chargement...</h2>
+            <p className="text-white opacity-75">Récupération des données Pokémon</p>
+            <div className="mt-4 text-sm text-white opacity-50">
+              Vérifiez la console pour plus d'informations
+            </div>
+          </>
+        )}
+      </ModernCard>
     </div>
   );
 };
 
 export default function ModernPokemonDetail() {
   const loaderData = useLoaderData() as any;
-  const { pokemon, error } = loaderData as { pokemon: Pokemon | null; error?: string; };
+  const { pokemon: initialPokemon, error: initialError } = loaderData as { pokemon: Pokemon | null; error?: string; };
   const { playDashboard } = useGlobalAudio();
   
+  // Utilisation du hook usePokemonDetail
+  const pokemonDetail = usePokemonDetail({
+    initialPokemon,
+    initialError,
+    onPokemonLoad: (pokemon) => {
+      console.log('🎮 Pokémon chargé:', pokemon);
+    },
+    onError: (error) => {
+      console.error('❌ Erreur Pokémon:', error);
+    }
+  });
+
   // Auto-start dashboard music
   useEffect(() => {
     playDashboard();
   }, [playDashboard]);
 
-  // Safety check: if pokemon is not loaded yet, show loading/error state
-  if (!pokemon) {
+  // Synchroniser les données du loader avec le hook
+  useEffect(() => {
+    if (initialPokemon) {
+      pokemonDetail.setPokemon(initialPokemon);
+    }
+  }, [initialPokemon]);
+
+  useEffect(() => {
+    if (initialError) {
+      pokemonDetail.setError(initialError);
+    }
+  }, [initialError]);
+
+  // Afficher l'état de chargement ou d'erreur
+  if (!pokemonDetail.hasPokemon() || pokemonDetail.hasError()) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 text-center max-w-md">
-          {error ? (
-            <>
-              <div className="text-6xl mb-4">❌</div>
-              <h2 className="text-2xl font-bold text-white mb-2">Erreur de chargement</h2>
-              <p className="text-white opacity-75 mb-4">{error}</p>
-              <VintageButton 
-                variant="modern" 
-                href="/dashboard/pokemon"
-                className="justify-center"
-              >
-                Retour au Pokédex
-              </VintageButton>
-            </>
-          ) : (
-            <>
-              <div className="text-6xl mb-4">⏳</div>
-              <h2 className="text-2xl font-bold text-white mb-2">Chargement...</h2>
-              <p className="text-white opacity-75">Récupération des données Pokémon</p>
-              <div className="mt-4 text-sm text-white opacity-50">
-                Vérifiez la console pour plus d'informations
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+      <LoadingErrorState 
+        error={pokemonDetail.error} 
+        isLoading={pokemonDetail.isLoading} 
+      />
     );
   }
 
-  const typeGradient = getTypeGradient(pokemon.type || 'Normal');
-  const typeEmoji = getTypeEmoji(pokemon.type || 'Normal');
-
-  const statNames: Record<string, { label: string; emoji: string }> = {
-    base_hp: { label: 'Points de Vie', emoji: '❤️' },
-    base_attack: { label: 'Attaque', emoji: '⚔️' },
-    base_defense: { label: 'Défense', emoji: '🛡️' },
-    base_speed: { label: 'Vitesse', emoji: '💨' }
-  };
-
-  const safeStats = {
-    base_hp: pokemon.base_hp || 0,
-    base_attack: pokemon.base_attack || 0,
-    base_defense: pokemon.base_defense || 0,
-    base_speed: pokemon.base_speed || 0
-  };
-  
-  const statsValues = Object.values(safeStats).map(v => Number(v) || 0);
-  const maxStat = statsValues.length > 0 ? Math.max(...statsValues) : 100;
-  const totalStats = statsValues.reduce((a: number, b: number) => a + b, 0);
+  const typeGradient = getTypeGradient(pokemonDetail.pokemonInfo?.type || 'Normal');
+  const typeEmoji = getTypeEmoji(pokemonDetail.pokemonInfo?.type || 'Normal');
 
   return (
     <div className="min-h-screen relative">
-  
-   
-
       <div className="max-w-7xl mx-auto px-6 py-8">
-
         {/* Header principal avec image et infos */}
-        <VintageCard variant="glass" className="mb-8 overflow-hidden">
-          <div className={cn('bg-gradient-to-br', typeGradient, 'p-8 -m-8 mb-6')}>
-            {/* Background pattern */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-16 translate-x-16"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full translate-y-12 -translate-x-12"></div>
-            </div>
-
-            <div className="relative flex flex-col lg:flex-row items-center gap-8">
-              {/* Image Pokemon avec effets modernes */}
-              <div className="relative">
-                <div className="absolute inset-0 bg-white bg-opacity-20 rounded-full blur-2xl scale-150"></div>
-                <div className="relative bg-white bg-opacity-10 backdrop-blur-sm rounded-3xl p-8 border border-white border-opacity-30">
-                  <img 
-                    src={pokemon.sprite_url}
-                    {...pokemon.sprite_url && {className: "w-50 h-50 object-contain mx-auto mb-3", style: { imageRendering: 'pixelated' }}}
-                  />
-                </div>
-              </div>
-              
-              {/* Infos principales */}
-              <div className="flex-1 text-center lg:text-left text-white">
-                <div className="flex items-center justify-center lg:justify-start space-x-4 mb-4">
-                  <span className="text-6xl">{typeEmoji}</span>
-                  <div>
-                    <h1 className="text-5xl font-bold drop-shadow-2xl mb-2">
-                      {pokemon.name_fr || 'Pokémon Inconnu'}
-                    </h1>
-                    <div className="flex items-center space-x-3">
-                      <span className="bg-white bg-opacity-20 text-white text-lg font-semibold px-4 py-2 rounded-full backdrop-blur-sm">
-                        #{(pokemon.id || 0).toString().padStart(3, '0')}
-                      </span>
-                      <span className="bg-white bg-opacity-20 text-white text-lg font-semibold px-4 py-2 rounded-full backdrop-blur-sm">
-                        {pokemon.type || 'Normal'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Informations physiques */}
-                <div className="grid grid-cols-3 gap-4 mt-6">
-                  <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 text-center">
-                    <div className="text-3xl font-bold mb-1">{pokemon.height || 0}M</div>
-                    <div className="text-sm opacity-75">Taille</div>
-                  </div>
-                  <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 text-center">
-                    <div className="text-3xl font-bold mb-1">{pokemon.weight || 0}KG</div>
-                    <div className="text-sm opacity-75">Poids</div>
-                  </div>
-                  <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 text-center">
-                    <div className="text-3xl font-bold mb-1">{totalStats}</div>
-                    <div className="text-sm opacity-75">Total Stats</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </VintageCard>
+        <PokemonHeader
+          pokemonInfo={pokemonDetail.pokemonInfo}
+          stats={pokemonDetail.stats}
+          typeGradient={typeGradient}
+          typeEmoji={typeEmoji}
+        />
 
         {/* Contenu principal */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Statistiques - 2/3 de l'espace */}
           <div className="xl:col-span-2">
-            <VintageCard variant="glass">
-              <h2 className="text-3xl font-bold text-white mb-6 flex items-center space-x-3">
-                <span>📊</span>
-                <span>Statistiques de Combat</span>
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {Object.entries(safeStats).map(([stat, value]) => (
-                  <ModernStatBar
-                    key={stat}
-                    label={statNames[stat]?.label || stat}
-                    value={Number(value)}
-                    maxValue={maxStat}
-                    emoji={statNames[stat]?.emoji || '📈'}
-                  />
-                ))}
-              </div>
-
-              {/* Résumé des stats */}
-              <div className="mt-8 bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-green-400">{Math.max(...statsValues)}</div>
-                    <div className="text-white text-sm opacity-75">Stat Max</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-blue-400">{Math.min(...statsValues)}</div>
-                    <div className="text-white text-sm opacity-75">Stat Min</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-yellow-400">{Math.round(totalStats / 4)}</div>
-                    <div className="text-white text-sm opacity-75">Moyenne</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-purple-400">{totalStats}</div>
-                    <div className="text-white text-sm opacity-75">Total</div>
-                  </div>
-                </div>
-              </div>
-            </VintageCard>
+            <PokemonStats
+              stats={pokemonDetail.stats}
+              statNames={pokemonDetail.statNames}
+              getStatColor={pokemonDetail.getStatColor}
+              getStatPercentage={pokemonDetail.getStatPercentage}
+              showStats={pokemonDetail.showStats}
+              toggleStats={pokemonDetail.toggleStats}
+              statsExpanded={pokemonDetail.statsExpanded}
+              toggleStatsExpanded={pokemonDetail.toggleStatsExpanded}
+            />
           </div>
 
           {/* Actions et infos supplémentaires - 1/3 de l'espace */}
           <div className="space-y-6">
-            {/* Informations détaillées */}
-            <VintageCard variant="glass">
-              <h3 className="text-2xl font-bold text-white mb-4 flex items-center space-x-2">
-                <span>ℹ️</span>
-                <span>Informations</span>
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-white opacity-75">Type</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xl">{typeEmoji}</span>
-                      <span className="text-white font-semibold">{pokemon.type || 'Normal'}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-white opacity-75">Numéro National</span>
-                    <span className="text-white font-semibold">#{(pokemon.id || 0).toString().padStart(3, '0')}</span>
-                  </div>
-                </div>
-                
-                <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-white opacity-75">Dimensions</span>
-                    <span className="text-white font-semibold">{pokemon.height || 0}M × {pokemon.weight || 0}KG</span>
-                  </div>
-                </div>
-              </div>
-            </VintageCard>
+            <PokemonInfo
+              pokemonInfo={pokemonDetail.pokemonInfo}
+              typeEmoji={typeEmoji}
+            />
           </div>
         </div>
       </div>

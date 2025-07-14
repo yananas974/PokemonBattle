@@ -2,7 +2,7 @@ import type { MetaFunction } from '@remix-run/node';
 import { useLoaderData, useNavigate } from '@remix-run/react';
 import { battleSimulationService } from '~/services/battleSimulationService';
 import type { TeamBattleRequest, BattleResult, TurnBasedResult } from '~/services/battleSimulationService';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { VintageCard } from '~/components/VintageCard';
 import { VintageTitle } from '~/components/VintageTitle';
 import { VintageButton } from '~/components/VintageButton';
@@ -10,6 +10,7 @@ import { StatusIndicator } from '~/components/StatusIndicator';
 import { PokemonAudioPlayer } from '~/components/PokemonAudioPlayer';
 import { BattleResultModal } from '~/components/BattleResultModal';
 import { useGlobalAudio } from '~/hooks/useGlobalAudio';
+import { useBattleSimulation } from '~/hooks/useBattleSimulation';
 
 // Import des fonctions serveur depuis le fichier .server.ts
 export { loader } from './server/dashboard.battle.simulate.server';
@@ -29,20 +30,21 @@ export default function BattleSimulation() {
   const navigate = useNavigate();
   const { playDashboard } = useGlobalAudio();
   
-  // État de progression - démarrer à l'étape appropriée
-  const [currentStep, setCurrentStep] = useState<BattleStep>(
-    preselectedPlayer && preselectedEnemy ? 'mode-selection' : 'team-selection'
-  );
-  const [selectedTeam, setSelectedTeam] = useState<any>(preselectedPlayer || null);
-  const [battleMode, setBattleMode] = useState<'team' | 'turnbased'>('team');
-  const [enemyTeam, setEnemyTeam] = useState<any>(preselectedEnemy || null);
-  const [useWeather, setUseWeather] = useState(false);
-  const [location, setLocation] = useState<{ lat: number; lon: number } | null>(null);
-  
-  // État de combat
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [battleResult, setBattleResult] = useState<BattleResult | TurnBasedResult | null>(null);
-  const [showResultModal, setShowResultModal] = useState(false);
+  // Utilisation du hook useBattleSimulation
+  const battleSimulation = useBattleSimulation({
+    initialTeam: preselectedPlayer,
+    initialEnemy: preselectedEnemy,
+    onSimulationStart: () => {
+      console.log('🚀 Démarrage du combat simulé');
+    },
+    onSimulationEnd: (result) => {
+      console.log('✅ Résultat du combat reçu:', result);
+    },
+    onError: (error) => {
+      console.error('💥 Erreur lors de la simulation:', error);
+      alert(`Erreur lors de la simulation du combat: ${error}`);
+    }
+  });
 
   // Auto-start dashboard music
   useEffect(() => {
@@ -51,68 +53,49 @@ export default function BattleSimulation() {
 
   // Géolocalisation
   useEffect(() => {
-    if (useWeather) {
-      battleSimulationService.getCurrentLocation().then(setLocation);
+    if (battleSimulation.useWeather) {
+      battleSimulationService.getCurrentLocation().then(battleSimulation.setLocation);
     }
-  }, [useWeather]);
+  }, [battleSimulation.useWeather]);
 
-  // Navigation entre étapes
+  // Navigation entre étapes - utilisation du hook
   const handleTeamSelection = (team: any) => {
-    setSelectedTeam(team);
-    setCurrentStep('mode-selection');
+    battleSimulation.selectTeam(team);
   };
 
   const handleModeSelection = (mode: 'team' | 'turnbased') => {
-    setBattleMode(mode);
-    setCurrentStep('enemy-selection');
+    battleSimulation.selectMode(mode);
   };
 
   const handleEnemySelection = (enemy: any) => {
-    setEnemyTeam(enemy);
-    setCurrentStep('battle-ready');
+    battleSimulation.selectEnemy(enemy);
   };
 
-  const handleBackToStep = (step: BattleStep) => {
-    setCurrentStep(step);
-    if (step === 'team-selection') {
-      setSelectedTeam(null);
-      setEnemyTeam(null);
-      setBattleResult(null);
-    } else if (step === 'mode-selection') {
-      setEnemyTeam(null);
-      setBattleResult(null);
-    } else if (step === 'enemy-selection') {
-      setBattleResult(null);
-    }
+  const handleBackToStep = (step: any) => {
+    battleSimulation.backToStep(step);
   };
 
   const handleStartBattle = async () => {
-    if (!selectedTeam || !enemyTeam) {
-      alert('Équipes manquantes');
-      return;
-    }
-
-    console.log('🚀 Démarrage du combat simulé');
-    setIsSimulating(true);
-    setBattleResult(null);
-
-    try {
+    await battleSimulation.startSimulation(async () => {
       const request: TeamBattleRequest = {
         team1: {
-          id: selectedTeam.id,
-          teamName: selectedTeam.teamName || selectedTeam.name,
-          pokemon: selectedTeam.pokemon
+          id: battleSimulation.selectedTeam.id,
+          teamName: battleSimulation.selectedTeam.teamName || battleSimulation.selectedTeam.name,
+          pokemon: battleSimulation.selectedTeam.pokemon
         },
         team2: {
-          id: enemyTeam.id,
-          teamName: enemyTeam.teamName || enemyTeam.name,
-          pokemon: enemyTeam.pokemon
+          id: battleSimulation.enemyTeam.id,
+          teamName: battleSimulation.enemyTeam.teamName || battleSimulation.enemyTeam.name,
+          pokemon: battleSimulation.enemyTeam.pokemon
         },
-        ...(useWeather && location ? { lat: location.lat, lon: location.lon } : {})
+        ...(battleSimulation.useWeather && battleSimulation.location ? { 
+          lat: battleSimulation.location.lat, 
+          lon: battleSimulation.location.lon 
+        } : {})
       };
 
       let result;
-      if (battleMode === 'team') {
+      if (battleSimulation.battleMode === 'team') {
         result = await battleSimulationService.simulateTeamBattle(request, user.backendToken);
       } else {
         result = await battleSimulationService.simulateTurnBasedBattle(
@@ -121,39 +104,23 @@ export default function BattleSimulation() {
         );
       }
 
-      console.log('✅ Résultat du combat reçu:', result);
-      setBattleResult(result);
-      console.log('🔄 État du modal avant:', showResultModal);
-      setShowResultModal(true);
-      console.log('🔄 État du modal après:', true);
-      setCurrentStep('battle-result');
-      console.log('🎯 Modal devrait être visible maintenant');
-    } catch (error: any) {
-      console.error('💥 Erreur lors de la simulation:', error);
-      alert(`Erreur lors de la simulation du combat: ${error?.message || error}`);
-    } finally {
-      setIsSimulating(false);
-    }
+      return result;
+    });
   };
 
   // Nouvelle bataille
   const handleNewBattle = () => {
-    setCurrentStep('team-selection');
-    setSelectedTeam(null);
-    setEnemyTeam(null);
-    setBattleResult(null);
-    setIsSimulating(false);
-    setShowResultModal(false);
+    battleSimulation.resetBattle();
   };
 
   // Fermer le modal
   const handleCloseModal = () => {
-    setShowResultModal(false);
+    battleSimulation.closeModal();
   };
 
   // Retour au menu
   const handleReturnToMenu = () => {
-    setShowResultModal(false);
+    battleSimulation.closeModal();
     navigate('/dashboard/battle');
   };
 

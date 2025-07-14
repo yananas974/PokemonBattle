@@ -1,4 +1,5 @@
 import { Pokemon, PokemonInTeam } from './pokemon';
+import { User } from './user';
 
 // ✅ INTERFACE ÉQUIPE
 export interface Team {
@@ -71,5 +72,40 @@ export interface AddPokemonToTeamResponse {
   success: boolean;
   team?: TeamWithPokemon;
   message?: string;
+  error?: string;
+}
+
+// ✅ DONNÉES POUR LES LOADERS REMIX
+export interface LoaderTeamData {
+  user: User;
+  team: TeamWithPokemon;
+  teamId: number;
+  teamPokemonCount: number;
+  maxPokemonPerTeam: number;
+  error?: string;
+}
+
+// ✅ DONNÉES POUR LES LOADERS DE SÉLECTION DE POKÉMON
+export interface LoaderTeamSelectionData extends LoaderTeamData {
+  pokemon: Pokemon[];
+  availablePokemon?: Pokemon[];
+  totalPokemonCount?: number;
+}
+
+// ✅ DONNÉES POUR LES LOADERS DE LISTE D'ÉQUIPES
+export interface LoaderTeamsListData {
+  user: User;
+  teams: TeamWithPokemon[];
+  totalCount: number;
+  maxTeamsPerUser: number;
+  error?: string;
+}
+
+// ✅ DONNÉES POUR LES LOADERS D'ÉQUIPES D'AMIS
+export interface LoaderFriendTeamsData {
+  user: User;
+  friend: User;
+  friendTeams: TeamWithPokemon[];
+  canViewTeams: boolean;
   error?: string;
 } 

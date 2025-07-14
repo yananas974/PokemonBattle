@@ -6,7 +6,8 @@ import { useLoaderData, useActionData, useNavigation, useSubmit, Link } from '@r
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
 import type { Pokemon } from '@pokemon-battle/shared';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useTeamPokemon } from '~/hooks/useCollection';
 
 // Types pour les données
 interface LoaderData {
@@ -46,6 +47,16 @@ export default function SelectPokemon() {
   
   const isLoading = navigation.state === 'submitting';
 
+  // Utilisation du hook useTeamPokemon
+  const teamPokemon = useTeamPokemon(team?.pokemon || [], maxPokemonPerTeam);
+
+  // Synchroniser les données du loader avec le hook
+  useEffect(() => {
+    if (team?.pokemon) {
+      teamPokemon.setItems(team.pokemon);
+    }
+  }, [team?.pokemon]);
+
   console.log('👤 Utilisateur dans le composant:', user);
 
   // Gestion d'erreur
@@ -70,8 +81,8 @@ export default function SelectPokemon() {
     );
   }
   
-  // Pokémon dans l'équipe (IDs)
-  const teamPokemonIds = team?.pokemon?.map((p: any) => p.id || p.pokemon_id) || [];
+  // Pokémon dans l'équipe (IDs) - utilisation du hook
+  const teamPokemonIds = teamPokemon.items.map((p: any) => p.id || p.pokemon_id);
   
   // Filtrage des Pokémon
   const filteredPokemon = (pokemon || []).filter(p => {
@@ -88,32 +99,55 @@ export default function SelectPokemon() {
     (pokemon || []).map(p => p.type)
   )].sort();
 
-  const handleAddPokemon = (pokemonId: number) => {
-    if (teamPokemonCount >= maxPokemonPerTeam) {
+  const handleAddPokemon = async (pokemonId: number) => {
+    // Vérifications via le hook
+    if (!teamPokemon.canAddMore()) {
+      teamPokemon.setError(`Équipe complète (${maxPokemonPerTeam}/${maxPokemonPerTeam})`);
       return;
     }
     
-    if (teamPokemonIds.includes(pokemonId)) {
+    if (teamPokemon.hasItem(pokemonId)) {
+      teamPokemon.setError('Ce Pokémon est déjà dans l\'équipe');
       return;
     }
 
-    const formData = new FormData();
-    formData.append('intent', 'addPokemon');
-    formData.append('pokemonId', pokemonId.toString());
+    // Trouver le Pokémon complet
+    const pokemonToAdd = pokemon.find(p => p.id === pokemonId);
+    if (!pokemonToAdd) {
+      teamPokemon.setError('Pokémon introuvable');
+      return;
+    }
+
+    // Ajouter via le hook (optimistic update)
+    const success = await teamPokemon.addItem(pokemonToAdd);
     
-    submit(formData, { method: 'post' });
+    if (success) {
+      // Envoyer au serveur
+      const formData = new FormData();
+      formData.append('intent', 'addPokemon');
+      formData.append('pokemonId', pokemonId.toString());
+      
+      submit(formData, { method: 'post' });
+    }
   };
 
-  const handleRemovePokemon = (pokemonId: number) => {
-    if (!teamPokemonIds.includes(pokemonId)) {
+  const handleRemovePokemon = async (pokemonId: number) => {
+    if (!teamPokemon.hasItem(pokemonId)) {
+      teamPokemon.setError('Ce Pokémon n\'est pas dans l\'équipe');
       return;
     }
 
-    const formData = new FormData();
-    formData.append('intent', 'removePokemon');
-    formData.append('pokemonId', pokemonId.toString());
+    // Supprimer via le hook (optimistic update)
+    const success = await teamPokemon.removeItem(pokemonId);
     
-    submit(formData, { method: 'post' });
+    if (success) {
+      // Envoyer au serveur
+      const formData = new FormData();
+      formData.append('intent', 'removePokemon');
+      formData.append('pokemonId', pokemonId.toString());
+      
+      submit(formData, { method: 'post' });
+    }
   };
 
   return (
@@ -143,7 +177,7 @@ export default function SelectPokemon() {
                 <div className="text-right">
                   <div className="text-white font-bold text-xl">{team?.teamName || team?.name || 'Équipe inconnue'}</div>
                   <div className="text-white/70 text-sm">
-                    {teamPokemonCount}/{maxPokemonPerTeam} Pokémon
+                    {teamPokemon.count}/{maxPokemonPerTeam} Pokémon
                   </div>
                 </div>
               </div>
@@ -151,14 +185,14 @@ export default function SelectPokemon() {
           </ModernCard>
 
           {/* Success/Error Messages */}
-          {actionData?.error && (
+          {(actionData?.error || teamPokemon.error) && (
             <ModernCard variant="glass" className="border-l-4 border-red-400 bg-red-500/20">
               <div className="p-6">
                 <div className="flex items-start space-x-3">
                   <span className="text-2xl">❌</span>
                   <div>
                     <h3 className="text-red-200 font-bold mb-2">Erreur</h3>
-                    <p className="text-red-100">{actionData.error}</p>
+                    <p className="text-red-100">{actionData?.error || teamPokemon.error}</p>
                   </div>
                 </div>
               </div>
@@ -185,7 +219,7 @@ export default function SelectPokemon() {
               <h2 className="text-white font-bold text-xl mb-4 flex items-center space-x-2">
                 <span>👥</span>
                 <span>Équipe Actuelle</span>
-                <span className="text-sm font-normal">({teamPokemonCount}/6)</span>
+                <span className="text-sm font-normal">({teamPokemon.count}/6)</span>
               </h2>
               
               {/* Slots visualization */}
@@ -194,20 +228,20 @@ export default function SelectPokemon() {
                   <div
                     key={index}
                     className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center ${
-                      index < teamPokemonCount 
+                      index < teamPokemon.count 
                         ? 'bg-green-500 border-green-400 text-white' 
                         : 'bg-white/10 border-white/30 text-white/50'
                     }`}
                   >
-                    {index < teamPokemonCount ? '⚡' : '○'}
+                    {index < teamPokemon.count ? '⚡' : '○'}
                   </div>
                 ))}
               </div>
 
               {/* Team Pokemon */}
-              {team?.pokemon && team.pokemon.length > 0 ? (
+              {teamPokemon.items && teamPokemon.items.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  {team.pokemon.map((poke: Pokemon, index: number) => (
+                  {teamPokemon.items.map((poke: Pokemon, index: number) => (
                     <ModernCard key={index} variant="glass" className="bg-white/5 hover:bg-white/10 transition-all duration-200">
                       <div className="p-4 text-center">
                       <img src={poke.sprite_url} {...poke.sprite_url && {className: "w-16 h-16 object-contain mx-auto mb-2", style: { imageRendering: 'pixelated' }}} />
@@ -332,7 +366,7 @@ export default function SelectPokemon() {
                                 size="sm"
                                 className="w-full text-red-400 hover:text-red-300 hover:bg-red-500/20"
                                 onClick={() => handleRemovePokemon(poke.id)}
-                                disabled={isLoading}
+                                disabled={isLoading || teamPokemon.isLoading}
                               >
                                 <span className="mr-2">❌</span>
                                 Retirer de l'équipe
@@ -343,7 +377,7 @@ export default function SelectPokemon() {
                                 size="sm"
                                 className={`w-full ${!canAdd ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 onClick={() => canAdd && handleAddPokemon(poke.id)}
-                                disabled={!canAdd || isLoading}
+                                disabled={!canAdd || isLoading || teamPokemon.isLoading}
                               >
                                 {canAdd ? (
                                   <>
@@ -387,32 +421,32 @@ export default function SelectPokemon() {
             </div>
           </ModernCard>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/dashboard/teams">
-              <ModernButton
-                variant="pokemon"
-                size="lg"
-                className="w-full sm:w-auto"
-              >
-                <span className="mr-2">✅</span>
-                Terminer la modification
-              </ModernButton>
-            </Link>
-            
-            {teamPokemonCount > 0 && (
-              <Link to="/dashboard/battle">
+                      {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/dashboard/teams">
                 <ModernButton
-                  variant="secondary"
+                  variant="pokemon"
                   size="lg"
                   className="w-full sm:w-auto"
                 >
-                  <span className="mr-2">⚔️</span>
-                  Aller au combat
+                  <span className="mr-2">✅</span>
+                  Terminer la modification
                 </ModernButton>
               </Link>
-            )}
-          </div>
+              
+              {teamPokemon.count > 0 && (
+                <Link to="/dashboard/battle">
+                  <ModernButton
+                    variant="secondary"
+                    size="lg"
+                    className="w-full sm:w-auto"
+                  >
+                    <span className="mr-2">⚔️</span>
+                    Aller au combat
+                  </ModernButton>
+                </Link>
+              )}
+            </div>
         </div>
       </div>
     </div>

@@ -28,6 +28,5 @@ export { default as SimplePokemonParticles } from './SimplePokemonParticles';
 
 // ===== DEFAULT EXPORTS =====
 export { default as ClientOnly } from './ClientOnly';
-export { default as BottomNavigation } from './BottomNavigation';
 export { default as TopNavigation } from './TopNavigation';
 export { default as NavbarSpacer } from './NavbarSpacer';

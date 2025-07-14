@@ -1,6 +1,7 @@
 import { useLoaderData, useActionData, useNavigation, useSubmit } from '@remix-run/react';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import type { MetaFunction } from '@remix-run/react';
+import { useInteractiveBattle } from '~/hooks/useInteractiveBattle';
 
 // Import des fonctions serveur depuis le fichier .server.ts
 export { loader, action } from './server/dashboard.battle.interactive.server';
@@ -13,6 +14,7 @@ import { HackChallengeModal } from '~/components/HackChallengeModal';
 import { useGlobalAudio } from '~/hooks/useGlobalAudio';
 import { cn } from '~/utils/cn';
 import { getTypeColor } from '~/utils/pokemonTypes';
+import type {  PokemonMove } from '@pokemon-battle/shared';
 
 export const meta: MetaFunction = () => {
   return [
@@ -21,10 +23,7 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-// Import des types shared
-import type { 
-  PokemonMove
-} from '@pokemon-battle/shared';
+
 
 // Composant pour la barre de HP moderne
 const PokemonHealthBar = ({ 
@@ -165,20 +164,18 @@ const BattleField = ({
 const BattleActions = ({ 
   currentBattle, 
   showMoveSelector, 
-  setShowMoveSelector, 
+  onShowMoveSelector, 
   handleAction, 
   handleForfeit, 
   isLoading 
 }: {
   currentBattle: any;
   showMoveSelector: boolean;
-  setShowMoveSelector: (show: boolean) => void;
+  onShowMoveSelector: (show: boolean) => void;
   handleAction: (action: any) => void;
   handleForfeit: () => void;
   isLoading: boolean;
 }) => {
-
-
   if (currentBattle.currentTurn !== 'player' || isLoading) {
     return (
       <div className="bg-white/90 backdrop-blur-sm rounded-lg p-6 text-center">
@@ -215,7 +212,7 @@ const BattleActions = ({
           ))}
         </div>
         <button
-          onClick={() => setShowMoveSelector(false)}
+          onClick={() => onShowMoveSelector(false)}
           className="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded"
         >
           ← Retour
@@ -228,7 +225,7 @@ const BattleActions = ({
     <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4">
       <div className="grid grid-cols-2 gap-4">
         <button
-          onClick={() => setShowMoveSelector(true)}
+          onClick={() => onShowMoveSelector(true)}
           className="bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg text-lg transition-all duration-200 hover:scale-105"
         >
           ⚔️ ATTAQUE
@@ -253,14 +250,34 @@ export default function InteractiveBattlePage() {
   const submit = useSubmit();
   const { playBattle } = useGlobalAudio();
 
-  const [currentBattle, setCurrentBattle] = useState<any>(loaderData.battle);
-  const [showMoveSelector, setShowMoveSelector] = useState(false);
-  const [isHackModalVisible, setIsHackModalVisible] = useState(false);
-  const [battleAnimations, setBattleAnimations] = useState({
-    playerAttack: false,
-    enemyAttack: false,
-    playerHit: false,
-    enemyHit: false
+  // Utilisation du hook useInteractiveBattle avec destructuring complet
+  const {
+    currentBattle,
+    showMoveSelector,
+    isHackModalVisible,
+    battleAnimations,
+    isLoading,
+    error,
+    setBattle,
+    setShowMoveSelector,
+    setIsHackModalVisible,
+    handleBattleActionSuccess,
+    executeAction,
+    handleForfeit: handleForfeitAction,
+    handleHackSubmit: handleHackSubmitAction,
+    canPlayerAct,
+    getBattleStatus,
+    getPlayerPokemon,
+    getEnemyPokemon,
+    getBattleLog
+  } = useInteractiveBattle({
+    initialBattle: loaderData.battle,
+    onBattleEnd: (result) => {
+      console.log('🏁 Combat terminé:', result);
+    },
+    onError: (error) => {
+      console.error('❌ Erreur de combat:', error);
+    }
   });
 
   useEffect(() => {
@@ -271,79 +288,32 @@ export default function InteractiveBattlePage() {
     if (currentBattle?.isHackActive && currentBattle.hackChallenge && !isHackModalVisible) {
       setIsHackModalVisible(true);
     }
-  }, [currentBattle?.isHackActive, currentBattle?.hackChallenge, isHackModalVisible]);
+  }, [currentBattle?.isHackActive, currentBattle?.hackChallenge, isHackModalVisible, setIsHackModalVisible]);
 
   useEffect(() => {
     const battleData = actionData?.data?.battle || actionData?.battle;
     
     if (actionData?.success && battleData) {
-      setCurrentBattle(battleData);
-      setShowMoveSelector(false);
-      
-      if (battleData.currentTurn !== currentBattle?.currentTurn) {
-        setBattleAnimations(prev => ({
-          ...prev,
-          playerAttack: battleData.currentTurn === 'enemy',
-          enemyAttack: battleData.currentTurn === 'player'
-        }));
-        
-        setTimeout(() => {
-          setBattleAnimations(prev => ({
-            ...prev,
-            playerAttack: false,
-            enemyAttack: false
-          }));
-        }, 1000);
-      }
+      handleBattleActionSuccess(battleData);
     }
-  }, [actionData, currentBattle]);
+  }, [actionData, handleBattleActionSuccess]);
 
   const handleAction = async (action: any) => {
-    if (!currentBattle) return;
-
-    const formData = new FormData();
-    formData.append('battleId', currentBattle.battleId);
-    
-    if (action.type === 'attack' && action.moveId !== undefined) {
-      formData.append('moveIndex', action.moveId.toString());
-    } else if (action.type === 'flee') {
-      formData.append('intent', 'forfeit');
-    }
-
-    submit(formData, { method: 'post' });
+    await executeAction(action, submit);
   };
 
   const handleForfeit = async () => {
-    if (!currentBattle) return;
-    if (!confirm('Voulez-vous vraiment abandonner le combat ?')) return;
-
-    const formData = new FormData();
-    formData.append('intent', 'forfeit');
-    formData.append('battleId', currentBattle.battleId);
-
-    submit(formData, { method: 'post' });
+    await handleForfeitAction(submit);
   };
 
   const handleHackSubmit = async (answer: string) => {
-    if (!currentBattle || !currentBattle.hackChallenge) return;
-
-    try {
-      console.log('🧩 Soumission du hack challenge:', { battleId: currentBattle.battleId, answer });
-      
-      const formData = new FormData();
-      formData.append('intent', 'hack');
-      formData.append('battleId', currentBattle.battleId);
-      formData.append('answer', answer);
-
-      submit(formData, { method: 'post' });
-      
-    } catch (error) {
-      console.error('❌ Erreur lors de la soumission du hack:', error);
-      alert('Erreur lors de la soumission du hack');
-    }
+    await handleHackSubmitAction(answer, submit);
   };
 
   console.log('🎮 État du combat:', currentBattle);
+  
+  const isSubmitting = navigation.state === 'submitting';
+  const effectiveLoading = isLoading || isSubmitting;
   
   if (!currentBattle || loaderData.forceErrorDisplay) {
     return (
@@ -355,12 +325,12 @@ export default function InteractiveBattlePage() {
             <StatusIndicator
               status="error"
               showLabel={true}
-              label={loaderData.error || 'Une erreur est survenue'}
+              label={loaderData.error || error || 'Une erreur est survenue'}
             />
             
             <div className="text-left bg-black/50 p-4 rounded text-xs text-white max-h-64 overflow-y-auto">
               <p><strong>Mode:</strong> {loaderData.mode}</p>
-              <p><strong>Error:</strong> {loaderData.error}</p>
+              <p><strong>Error:</strong> {loaderData.error || error}</p>
               <p><strong>Battle data:</strong> {currentBattle ? 'Présent' : 'Absent'}</p>
               <p><strong>User:</strong> {loaderData.user?.username || 'Non défini'}</p>
               
@@ -383,10 +353,8 @@ export default function InteractiveBattlePage() {
     );
   }
 
-  const isLoading = navigation.state === 'submitting';
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-green-400 to-yellow-300 p-4">
+    <div className="min-h-screen  p-4">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header de combat */}
         <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg">
@@ -410,8 +378,8 @@ export default function InteractiveBattlePage() {
 
         {/* Terrain de combat */}
         <BattleField 
-          playerPokemon={currentBattle.playerPokemon}
-          enemyPokemon={currentBattle.enemyPokemon}
+          playerPokemon={getPlayerPokemon()}
+          enemyPokemon={getEnemyPokemon()}
           battleAnimations={battleAnimations}
         />
 
@@ -439,12 +407,12 @@ export default function InteractiveBattlePage() {
             <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4">
               <h3 className="text-xl font-bold text-gray-800 mb-4">📜 Journal de Combat</h3>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {(currentBattle.battleLog || []).slice(-8).map((entry: any, index: number) => (
+                {getBattleLog().slice(-8).map((entry: any, index: number) => (
                   <div key={index} className="bg-gray-100 rounded p-2 text-sm text-gray-700">
                     {typeof entry === 'string' ? entry : entry.description || 'Action de combat'}
                   </div>
                 ))}
-                {(!currentBattle.battleLog || currentBattle.battleLog.length === 0) && (
+                {getBattleLog().length === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     <div className="text-4xl mb-2">⚔️</div>
                     <p>Le combat commence...</p>
@@ -457,18 +425,18 @@ export default function InteractiveBattlePage() {
             <BattleActions 
               currentBattle={currentBattle}
               showMoveSelector={showMoveSelector}
-              setShowMoveSelector={setShowMoveSelector}
+              onShowMoveSelector={setShowMoveSelector}
               handleAction={handleAction}
               handleForfeit={handleForfeit}
-              isLoading={isLoading}
+              isLoading={effectiveLoading}
             />
           </div>
         )}
 
         {/* Erreurs */}
-        {actionData?.error && (
+        {(actionData?.error || error) && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            <StatusIndicator status="error" showLabel={true} label={actionData.error} />
+            <StatusIndicator status="error" showLabel={true} label={actionData?.error || error} />
           </div>
         )}
 

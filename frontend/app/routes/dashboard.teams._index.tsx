@@ -1,19 +1,17 @@
-import type { MetaFunction } from '@remix-run/node';
 import { useLoaderData, Form } from '@remix-run/react';
-import { teamService } from '~/services/teamService';
-import type { TeamWithPokemon, LoaderTeamData } from '@pokemon-battle/shared';
+import type { TeamWithPokemon, LoaderTeamsListData } from '@pokemon-battle/shared';
 import {
   VintageCard,
   VintageButton,
   StatusIndicator,
 } from '~/components';
 import { ModernButton } from '~/components/ui/ModernButton';
-import { loader, action } from './server/dashboard.teams._index.server';
+
 
 export { loader, action } from './server/dashboard.teams._index.server';
 
 export default function ModernTeamsIndex() {
-  const data = useLoaderData<LoaderTeamData | null>();
+  const data = useLoaderData<LoaderTeamsListData | null>();
   console.log('🔍 Données reçues dans le composant:', data);
   
   if (!data || !data.teams) {
@@ -24,7 +22,7 @@ export default function ModernTeamsIndex() {
     );
   }
 
-  const { teams, status, message } = data;
+  const { teams } = data;
 
   return (
     

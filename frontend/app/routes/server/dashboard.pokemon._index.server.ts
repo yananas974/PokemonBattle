@@ -1,5 +1,14 @@
 import { pokemonService } from '~/services/pokemonService';
 import { withAuthLoader } from '~/utils/withAuthLoader';
+import type { MetaFunction } from '@remix-run/node';
+
+export const meta: MetaFunction = () => {
+  return [
+    { title: 'Pokédex National - Explorer les Pokémon' },
+    { name: 'description', content: 'Découvrez tous les Pokémon dans le Pokédex National moderne' },
+  ];
+};
+
 
 export const loader = withAuthLoader(async (user, request, params) => {
   const url = new URL(request.url);

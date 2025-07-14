@@ -1,11 +1,11 @@
 // Import des fonctions serveur depuis le fichier .server.ts
 export { loader, action } from './server/dashboard.friends._index.server';
 
-import { useLoaderData, useActionData, useSubmit, useNavigation, useSearchParams, Link } from '@remix-run/react';
-import { useState, useEffect } from 'react';
+import { useLoaderData, useActionData, useSubmit, useNavigation, Link } from '@remix-run/react';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
 import { cn } from '~/utils/cn';
+import { useFriends } from '~/hooks/useFriends';
 
 // Import des types depuis le package shared
 import type { 
@@ -51,6 +51,188 @@ interface ActionData {
   error?: string;
 }
 
+// Composant pour afficher un utilisateur/ami
+const UserCard = ({ 
+  user: userItem, 
+  actionType, 
+  actionLabel, 
+  actionColor = 'secondary',
+  friendship,
+  onAction,
+  isLoading
+}: { 
+  user: User; 
+  actionType?: string; 
+  actionLabel?: string; 
+  actionColor?: string;
+  friendship?: Friendship;
+  onAction?: (actionType: string, data: Record<string, any>) => void;
+  isLoading?: boolean;
+}) => {
+  return (
+    <div className="p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-xl">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          {/* Avatar */}
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
+            {userItem.username.charAt(0).toUpperCase()}
+          </div>
+          
+          {/* Informations utilisateur */}
+          <div className="flex-1">
+            <h4 className="text-white font-bold text-xl mb-1">
+              {userItem.username}
+            </h4>
+            <p className="text-white/70 text-sm mb-2">{userItem.email}</p>
+            {friendship && (
+              <span className={cn(
+                "inline-flex items-center px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide",
+                friendship.status === 'pending' && 'bg-yellow-500/20 text-yellow-400 border border-yellow-400/30',
+                friendship.status === 'accepted' && 'bg-green-500/20 text-green-400 border border-green-400/30',
+                friendship.status === 'blocked' && 'bg-red-500/20 text-red-400 border border-red-400/30'
+              )}>
+                {friendship.status === 'pending' ? '⏳ En attente' : 
+                 friendship.status === 'accepted' ? '✅ Accepté' : 
+                 friendship.status === 'blocked' ? '🚫 Bloqué' : friendship.status}
+              </span>
+            )}
+          </div>
+        </div>
+        
+        {actionType && actionLabel && onAction && (
+          <button
+            onClick={() => onAction(actionType, {
+              friendId: userItem.id,
+              friendshipId: friendship?.id
+            })}
+            disabled={isLoading}
+            className={cn(
+              "px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
+              actionColor === 'pokemon' && 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white shadow-lg',
+              actionColor === 'secondary' && 'bg-white/20 hover:bg-white/30 text-white border border-white/30',
+              !actionColor && 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg'
+            )}
+          >
+            {isLoading ? '⏳' : actionLabel}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Composant pour les statistiques
+const StatisticsGrid = ({ statistics }: { statistics: { friendsCount: number; pendingCount: number; sentCount: number; availableCount: number } }) => (
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+    {[
+      { icon: '👥', value: statistics.friendsCount, label: 'Amis', color: 'text-blue-400' },
+      { icon: '📥', value: statistics.pendingCount, label: 'Reçues', color: 'text-green-400' },
+      { icon: '📤', value: statistics.sentCount, label: 'Envoyées', color: 'text-orange-400' },
+      { icon: '🌐', value: statistics.availableCount, label: 'Utilisateurs', color: 'text-purple-400' }
+    ].map((stat, index) => (
+      <ModernCard key={index} variant="glass" className="p-6 text-center bg-white/5">
+        <div className="text-4xl mb-3">{stat.icon}</div>
+        <div className={cn('text-3xl font-bold mb-2', stat.color)}>{stat.value}</div>
+        <div className="text-white/70 text-sm uppercase tracking-wide">{stat.label}</div>
+      </ModernCard>
+    ))}
+  </div>
+);
+
+// Composant pour les onglets de navigation
+const TabNavigation = ({ 
+  tabs, 
+  activeTab, 
+  onTabChange 
+}: { 
+  tabs: Array<{ key: string; label: string; icon: string; color: string }>; 
+  activeTab: string; 
+  onTabChange: (tab: any) => void;
+}) => (
+  <div className="p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {tabs.map(tab => (
+        <button
+          key={tab.key}
+          onClick={() => onTabChange(tab.key)}
+          className={cn(
+            "px-6 py-4 rounded-xl transition-all duration-300 text-white font-bold text-lg transform hover:scale-105 shadow-lg",
+            activeTab === tab.key 
+              ? `bg-gradient-to-r ${tab.color} scale-105 shadow-2xl` 
+              : 'bg-white/20 hover:bg-white/30 border border-white/30'
+          )}
+        >
+          <span className="mr-3 text-2xl">{tab.icon}</span>
+          <span className="hidden sm:inline">{tab.label}</span>
+          <span className="sm:hidden">
+            {tab.key === 'friends' ? tab.label.match(/\d+/)?.[0] || '0' : 
+             tab.key === 'pending' ? tab.label.match(/\d+/)?.[0] || '0' :
+             tab.key === 'sent' ? tab.label.match(/\d+/)?.[0] || '0' : '🔍'}
+          </span>
+        </button>
+      ))}
+    </div>
+  </div>
+);
+
+// Composant pour les messages d'erreur/succès
+const MessageDisplay = ({ 
+  error, 
+  successMessage 
+}: { 
+  error: string | null; 
+  successMessage: string | null;
+}) => {
+  if (!error && !successMessage) return null;
+  
+  return (
+    <div className={cn(
+      "p-4 rounded-lg border-l-4 mb-4",
+      successMessage 
+        ? 'bg-green-500/20 border-green-400 text-green-200' 
+        : 'bg-red-500/20 border-red-400 text-red-200'
+    )}>
+      <div className="flex items-start space-x-3">
+        <span className="text-2xl">
+          {successMessage ? '✅' : '❌'}
+        </span>
+        <p className="font-medium">
+          {successMessage || error}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// Composant pour l'état vide
+const EmptyState = ({ 
+  icon, 
+  title, 
+  description, 
+  actionLabel, 
+  onAction 
+}: { 
+  icon: string; 
+  title: string; 
+  description: string; 
+  actionLabel?: string; 
+  onAction?: () => void;
+}) => (
+  <div className="text-center py-16">
+    <div className="text-9xl mb-8 opacity-50">{icon}</div>
+    <h3 className="text-white font-bold text-2xl mb-4">{title}</h3>
+    <p className="text-white/70 text-lg mb-8">{description}</p>
+    {actionLabel && onAction && (
+      <button
+        onClick={onAction}
+        className="px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+      >
+        {actionLabel}
+      </button>
+    )}
+  </div>
+);
+
 // Les fonctions loader et action sont importées depuis le fichier .server.ts
 
 export default function FriendsPage() {
@@ -58,63 +240,16 @@ export default function FriendsPage() {
   const actionData = useActionData<ActionData>();
   const submit = useSubmit();
   const navigation = useNavigation();
-  const [searchParams] = useSearchParams();
   
-  const [activeTab, setActiveTab] = useState<'friends' | 'pending' | 'sent' | 'search'>('friends');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-
-  const isLoading = navigation.state === 'submitting';
-
-
-
-  // Lire le paramètre URL pour définir l'onglet actif au montage
-  useEffect(() => {
-    const tabParam = searchParams.get('tab');
-    if (tabParam && ['friends', 'pending', 'sent', 'search'].includes(tabParam)) {
-      setActiveTab(tabParam as 'friends' | 'pending' | 'sent' | 'search');
-    }
-  }, [searchParams]);
-
-  // Gérer les messages de succès depuis les paramètres URL
-  const successParam = searchParams.get('success');
-  const successMessage = successParam ? {
-    'request-sent': '✅ Demande d\'ami envoyée avec succès !',
-    'request-accepted': '✅ Demande d\'ami acceptée !',
-    'user-blocked': '🚫 Utilisateur bloqué !',
-    'friend-removed': '🗑️ Ami supprimé !'
-  }[successParam] : null;
-
-  // Filtrer les utilisateurs disponibles pour la recherche
-  useEffect(() => {
-    if (!availableUsers || !Array.isArray(availableUsers)) {
-      setFilteredUsers([]);
-      return;
-    }
-
-    const filtered = availableUsers.filter(u => {
-      // Exclure soi-même
-      if (u.id === user.id) return false;
-      
-      // Filtrer par recherche
-      if (searchQuery && !u.username.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
-      }
-      
-      // Exclure les amis existants
-      if (friends?.some(f => f.friend?.id === u.id)) return false;
-      
-      // Exclure les demandes reçues
-      if (pendingRequests?.some(p => p.userId === u.id)) return false;
-      
-      // Exclure les demandes envoyées
-      if (sentRequests?.some(s => s.friend?.id === u.id)) return false;
-      
-      return true;
-    });
-    
-    setFilteredUsers(filtered);
-  }, [searchQuery, availableUsers, user.id, friends, pendingRequests, sentRequests]);
+  const friendsHook = useFriends({
+    user,
+    friends,
+    pendingRequests,
+    sentRequests,
+    availableUsers,
+    isSubmitting: navigation.state === 'submitting',
+    actionData,
+  });
 
   // Fonction pour soumettre une action
   const handleAction = (actionType: string, data: Record<string, any>) => {
@@ -126,72 +261,6 @@ export default function FriendsPage() {
       }
     });
     submit(formData, { method: 'post' });
-  };
-
-  // Composant pour afficher un utilisateur/ami - VERSION AMÉLIORÉE
-  const UserCard = ({ 
-    user: userItem, 
-    actionType, 
-    actionLabel, 
-    actionColor = 'secondary',
-    friendship 
-  }: { 
-    user: User; 
-    actionType?: string; 
-    actionLabel?: string; 
-    actionColor?: string;
-    friendship?: Friendship;
-  }) => {
-    return (
-      <div className="p-6 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-xl">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            {/* Avatar */}
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
-              {userItem.username.charAt(0).toUpperCase()}
-            </div>
-            
-            {/* Informations utilisateur */}
-            <div className="flex-1">
-              <h4 className="text-white font-bold text-xl mb-1">
-                {userItem.username}
-              </h4>
-              <p className="text-white/70 text-sm mb-2">{userItem.email}</p>
-              {friendship && (
-                <span className={cn(
-                  "inline-flex items-center px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wide",
-                  friendship.status === 'pending' && 'bg-yellow-500/20 text-yellow-400 border border-yellow-400/30',
-                  friendship.status === 'accepted' && 'bg-green-500/20 text-green-400 border border-green-400/30',
-                  friendship.status === 'blocked' && 'bg-red-500/20 text-red-400 border border-red-400/30'
-                )}>
-                  {friendship.status === 'pending' ? '⏳ En attente' : 
-                   friendship.status === 'accepted' ? '✅ Accepté' : 
-                   friendship.status === 'blocked' ? '🚫 Bloqué' : friendship.status}
-                </span>
-              )}
-            </div>
-          </div>
-          
-          {actionType && actionLabel && (
-            <button
-              onClick={() => handleAction(actionType, {
-                friendId: userItem.id,
-                friendshipId: friendship?.id
-              })}
-              disabled={isLoading}
-              className={cn(
-                "px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
-                actionColor === 'pokemon' && 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white shadow-lg',
-                actionColor === 'secondary' && 'bg-white/20 hover:bg-white/30 text-white border border-white/30',
-                !actionColor && 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg'
-              )}
-            >
-              {isLoading ? '⏳' : actionLabel}
-            </button>
-          )}
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -237,83 +306,38 @@ export default function FriendsPage() {
               )}
               
               {/* Message de succès/erreur d'action */}
-              {(actionData || successMessage) && (
-                <div className={cn(
-                  "p-4 rounded-lg border-l-4 mb-4",
-                  (actionData?.success || successMessage) 
-                    ? 'bg-green-500/20 border-green-400 text-green-200' 
-                    : 'bg-red-500/20 border-red-400 text-red-200'
-                )}>
-                  <div className="flex items-start space-x-3">
-                    <span className="text-2xl">
-                      {(actionData?.success || successMessage) ? '✅' : '❌'}
-                    </span>
-                    <p className="font-medium">
-                      {successMessage || (actionData?.success ? actionData.message : actionData?.error)}
-                    </p>
-                  </div>
-                </div>
-              )}
+              <MessageDisplay 
+                error={friendsHook.error} 
+                successMessage={friendsHook.successMessage} 
+              />
             </div>
           </ModernCard>
 
-
-
           {/* Tab Navigation */}
-          <div className="p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 shadow-xl">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { key: 'friends', label: `Amis (${friends?.length || 0})`, icon: '👥', color: 'from-blue-500 to-cyan-600' },
-                { key: 'pending', label: `Reçues (${pendingRequests?.length || 0})`, icon: '📥', color: 'from-green-500 to-emerald-600' },
-                { key: 'sent', label: `Envoyées (${sentRequests?.length || 0})`, icon: '📤', color: 'from-orange-500 to-red-600' },
-                { key: 'search', label: 'Rechercher', icon: '🔍', color: 'from-purple-500 to-pink-600' }
-              ].map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key as any)}
-                  className={cn(
-                    "px-6 py-4 rounded-xl transition-all duration-300 text-white font-bold text-lg transform hover:scale-105 shadow-lg",
-                    activeTab === tab.key 
-                      ? `bg-gradient-to-r ${tab.color} scale-105 shadow-2xl` 
-                      : 'bg-white/20 hover:bg-white/30 border border-white/30'
-                  )}
-                >
-                  <span className="mr-3 text-2xl">{tab.icon}</span>
-                  <span className="hidden sm:inline">{tab.label}</span>
-                  <span className="sm:hidden">
-                    {tab.key === 'friends' ? friends?.length || 0 : 
-                     tab.key === 'pending' ? pendingRequests?.length || 0 :
-                     tab.key === 'sent' ? sentRequests?.length || 0 : '🔍'}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <TabNavigation 
+            tabs={friendsHook.tabs}
+            activeTab={friendsHook.activeTab}
+            onTabChange={friendsHook.setActiveTab}
+          />
 
           {/* Content based on active tab */}
           <div className="space-y-6">
             {/* Friends Tab */}
-            {activeTab === 'friends' && (
+            {friendsHook.activeTab === 'friends' && (
               <div className="p-8 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 shadow-2xl">
                 <h2 className="text-white font-bold text-3xl mb-8 flex items-center space-x-3">
                   <span className="text-4xl">👥</span>
-                  <span>Mes Amis ({friends?.length || 0})</span>
+                  <span>Mes Amis ({friendsHook.statistics.friendsCount})</span>
                 </h2>
                 
-                {!friends || friends.length === 0 ? (
-                  <div className="text-center py-16">
-                    <div className="text-9xl mb-8 opacity-50">👥</div>
-                    <h3 className="text-white font-bold text-2xl mb-4">Aucun ami pour le moment</h3>
-                    <p className="text-white/70 text-lg mb-8">
-                      Utilisez l'onglet RECHERCHER pour trouver des amis !
-                    </p>
-                    <button
-                      onClick={() => setActiveTab('search')}
-                      className="px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
-                    >
-                      🔍 Rechercher des amis
-                    </button>
-                  </div>
+                {friendsHook.statistics.friendsCount === 0 ? (
+                  <EmptyState
+                    icon="👥"
+                    title="Aucun ami pour le moment"
+                    description="Utilisez l'onglet RECHERCHER pour trouver des amis !"
+                    actionLabel="🔍 Rechercher des amis"
+                    onAction={() => friendsHook.setActiveTab('search')}
+                  />
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {friends.map((friendship) => {
@@ -330,11 +354,13 @@ export default function FriendsPage() {
                           <UserCard
                             user={friendship.friend}
                             friendship={friendship}
+                            onAction={handleAction}
+                            isLoading={friendsHook.isLoading}
                           />
                           <div className="flex gap-3">
                             <button
                               onClick={() => handleAction('removeFriend', { friendshipId: friendship.id })}
-                              disabled={isLoading}
+                              disabled={friendsHook.isLoading}
                               className="flex-1 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-red-200 rounded-lg transition-all duration-200 font-medium border border-red-400/30 hover:border-red-400/50 disabled:opacity-50"
                             >
                               🗑️ Supprimer
@@ -354,31 +380,24 @@ export default function FriendsPage() {
             )}
 
             {/* Pending Requests Tab */}
-            {activeTab === 'pending' && (
+            {friendsHook.activeTab === 'pending' && (
               <ModernCard variant="glass" size="lg" className="shadow-2xl">
                 <div className="p-8">
                   <h2 className="text-white font-bold text-2xl mb-6 flex items-center space-x-2">
                     <span>📥</span>
-                    <span>Demandes Reçues ({pendingRequests?.length || 0})</span>
+                    <span>Demandes Reçues ({friendsHook.statistics.pendingCount})</span>
                   </h2>
                   
-                  {!pendingRequests || pendingRequests.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="text-8xl mb-6 opacity-50">📥</div>
-                      <h3 className="text-white font-bold text-xl mb-4">Aucune demande en attente</h3>
-                      <p className="text-white/70">
-                        Les nouvelles demandes d'amitié apparaîtront ici
-                      </p>
-                    </div>
+                  {friendsHook.statistics.pendingCount === 0 ? (
+                    <EmptyState
+                      icon="📥"
+                      title="Aucune demande en attente"
+                      description="Les nouvelles demandes d'amitié apparaîtront ici"
+                    />
                   ) : (
                     <div className="space-y-4">
                       {pendingRequests.map(request => {
-                        // Chercher l'utilisateur qui a envoyé la demande dans availableUsers
-                        const sender = availableUsers?.find(u => u.id === request.userId) || {
-                          id: request.userId,
-                          username: `User ${request.userId}`,
-                          email: 'unknown@example.com'
-                        } as User;
+                        const sender = friendsHook.getUserFromRequest(request, true);
                         
                         return (
                           <ModernCard key={request.id} variant="glass" className="p-6 bg-green-500/10 border border-green-400/20">
@@ -386,16 +405,16 @@ export default function FriendsPage() {
                               <div className="flex items-center space-x-4">
                                 {/* Avatar */}
                                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-2xl font-bold text-white">
-                                  {sender.username.charAt(0).toUpperCase()}
+                                  {sender?.username.charAt(0).toUpperCase()}
                                 </div>
                                 
                                 {/* Informations utilisateur */}
                                 <div className="flex-1">
                                   <h3 className="text-white font-bold text-xl mb-1">
-                                    {sender.username}
+                                    {sender?.username}
                                   </h3>
                                   <p className="text-white/70 text-sm mb-2">
-                                    {sender.email}
+                                    {sender?.email}
                                   </p>
                                   <div className="flex items-center space-x-4 text-sm">
                                     <div className="flex items-center space-x-1">
@@ -439,7 +458,7 @@ export default function FriendsPage() {
                                     variant="pokemon"
                                     size="sm"
                                     onClick={() => handleAction('acceptRequest', { friendshipId: request.id })}
-                                    disabled={isLoading}
+                                    disabled={friendsHook.isLoading}
                                   >
                                     ✅ Accepter
                                   </ModernButton>
@@ -447,7 +466,7 @@ export default function FriendsPage() {
                                     variant="secondary"
                                     size="sm"
                                     onClick={() => handleAction('blockFriend', { friendshipId: request.id })}
-                                    disabled={isLoading}
+                                    disabled={friendsHook.isLoading}
                                     className="text-red-400 hover:text-red-300"
                                   >
                                     🚫 Bloquer
@@ -467,7 +486,7 @@ export default function FriendsPage() {
                                 <div className="flex items-center space-x-2">
                                   <span className="text-purple-400">👤</span>
                                   <span className="text-white/70">ID Expéditeur:</span>
-                                  <span className="text-white font-mono">#{sender.id}</span>
+                                  <span className="text-white font-mono">#{sender?.id}</span>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                   <span className="text-green-400">🔄</span>
@@ -488,27 +507,21 @@ export default function FriendsPage() {
             )}
 
             {/* Sent Requests Tab */}
-            {activeTab === 'sent' && (
+            {friendsHook.activeTab === 'sent' && (
               <div className="p-8 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 shadow-2xl">
                 <h2 className="text-white font-bold text-3xl mb-8 flex items-center space-x-3">
                   <span className="text-4xl">📤</span>
-                  <span>Demandes Envoyées ({sentRequests?.length || 0})</span>
+                  <span>Demandes Envoyées ({friendsHook.statistics.sentCount})</span>
                 </h2>
                 
-                {!sentRequests || sentRequests.length === 0 ? (
-                  <div className="text-center py-16">
-                    <div className="text-9xl mb-8 opacity-50">📤</div>
-                    <h3 className="text-white font-bold text-2xl mb-4">Aucune demande envoyée</h3>
-                    <p className="text-white/70 text-lg mb-8">
-                      Recherchez des utilisateurs pour leur envoyer des demandes d'amitié
-                    </p>
-                    <button
-                      onClick={() => setActiveTab('search')}
-                      className="px-8 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
-                    >
-                      🔍 Rechercher des amis
-                    </button>
-                  </div>
+                {friendsHook.statistics.sentCount === 0 ? (
+                  <EmptyState
+                    icon="📤"
+                    title="Aucune demande envoyée"
+                    description="Recherchez des utilisateurs pour leur envoyer des demandes d'amitié"
+                    actionLabel="🔍 Rechercher des amis"
+                    onAction={() => friendsHook.setActiveTab('search')}
+                  />
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {sentRequests.map((request) => {
@@ -525,6 +538,8 @@ export default function FriendsPage() {
                           <UserCard
                             user={request.friend}
                             friendship={request}
+                            onAction={handleAction}
+                            isLoading={friendsHook.isLoading}
                           />
                           
                           {/* Informations de la demande */}
@@ -567,7 +582,7 @@ export default function FriendsPage() {
                           <div className="flex gap-3">
                             <button
                               onClick={() => handleAction('removeFriend', { friendshipId: request.id })}
-                              disabled={isLoading}
+                              disabled={friendsHook.isLoading}
                               className="flex-1 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-red-200 rounded-lg transition-all duration-200 font-medium border border-red-400/30 hover:border-red-400/50 disabled:opacity-50"
                             >
                               ❌ Annuler la demande
@@ -589,7 +604,7 @@ export default function FriendsPage() {
             )}
 
             {/* Search Tab */}
-            {activeTab === 'search' && (
+            {friendsHook.activeTab === 'search' && (
               <ModernCard variant="glass" size="lg" className="shadow-2xl">
                 <div className="p-8">
                   <h2 className="text-white font-bold text-2xl mb-6 flex items-center space-x-2">
@@ -602,37 +617,39 @@ export default function FriendsPage() {
                     <input
                       type="text"
                       placeholder="Nom d'utilisateur..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      value={friendsHook.searchQuery}
+                      onChange={(e) => friendsHook.setSearchQuery(e.target.value)}
                       className="w-full px-6 py-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent backdrop-blur-sm text-lg"
                     />
                   </div>
 
                   {/* Search results */}
-                  {searchQuery.length > 0 ? (
+                  {friendsHook.shouldShowSearchResults ? (
                     <>
                       <h3 className="text-white font-bold text-lg mb-6 flex items-center space-x-2">
                         <span>👥</span>
-                        <span>Utilisateurs trouvés ({filteredUsers?.length || 0})</span>
+                        <span>Utilisateurs trouvés ({friendsHook.filteredUsers.length})</span>
                       </h3>
-                      {!filteredUsers || filteredUsers.length === 0 ? (
-                        <div className="text-center py-8">
-                          <div className="text-6xl mb-4 opacity-50">🔍</div>
-                          <h3 className="text-white font-bold text-lg mb-2">Aucun utilisateur trouvé</h3>
-                          <p className="text-white/70">
-                            Essayez un autre nom d'utilisateur
-                          </p>
-                        </div>
+                      {!friendsHook.hasSearchResults ? (
+                        <EmptyState
+                          icon="🔍"
+                          title="Aucun utilisateur trouvé"
+                          description="Essayez un autre nom d'utilisateur"
+                        />
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          {filteredUsers.map(userItem => (
+                          {friendsHook.filteredUsers.map(userItem => (
                             <div key={userItem.id} className="space-y-3">
-                              <UserCard user={userItem} />
+                              <UserCard 
+                                user={userItem} 
+                                onAction={handleAction}
+                                isLoading={friendsHook.isLoading}
+                              />
                               <ModernButton
                                 variant="pokemon"
                                 size="sm"
                                 onClick={() => handleAction('sendRequest', { friendId: userItem.id })}
-                                disabled={isLoading}
+                                disabled={friendsHook.isLoading}
                                 className="w-full"
                               >
                                 ➕ Envoyer une demande
@@ -643,13 +660,11 @@ export default function FriendsPage() {
                       )}
                     </>
                   ) : (
-                    <div className="text-center py-12">
-                      <div className="text-8xl mb-6 opacity-50">🔍</div>
-                      <h3 className="text-white font-bold text-xl mb-4">Tapez pour rechercher</h3>
-                      <p className="text-white/70">
-                        Recherchez des utilisateurs par nom d'utilisateur pour leur envoyer une demande d'ami
-                      </p>
-                    </div>
+                    <EmptyState
+                      icon="🔍"
+                      title="Tapez pour rechercher"
+                      description="Recherchez des utilisateurs par nom d'utilisateur pour leur envoyer une demande d'ami"
+                    />
                   )}
                 </div>
               </ModernCard>
@@ -657,20 +672,7 @@ export default function FriendsPage() {
           </div>
 
           {/* Statistics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[
-              { icon: '👥', value: friends?.length || 0, label: 'Amis', color: 'text-blue-400' },
-              { icon: '📥', value: pendingRequests?.length || 0, label: 'Reçues', color: 'text-green-400' },
-              { icon: '📤', value: sentRequests?.length || 0, label: 'Envoyées', color: 'text-orange-400' },
-              { icon: '🌐', value: availableUsers?.length || 0, label: 'Utilisateurs', color: 'text-purple-400' }
-            ].map((stat, index) => (
-              <ModernCard key={index} variant="glass" className="p-6 text-center bg-white/5">
-                <div className="text-4xl mb-3">{stat.icon}</div>
-                <div className={cn('text-3xl font-bold mb-2', stat.color)}>{stat.value}</div>
-                <div className="text-white/70 text-sm uppercase tracking-wide">{stat.label}</div>
-              </ModernCard>
-            ))}
-          </div>
+          <StatisticsGrid statistics={friendsHook.statistics} />
         </div>
       </div>
     </div>
