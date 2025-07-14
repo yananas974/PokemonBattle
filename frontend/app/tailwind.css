@@ -425,8 +425,11 @@ input[type="range"]::-moz-range-thumb {
 
 /* Background Pokemon */
 .bg-pokemon-background {
-  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #e0f2fe 100%);
-  position: relative;
+  background-image: url('frontend/public/detective-pikachu.webp'); /* ✅ Remplace par ton image */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 .bg-pokemon-screen {
@@ -861,4 +864,12 @@ input[type="range"]::-moz-range-thumb {
   body {
     padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
   }
+}
+
+.bg-detective-pikachu {
+  background-image: url('/detective-pikachu.webp');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }

@@ -273,7 +273,7 @@ export default function Register() {
 
 export function ErrorBoundary() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+   
       <ModernCard variant="glass" size="lg" className="max-w-md w-full">
         <div className="text-center">
           <div className="text-6xl mb-4">🚨</div>
@@ -288,6 +288,6 @@ export function ErrorBoundary() {
           </ModernButton>
         </div>
       </ModernCard>
-    </div>
+    
   );
 } 

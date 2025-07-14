@@ -1,33 +1,24 @@
-import type { LoaderFunctionArgs, ActionFunctionArgs } from '@remix-run/node';
-import { json, redirect } from '@remix-run/node';
-import { getUserFromSession } from '~/sessions.server';
 import { interactiveBattleService } from '~/services/interactiveBattleService';
 import { teamService } from '~/services/teamService';
+import { withAuthLoader } from '~/utils/withAuthLoader';
+import { withAuthAction } from '~/utils/withAuthAction';
+import { getUserFromSession } from '~/sessions.server';
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { userId, user } = await getUserFromSession(request);
-  
-  if (!userId || !user) {
-    throw redirect('/login');
-  }
-
+export const loader = withAuthLoader(async (user, request, params) => {
   const url = new URL(request.url);
   const battleId = url.searchParams.get('battleId');
   const playerTeamId = url.searchParams.get('playerTeamId');
   const enemyTeamId = url.searchParams.get('enemyTeamId');
 
-  const token = typeof user === 'object' && user !== null ? user.backendToken : null;
+  const { user: userData } = await getUserFromSession(request);
+  console.log(userData);
   
-  if (!token) {
-    throw redirect('/login');
-  }
-
   try {
     if (battleId) {
-      const battleResponse = await interactiveBattleService.getBattleState(battleId, token);
+      const battleResponse = await interactiveBattleService.getBattleState(battleId, userData.backendToken);
       
       if (battleResponse.success && battleResponse.battle) {
-        return json({
+        return Response.json({
           user,
           battle: battleResponse.battle,
           error: null,
@@ -37,7 +28,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     if (!playerTeamId || !enemyTeamId) {
-      return json({
+      return Response.json({
         user,
         battle: null,
         error: 'IDs des équipes manquants pour créer un nouveau combat',
@@ -45,12 +36,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     }
 
-    const teamsData = await teamService.getMyTeams(token);
+    const teamsData = await teamService.getMyTeams(request);
     const playerTeam = teamsData.teams.find(t => t.id === parseInt(playerTeamId));
     const enemyTeam = teamsData.teams.find(t => t.id === parseInt(enemyTeamId));
     
     if (!playerTeam || !enemyTeam) {
-      return json({
+      return Response.json({
         user,
         battle: null,
         error: 'Équipe introuvable',
@@ -63,7 +54,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const initResponse = await interactiveBattleService.initBattle({
       playerTeamId: parseInt(playerTeamId),
       enemyTeamId: parseInt(enemyTeamId)
-    }, token);
+    }, userData.backendToken);
 
     console.log('📦 Réponse de l\'API:', initResponse);
 
@@ -76,7 +67,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       console.log('👤 Pokémon joueur:', battleData.playerPokemon?.name_fr);
       console.log('🤖 Pokémon ennemi:', battleData.enemyPokemon?.name_fr);
       
-      return json({
+      return Response.json({
         user,
         battle: battleData,
         error: null,
@@ -91,7 +82,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const errorMessage = initResponse.error || initResponse.message || 'Erreur lors de l\'initialisation du combat';
     console.error('🚨 ERREUR FINALE:', errorMessage);
     
-    return json({
+    return Response.json({
       user,
       battle: null,
       error: errorMessage,
@@ -100,7 +91,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         initResponse: initResponse,
         playerTeamId,
         enemyTeamId,
-        hasToken: !!token,
+        hasToken: !!userData.backendToken,
         timestamp: new Date().toISOString()
       }
     });
@@ -118,7 +109,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     
     console.error('🚨 DÉTAILS COMPLETS DE L\'ERREUR:', errorDetails);
     
-    return json({
+    return Response.json({
       user,
       battle: null,
       error: `ERREUR CAPTURÉE: ${errorDetails.message}`,
@@ -127,15 +118,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       forceErrorDisplay: true
     }, { status: 200 });
   }
-};
-
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const { userId, user } = await getUserFromSession(request);
-  
-  if (!userId || !user) {
-    return json({ error: 'Utilisateur non authentifié', success: false });
-  }
-
+});
+  export const action = withAuthAction(async (user, request, params) => {
   const formData = await request.formData();
   const battleId = formData.get('battleId') as string;
   const moveIndex = formData.get('moveIndex') as string;
@@ -146,27 +130,27 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   try {
     if (intent === 'forfeit') {
       const response = await interactiveBattleService.forfeitBattle(battleId, token);
-      return json(response);
+      return Response.json(response);
     } else if (intent === 'hack' && answer) {
       const response = await interactiveBattleService.solveHackChallenge(battleId, answer, token);
-      return json(response);
+      return Response.json(response);
     } else if (moveIndex) {
       const response = await interactiveBattleService.executeAction({
         battleId,
         action: { type: 'attack', moveId: parseInt(moveIndex) }
       }, token);
       
-      return json(response);
+      return Response.json(response);
     }
 
-    return json({
+    return Response.json({
       success: false,
       error: 'Action non reconnue'
     });
   } catch (error) {
-    return json({
+    return Response.json({
       success: false,
       error: error instanceof Error ? error.message : 'Erreur lors de l\'action'
     });
   }
-}; 
+}); 

@@ -1,55 +1,33 @@
 import type { MetaFunction } from '@remix-run/node';
-import { useLoaderData } from '@remix-run/react';
+import { useLoaderData, Form } from '@remix-run/react';
 import { teamService } from '~/services/teamService';
-import type { TeamWithPokemon } from '@pokemon-battle/shared';
+import type { TeamWithPokemon, LoaderTeamData } from '@pokemon-battle/shared';
 import {
-  VintageCard, 
+  VintageCard,
   VintageButton,
   StatusIndicator,
 } from '~/components';
-import { withAuthLoader } from '~/utils/withAuthLoader';
-import { pokemonService } from '~/services/pokemonService';
 import { ModernButton } from '~/components/ui/ModernButton';
+import { loader, action } from './server/dashboard.teams._index.server';
 
-export const meta: MetaFunction = () => {
-  return [
-    { title: 'Mes Équipes - Pokédex National' },
-    { name: 'description', content: 'Gérez vos équipes Pokémon et préparez vos combats stratégiques' },
-  ];
-};
+export { loader, action } from './server/dashboard.teams._index.server';
 
-interface LoaderData {
-  user: any;
-  teams: TeamWithPokemon[];
-  message?: string;
-  error?: string;
-  status?: string;
-}
-export const loader = withAuthLoader<LoaderData>(async (user, request) => {
-  const data = await teamService.getMyTeams(request);
-
-  if (!data.success) {
-    return {
-      user,
-      teams: [],
-      status: 'error',
-      message: 'Impossible de charger les équipes',
-    };
+export default function ModernTeamsIndex() {
+  const data = useLoaderData<LoaderTeamData | null>();
+  console.log('🔍 Données reçues dans le composant:', data);
+  
+  if (!data || !data.teams) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white text-xl">
+        Erreur de chargement des données. Veuillez réessayer plus tard.
+      </div>
+    );
   }
 
-  return {
-    user,
-    teams: data.teams || [],
-    status: 'success',
-    message: 'Équipes chargées avec succès',
-  };
-});
-export default function ModernTeamsIndex() {
-  const data = useLoaderData<LoaderData>();
-  const { teams, user, status, message } = data;
-  
+  const { teams, status, message } = data;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative">
+    
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Header principal */}
         <VintageCard variant="glass" className="mb-8">
@@ -67,22 +45,23 @@ export default function ModernTeamsIndex() {
                 {teams.length} équipe{teams.length !== 1 ? 's' : ''} disponible{teams.length !== 1 ? 's' : ''}
               </div>
             </div>
-            
+
             {teams.length > 0 && (
-             <div className="mt-6 lg:mt-0">
-             <ModernButton 
-               variant="pokemon" 
-               href="/dashboard/teams/create"
-               size="lg"
-               className="inline-flex items-center space-x-2"
-             >
-               <span>➕</span>
-               <span>Nouvelle Équipe</span>
-             </ModernButton>
-           </div>
+              <div className="mt-6 lg:mt-0">
+                <VintageButton
+                  variant="pokemon"
+                  href="/dashboard/teams/create"
+                  size="lg"
+                  className="inline-flex items-center space-x-2"
+                >
+                  <span>➕</span>
+                  <span>Nouvelle Équipe</span>
+                </VintageButton>
+              </div>
             )}
           </div>
         </VintageCard>
+
         {/* Liste des équipes ou message vide */}
         {teams.length === 0 ? (
           <VintageCard variant="glass" className="text-center py-16">
@@ -91,8 +70,8 @@ export default function ModernTeamsIndex() {
             <p className="text-xl text-white opacity-75 mb-8 max-w-md mx-auto">
               Créez votre première équipe pour commencer vos aventures Pokémon et affronter d'autres dresseurs
             </p>
-            <VintageButton 
-              variant="pokemon" 
+            <VintageButton
+              variant="pokemon"
               href="/dashboard/teams/create"
               size="xl"
               className="inline-flex items-center space-x-3"
@@ -107,7 +86,7 @@ export default function ModernTeamsIndex() {
               <span>🏆</span>
               <span>Mes Équipes ({teams.length})</span>
             </h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {teams.map((team: TeamWithPokemon) => (
                 <div key={team.id} className="group">
@@ -116,24 +95,28 @@ export default function ModernTeamsIndex() {
                       <h3 className="text-white font-bold text-xl truncate">
                         {team.teamName}
                       </h3>
-                      <StatusIndicator 
-                        status={(team.pokemon?.length || 0) === 6 ? "success" : "warning"} 
+                      <StatusIndicator
+                        status={(team.pokemon?.length || 0) === 6 ? "success" : "warning"}
                         label={`${team.pokemon?.length || 0}/6`}
                         showLabel
                       />
                     </div>
-                    
+
                     {/* Pokémon de l'équipe */}
                     <div className="grid grid-cols-3 gap-2 mb-4">
                       {Array.from({ length: 6 }).map((_, index) => {
                         const pokemon = team.pokemon?.[index];
                         return (
-                          <div 
+                          <div
                             key={index}
                             className="aspect-square bg-white bg-opacity-10 rounded-lg flex items-center justify-center"
                           >
-                              {pokemon ? (
-                               <img src={pokemon.sprite_url} {...pokemon.sprite_url && {className: "w-16 h-16 object-contain mx-auto mb-2", style: { imageRendering: 'pixelated' }}} />
+                            {pokemon ? (
+                              <img
+                                src={pokemon.sprite_url}
+                                className="w-16 h-16 object-contain mx-auto mb-2"
+                                style={{ imageRendering: 'pixelated' }}
+                              />
                             ) : (
                               <span className="text-white opacity-30 text-2xl">?</span>
                             )}
@@ -141,10 +124,10 @@ export default function ModernTeamsIndex() {
                         );
                       })}
                     </div>
-                    
+
                     <div className="flex space-x-2">
-                      <ModernButton 
-                        variant="water" 
+                      <ModernButton
+                        variant="water"
                         href={`/dashboard/teams/${team.id}`}
                         size="sm"
                         fullWidth
@@ -152,14 +135,34 @@ export default function ModernTeamsIndex() {
                         👁️ Voir
                       </ModernButton>
 
-                      <ModernButton 
-                        variant="grass" 
+                      <ModernButton
+                        variant="grass"
                         href={`/dashboard/teams/${team.id}/select-pokemon`}
                         size="sm"
                         fullWidth
                       >
                         ✏️ Modifier
                       </ModernButton>
+
+                      <Form 
+                        method="post" 
+                        onSubmit={(e) => {
+                          if (!confirm('Êtes-vous sûr de vouloir supprimer cette équipe ?')) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        <input type="hidden" name="intent" value="deleteTeam" />
+                        <input type="hidden" name="teamId" value={team.id} />
+                        <ModernButton
+                          variant="fire"
+                          type="submit"
+                          size="sm"
+                          fullWidth
+                        >
+                          🗑️ Supprimer
+                        </ModernButton>
+                      </Form>
                     </div>
                   </div>
                 </div>
@@ -168,6 +171,6 @@ export default function ModernTeamsIndex() {
           </VintageCard>
         )}
       </div>
-    </div>
+    
   );
-} 
+}

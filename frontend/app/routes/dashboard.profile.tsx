@@ -12,6 +12,7 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { getUserFromSession } = await import('~/sessions.server');
   const { user } = await getUserFromSession(request);
   
   if (!user) {
@@ -47,21 +48,11 @@ export default function Profile() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative overflow-hidden">
-      {/* Decorative Elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-20 left-10 text-6xl animate-pulse">👤</div>
-        <div className="absolute top-40 right-20 text-4xl animate-bounce delay-300">🏆</div>
-        <div className="absolute bottom-32 left-20 text-5xl animate-pulse delay-700">⚡</div>
-        <div className="absolute bottom-20 right-10 text-4xl animate-bounce delay-1000">🎯</div>
-        <div className="absolute top-1/3 left-1/4 text-3xl animate-pulse delay-500">⭐</div>
-        <div className="absolute top-2/3 right-1/3 text-3xl animate-bounce delay-1200">💎</div>
-      </div>
-
+    <div className="min-h-screen relative overflow-hidden">
+     
       <div className="relative z-10 p-4 md:p-8">
         <div className="max-w-6xl mx-auto space-y-8">
-          
-          {/* Header */}
+
           <ModernCard variant="glass" className="backdrop-blur-xl bg-white/10">
             <div className="p-6">
               <div className="flex items-center justify-between">
@@ -89,12 +80,8 @@ export default function Profile() {
             </div>
           </ModernCard>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* User Information */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">            
             <div className="lg:col-span-2 space-y-8">
-              
-              {/* Profile Details */}
               <ModernCard variant="glass" size="lg" className="shadow-2xl">
                 <div className="p-6">
                   <h2 className="text-2xl font-bold text-white mb-6 flex items-center space-x-2">

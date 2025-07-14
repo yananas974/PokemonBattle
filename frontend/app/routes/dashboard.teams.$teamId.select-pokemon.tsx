@@ -7,10 +7,10 @@ import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
 import type { Pokemon } from '@pokemon-battle/shared';
 import { useState } from 'react';
-import { getPokemonSprite } from '~/services/pokemonSpriteService';
 
 // Types pour les données
 interface LoaderData {
+  user: any;  // ✅ Ajouter user
   pokemon: Pokemon[];
   team: any;
   teamId: number;
@@ -36,7 +36,7 @@ export const meta: MetaFunction = ({ params }) => {
 // Les fonctions loader et action sont importées depuis le fichier .server.ts
 
 export default function SelectPokemon() {
-  const { pokemon, team, teamId, teamPokemonCount, maxPokemonPerTeam, error } = useLoaderData<LoaderData>();
+  const { pokemon, team, teamId, teamPokemonCount, maxPokemonPerTeam, error, user } = useLoaderData<LoaderData>();
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const submit = useSubmit();
@@ -46,10 +46,12 @@ export default function SelectPokemon() {
   
   const isLoading = navigation.state === 'submitting';
 
+  console.log('👤 Utilisateur dans le composant:', user);
+
   // Gestion d'erreur
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-900 p-6">
+      <div className="min-h-screen p-6">
         <div className="max-w-4xl mx-auto">
           <ModernCard variant="glass" className="bg-red-500/20 border border-red-400/30">
             <div className="p-8 text-center">

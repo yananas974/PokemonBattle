@@ -6,7 +6,7 @@ import { useLoaderData, Link, Form, useActionData, useNavigation } from '@remix-
 import { useState } from 'react';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
-import AppLink from '~/components/AppLink';
+import { AppLink } from '~/components/AppLink';
 
 // Types pour les données
 interface LoaderData {
@@ -49,7 +49,7 @@ export default function TeamsCreate() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden">
       <div className="relative z-10 p-4 md:p-8">
         <div className="max-w-4xl mx-auto space-y-8">
           <ModernCard variant="glass" className="backdrop-blur-xl bg-white/10">

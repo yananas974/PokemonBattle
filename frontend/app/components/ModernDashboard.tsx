@@ -1,34 +1,18 @@
 import React from 'react';
 import { Link } from '@remix-run/react';
 
-
-interface DashboardStats {
-  totalPokemon: number;
-  totalTeams: number;
- 
-}
-
-interface ModernDashboardProps {
-  stats: DashboardStats;
-  userName?: string;
-}
-
-export const ModernDashboard: React.FC<ModernDashboardProps> = ({
-  stats,
-  userName = 'Dresseur'
-}) => {
-
+export const ModernDashboard = ({ userName, stats }: { userName: string; stats: { totalPokemon: number; totalTeams: number } }) => {
   return (
-    <div className="min-h-screen p-6">
+    <div className="h-screen overflow-hidden pt-40">
       {/* Header avec salutation */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
           <div className="text-center">
             <h1 className="text-5xl font-bold text-white mb-4">
-              Bienvenue, {userName} ! 👋
+              Bienvenue, {userName} !
             </h1>
             <p className="text-xl text-white opacity-80">
-              Prêt pour de nouvelles aventures Pokemon ?
+              Prêt pour de nouvelles aventures Pokémon ?
             </p>
           </div>
         </div>
@@ -62,12 +46,12 @@ export const ModernDashboard: React.FC<ModernDashboardProps> = ({
       </div>
 
       {/* Actions principales */}
-      <div className="max-w-7xl mx-auto mb-8">
+      <div className="max-w-7xl mx-auto">
         <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
           <h2 className="text-3xl font-bold text-white mb-8 text-center">
             🎮 Actions principales
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Combat */}
             <Link to="/dashboard/battle" className="group">
@@ -86,7 +70,7 @@ export const ModernDashboard: React.FC<ModernDashboardProps> = ({
                 <div className="text-center">
                   <div className="text-6xl mb-4 group-hover:animate-bounce">👥</div>
                   <h3 className="text-2xl font-bold text-white mb-2">ÉQUIPES</h3>
-                  <p className="text-white opacity-80">Gérez vos équipes Pokemon</p>
+                  <p className="text-white opacity-80">Gérez vos équipes Pokémon</p>
                 </div>
               </div>
             </Link>
@@ -97,58 +81,7 @@ export const ModernDashboard: React.FC<ModernDashboardProps> = ({
                 <div className="text-center">
                   <div className="text-6xl mb-4 group-hover:animate-bounce">📚</div>
                   <h3 className="text-2xl font-bold text-white mb-2">POKÉDEX</h3>
-                  <p className="text-white opacity-80">Explorez tous les Pokemon</p>
-                </div>
-              </div>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Actions rapides */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
-          <h3 className="text-2xl font-bold text-white mb-6 flex items-center">
-            <span className="mr-3">⚡</span>
-            Actions rapides
-          </h3>
-          
-          <div className="space-y-4">
-            <Link 
-              to="/dashboard/battle/simulate" 
-              className="block bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 rounded-xl p-4 transition-all duration-200 transform hover:scale-105"
-            >
-              <div className="flex items-center space-x-3">
-                <span className="text-2xl">⚡</span>
-                <div>
-                  <p className="text-white font-semibold">Combat simulé</p>
-                  <p className="text-white opacity-80 text-sm">Simulation rapide</p>
-                </div>
-              </div>
-            </Link>
-
-            <Link 
-              to="/dashboard/teams/create" 
-              className="block bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl p-4 transition-all duration-200 transform hover:scale-105"
-            >
-              <div className="flex items-center space-x-3">
-                <span className="text-2xl">✨</span>
-                <div>
-                  <p className="text-white font-semibold">Créer une équipe</p>
-                  <p className="text-white opacity-80 text-sm">Nouvelle équipe</p>
-                </div>
-              </div>
-            </Link>
-
-            <Link 
-              to="/dashboard/friends" 
-              className="block bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 rounded-xl p-4 transition-all duration-200 transform hover:scale-105"
-            >
-              <div className="flex items-center space-x-3">
-                <span className="text-2xl">👥</span>
-                <div>
-                  <p className="text-white font-semibold">Amis</p>
-                  <p className="text-white opacity-80 text-sm">Gérer vos amis</p>
+                  <p className="text-white opacity-80">Explorez tous les Pokémon</p>
                 </div>
               </div>
             </Link>
@@ -157,4 +90,4 @@ export const ModernDashboard: React.FC<ModernDashboardProps> = ({
       </div>
     </div>
   );
-}; 
+};

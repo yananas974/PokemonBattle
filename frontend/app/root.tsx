@@ -83,20 +83,30 @@ export default function App() {
   const location = useLocation();
   const user = useOptionalUser();
   
-  // Initialiser l'audio au chargement de l'app
   useEffect(() => {
     globalAudio.initialize();
   }, []);
 
-  // Déterminer si on doit afficher la navigation
   const shouldShowNavigation = location.pathname.startsWith('/dashboard');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
-     
-      {shouldShowNavigation && <QuickActionsNavbar user={user} />}
-      {shouldShowNavigation && <NavbarSpacer />}
-      <Outlet />
+    <div 
+      className="min-h-screen relative"
+      style={{
+        backgroundImage: 'url("/detective-pikachu.webp")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed'
+      }}
+    >
+      <div className="absolute inset-0 bg-black/40 z-0"></div>
+      
+      <div className="relative z-10">
+        {shouldShowNavigation && <QuickActionsNavbar user={user} />}
+        {shouldShowNavigation && <NavbarSpacer />}
+        <Outlet />
+      </div>
     </div>
   );
 }

@@ -1,23 +1,17 @@
-import type { LoaderFunctionArgs, ActionFunctionArgs } from '@remix-run/node';
-import { json, redirect } from '@remix-run/node';
-import { getUserFromSession } from '~/sessions.server';
+import { redirect } from '@remix-run/node';
 import { teamService } from '~/services/teamService';
 import { interactiveBattleService } from '~/services/interactiveBattleService';
+import { withAuthLoader } from '~/utils/withAuthLoader';
+import { withAuthAction } from '~/utils/withAuthAction';
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user) {
-    throw new Response('Unauthorized', { status: 401 });
-  }
-
+export const loader = withAuthLoader(async (user, request, params) => {
   const url = new URL(request.url);
   const playerTeamId = url.searchParams.get('playerTeamId');
   const enemyTeamId = url.searchParams.get('enemyTeamId');
 
   try {
     // Récupérer les équipes disponibles
-    const teamsResponse = await teamService.getMyTeams(user.backendToken);
+    const teamsResponse = await teamService.getMyTeams(request);
     const teams = teamsResponse.teams || [];
     
     // Filtrer les équipes qui ont au moins un Pokémon
@@ -32,7 +26,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       selectedEnemyTeam = readyTeams.find((team: any) => team.id === parseInt(enemyTeamId));
     }
 
-    return json({
+    return Response.json({
       user,
       teams: readyTeams,
       selectedPlayerTeam,
@@ -41,7 +35,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
   } catch (error) {
     console.error('Erreur lors du chargement des équipes:', error);
-    return json({
+    return Response.json({
       user,
       teams: [],
       selectedPlayerTeam: null,
@@ -50,15 +44,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       error: error instanceof Error ? error.message : 'Erreur lors du chargement'
     });
   }
-};
+});
 
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user) {
-    return json({ success: false, error: 'Non autorisé' }, { status: 401 });
-  }
-
+export const action = withAuthAction(async (user, request, params) => {
   const formData = await request.formData();
   const intent = formData.get('intent') as string;
 
@@ -71,7 +59,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const lon = formData.get('lon') as string;
 
         if (!playerTeamId || !enemyTeamId) {
-          return json({ 
+          return Response.json({ 
             success: false, 
             error: 'Équipes manquantes' 
           }, { status: 400 });
@@ -92,7 +80,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         if (battleResponse.success && battleResponse.data?.battle) {
           return redirect(`/dashboard/battle/interactive?battleId=${battleResponse.data.battle.battleId}`);
         } else {
-          return json({
+          return Response.json({
             success: false,
             error: battleResponse.error || 'Erreur lors de l\'initialisation du combat'
           }, { status: 500 });
@@ -100,16 +88,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
 
       default:
-        return json({ 
+        return Response.json({ 
           success: false, 
           error: 'Action non reconnue' 
         }, { status: 400 });
     }
   } catch (error: any) {
     console.error('Erreur dans l\'action de combat:', error);
-    return json({
+    return Response.json({
       success: false,
       error: error.message || 'Erreur lors de l\'action'
     }, { status: 500 });
   }
-}; 
+}); 

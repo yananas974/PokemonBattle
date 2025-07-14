@@ -9,7 +9,6 @@ export { loader, action } from './server/dashboard.battle.interactive.server';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
 import { StatusIndicator } from '~/components/StatusIndicator';
-import { PokemonAudioPlayer } from '~/components/PokemonAudioPlayer';
 import { HackChallengeModal } from '~/components/HackChallengeModal';
 import { useGlobalAudio } from '~/hooks/useGlobalAudio';
 import { cn } from '~/utils/cn';
@@ -388,8 +387,6 @@ export default function InteractiveBattlePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-400 via-green-400 to-yellow-300 p-4">
-      <PokemonAudioPlayer />
-      
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header de combat */}
         <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg">

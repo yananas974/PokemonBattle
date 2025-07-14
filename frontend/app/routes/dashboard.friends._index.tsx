@@ -195,7 +195,7 @@ export default function FriendsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden">
       <div className="relative z-10 p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           

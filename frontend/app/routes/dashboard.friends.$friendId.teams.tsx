@@ -131,7 +131,7 @@ export default function FriendTeams() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-6">
+      <div className="min-h-screen p-6">
         <div className="max-w-4xl mx-auto space-y-6">
           <ModernCard variant="glass" className="bg-red-500/20 border border-red-400/30">
             <div className="p-8 text-center">
@@ -152,7 +152,7 @@ export default function FriendTeams() {
 
   if (!friend) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-6">
+      <div className="min-h-screen p-6">
         <div className="max-w-4xl mx-auto space-y-6">
           <ModernCard variant="glass" className="bg-orange-500/20 border border-orange-400/30">
             <div className="p-8 text-center">
@@ -175,7 +175,7 @@ export default function FriendTeams() {
   const completeTeams = teams.filter(team => team.pokemon && team.pokemon.length === 6).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-6">
+    <div className="min-h-screen p-6">
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* Header avec animation et effets décoratifs */}

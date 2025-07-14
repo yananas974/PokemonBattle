@@ -28,7 +28,7 @@ export default function ModernPokemonIndex() {
   const isLoading = navigation.state === 'loading';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative">
+    <div className="min-h-screen relative">
       <div className="max-w-7xl mx-auto px-6 pb-12">
        
         {error && (

@@ -1,116 +1,133 @@
-import type { LoaderFunctionArgs, ActionFunctionArgs } from '@remix-run/node';
-import { json, redirect } from '@remix-run/node';
-import { getUserFromSession } from '~/sessions.server';
+import { redirect } from '@remix-run/node';
 import { teamService } from '~/services/teamService';
 import { pokemonService } from '~/services/pokemonService';
+import { withAuthLoader } from '~/utils/withAuthLoader';
+import { withAuthAction } from '~/utils/withAuthAction';
+import type { TeamWithPokemon } from '@pokemon-battle/shared';
 
-export const loader = async ({ request, params }: LoaderFunctionArgs): Promise<Response> => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user) {
-    throw new Response('Unauthorized', { status: 401 });
-  }
-
+export const loader = withAuthLoader(async (user, request, params) => {
   const teamId = params.teamId;
+
   if (!teamId) {
     throw new Response('Team ID manquant', { status: 400 });
   }
-
+  
   try {
-    // Récupérer l'équipe et les Pokémon disponibles
+    console.log('🔍 Loader - Utilisateur connecté:', user);
+    
     const [teamsResponse, pokemonResponse] = await Promise.all([
-      teamService.getMyTeams(user.backendToken),
-      pokemonService.getAllPokemon(user.backendToken)
+      teamService.getMyTeams(request),
+      pokemonService.getAllPokemon(request)
     ]);
-
+    
     const teams = teamsResponse.teams || [];
-    const currentTeam = teams.find((team: any) => team.id === parseInt(teamId));
+    const currentTeam = teams.find((team: TeamWithPokemon) => team.id === parseInt(teamId));
     
     if (!currentTeam) {
       throw new Response('Équipe non trouvée', { status: 404 });
     }
-
+    
     const allPokemon = pokemonResponse.pokemon || [];
     
-    // Filtrer les Pokémon déjà dans l'équipe
-    const teamPokemonIds = new Set(currentTeam.pokemon?.map((p: any) => p.pokemon_reference_id) || []);
-    const availablePokemon = allPokemon.filter((pokemon: any) => !teamPokemonIds.has(pokemon.id));
-
-    return json({
-      user,
+    // Obtenir les IDs des Pokémon déjà dans l'équipe
+    const teamPokemonIds = new Set(
+      currentTeam.pokemon?.map((p: any) => p.pokemon_reference_id || p.id) || []
+    );
+    
+    // Filtrer les Pokémon disponibles (ceux qui ne sont pas dans l'équipe)
+    const availablePokemon = allPokemon.filter((pokemon: any) => 
+      !teamPokemonIds.has(pokemon.id)
+    );
+    
+    // ✅ Retourner directement les données (pas Response.json)
+    return {
+      user,  // ✅ L'utilisateur sera maintenant disponible dans le composant
       team: currentTeam,
-      pokemon: availablePokemon,
+      pokemon: allPokemon,
+      availablePokemon,
       teamPokemon: currentTeam.pokemon || [],
       teamId: parseInt(teamId),
       teamPokemonCount: currentTeam.pokemon?.length || 0,
       maxPokemonPerTeam: 6
-    });
+    };
+
   } catch (error) {
-    console.error('Erreur lors du chargement des données:', error);
-    return json({
-      user,
-      team: null,
-      pokemon: [],
-      teamPokemon: [],
-      teamId: parseInt(teamId) || 0,
-      teamPokemonCount: 0,
-      maxPokemonPerTeam: 6,
-      error: error instanceof Error ? error.message : 'Erreur lors du chargement'
-    });
+    console.error('Erreur dans le loader:', error);
+    throw new Response('Erreur lors du chargement', { status: 500 });
   }
-};
+});
 
-export const action = async ({ request, params }: ActionFunctionArgs): Promise<Response> => {
-  const { user } = await getUserFromSession(request);
-  
-  if (!user) {
-    return json({ success: false, error: 'Non autorisé' }, { status: 401 });
-  }
-
+export const action = withAuthAction(async (user, request, params) => {
   const teamId = params.teamId;
+  
   if (!teamId) {
-    return json({ success: false, error: 'Team ID manquant' }, { status: 400 });
+    return Response.json({ error: 'Team ID manquant' }, { status: 400 });
   }
-
-  const formData = await request.formData();
-  const intent = formData.get('intent') as string;
-  const pokemonId = formData.get('pokemonId') as string;
-
+  
   try {
+    const formData = await request.formData();
+    const intent = formData.get('intent') as string;
+    const pokemonId = formData.get('pokemonId') as string;
+    
+    console.log('🔍 Action reçue:', { intent, pokemonId, teamId });
+    
     switch (intent) {
-      case 'add':
+      case 'addPokemon':
         if (!pokemonId) {
-          return json({ success: false, error: 'ID Pokémon manquant' }, { status: 400 });
+          return Response.json({ error: 'ID Pokémon manquant' }, { status: 400 });
         }
         
-        await teamService.addPokemonToTeam(
+        console.log('➕ Ajout du Pokémon:', { teamId, pokemonId });
+        
+        const addResult = await teamService.addPokemonToTeam(
           parseInt(teamId),
           parseInt(pokemonId),
-          user.backendToken
+          request  // ✅ Passer request au lieu de user.backendToken
         );
         
-        return redirect(`/dashboard/teams/${teamId}/select-pokemon?success=pokemon-added`);
-
-      case 'remove':
-        if (!pokemonId) {
-          return json({ success: false, error: 'ID Pokémon manquant' }, { status: 400 });
+        if (!addResult.success) {
+          return Response.json({ 
+            error: addResult.error || 'Erreur lors de l\'ajout' 
+          }, { status: 400 });
         }
         
-        await teamService.removePokemonFromTeam(
+        return Response.json({ 
+          success: true, 
+          message: 'Pokémon ajouté avec succès !' 
+        });
+        
+      case 'removePokemon':
+        if (!pokemonId) {
+          return Response.json({ error: 'ID Pokémon manquant' }, { status: 400 });
+        }
+        
+        console.log('➖ Suppression du Pokémon:', { teamId, pokemonId });
+        
+        const removeResult = await teamService.removePokemonFromTeam(
           parseInt(teamId),
           parseInt(pokemonId),
-          user.backendToken
+          request  // ✅ Passer request au lieu de user.backendToken
         );
         
-        return redirect(`/dashboard/teams/${teamId}/select-pokemon?success=pokemon-removed`);
-
+        if (!removeResult.success) {
+          return Response.json({ 
+            error: removeResult.error || 'Erreur lors de la suppression' 
+          }, { status: 400 });
+        }
+        
+        return Response.json({ 
+          success: true, 
+          message: 'Pokémon retiré avec succès !' 
+        });
+        
       default:
-        return json({ success: false, error: 'Action non reconnue' }, { status: 400 });
+        return Response.json({ error: 'Action non reconnue' }, { status: 400 });
     }
-  } catch (error: any) {
-    return json({
-      success: false,
-      error: error.message || 'Erreur lors de l\'action'
+    
+  } catch (error) {
+    console.error('Erreur lors de l\'action:', error);
+    return Response.json({ 
+      error: 'Une erreur est survenue lors de l\'opération' 
     }, { status: 500 });
   }
-}; 
+});

@@ -15,6 +15,7 @@ import { apiCallWithRequest } from '~/utils/api';
 import { cn } from '~/utils/cn';
 import { getTypeGradient, getTypeEmoji } from '~/utils/pokemonTypes';
 import { getPokemonSprite } from '~/services/pokemonSpriteService';
+import { withAuthLoader } from '~/utils/withAuthLoader';
 
 // Loader function
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
@@ -116,7 +117,7 @@ export default function ModernPokemonDetail() {
   // Safety check: if pokemon is not loaded yet, show loading/error state
   if (!pokemon) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-2xl p-8 text-center max-w-md">
           {error ? (
             <>
@@ -168,7 +169,7 @@ export default function ModernPokemonDetail() {
   const totalStats = statsValues.reduce((a: number, b: number) => a + b, 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative">
+    <div className="min-h-screen relative">
   
    
 

@@ -1,19 +1,24 @@
+import { LoaderFunctionArgs, redirect } from '@remix-run/node';
 import { getUserFromSession } from '~/sessions.server';
-import { json, redirect, type LoaderFunctionArgs } from '@remix-run/node';
+import type { User } from '@pokemon-battle/shared';
 
-type LoaderCallback<T> = (user: any, request: Request) => Promise<T>;
+type LoaderCallback<T> = (
+  user: User,
+  request: Request,
+  params: Record<string, string | undefined>
+) => Promise<T>;
 
 export function withAuthLoader<T>(callback: LoaderCallback<T>) {
-  return async ({ request }: LoaderFunctionArgs) => {
+  return async ({ request, params }: LoaderFunctionArgs) => {
     const { user } = await getUserFromSession(request);
 
     if (!user) {
-      // Redirection si pas connecté
       throw redirect('/login');
     }
 
-    // On ne catch pas les erreurs ici pour laisser Remix gérer via ErrorBoundary
-    const data = await callback(user, request);
-    return json(data);
+    const data = await callback(user, request, params);
+
+    // ✅ Ne pas envelopper dans Response.json
+    return data;
   };
 }
