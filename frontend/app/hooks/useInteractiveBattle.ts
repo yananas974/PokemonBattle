@@ -1,4 +1,4 @@
-import { useReducer, useCallback } from 'react';
+import { useReducer, useCallback, useEffect, useMemo } from 'react';
 
 // Types pour les animations de bataille
 export interface BattleAnimations {
@@ -92,6 +92,13 @@ function interactiveBattleReducer(
 
     case 'BATTLE_ACTION_SUCCESS':
       const battleData = action.payload;
+      console.log('🔧 REDUCER BATTLE_ACTION_SUCCESS:', {
+        oldTurn: state.currentBattle?.currentTurn,
+        newTurn: battleData.currentTurn,
+        oldTurnCount: state.currentBattle?.turnCount,
+        newTurnCount: battleData.turnCount
+      });
+      
       const newState = {
         ...state,
         currentBattle: battleData,
@@ -103,12 +110,19 @@ function interactiveBattleReducer(
 
       // Gérer les animations si le tour a changé
       if (battleData.currentTurn !== state.currentBattle?.currentTurn) {
+        console.log('🎬 Animation: Changement de tour détecté');
         newState.battleAnimations = {
           ...state.battleAnimations,
           playerAttack: battleData.currentTurn === 'enemy',
           enemyAttack: battleData.currentTurn === 'player'
         };
       }
+
+      console.log('🎯 REDUCER: Nouvel état de combat:', {
+        currentTurn: newState.currentBattle.currentTurn,
+        turnCount: newState.currentBattle.turnCount,
+        isLoading: newState.isLoading
+      });
 
       return newState;
 
@@ -143,7 +157,8 @@ export function useInteractiveBattle(options: UseInteractiveBattleOptions = {}) 
     animationDuration = 1000
   } = options;
 
-  const initialState: InteractiveBattleState = {
+  // ✅ Mémoriser l'état initial pour éviter les re-renders
+  const initialState = useMemo((): InteractiveBattleState => ({
     currentBattle: initialBattle || null,
     showMoveSelector: false,
     isHackModalVisible: false,
@@ -156,19 +171,27 @@ export function useInteractiveBattle(options: UseInteractiveBattleOptions = {}) 
     isLoading: false,
     error: null,
     lastAction: null
-  };
+  }), [initialBattle?.battleId]); // ✅ Utiliser battleId au lieu de l'objet entier
 
   const [state, dispatch] = useReducer(interactiveBattleReducer, initialState);
 
-  // Actions
+  // ✅ Mettre à jour l'état quand initialBattle change
+  useEffect(() => {
+    if (initialBattle && initialBattle.battleId !== state.currentBattle?.battleId) {
+      dispatch({ type: 'SET_BATTLE', payload: initialBattle });
+    }
+  }, [initialBattle?.battleId, state.currentBattle?.battleId]);
+
+
+  // ✅ Actions - Suppression des dépendances problématiques
   const setBattle = useCallback((battle: any) => {
     dispatch({ type: 'SET_BATTLE', payload: battle });
     
-    // Vérifier si un hack challenge est actif
-    if (battle?.isHackActive && battle.hackChallenge && !state.isHackModalVisible) {
+    // ✅ Vérifier si un hack challenge est actif sans dépendance à state
+    if (battle?.isHackActive && battle.hackChallenge) {
       dispatch({ type: 'SHOW_HACK_MODAL', payload: true });
     }
-  }, [state.isHackModalVisible]);
+  }, []); // ✅ Plus de dépendances
 
   const showMoveSelector = useCallback((show: boolean) => {
     dispatch({ type: 'SHOW_MOVE_SELECTOR', payload: show });
@@ -190,26 +213,48 @@ export function useInteractiveBattle(options: UseInteractiveBattleOptions = {}) 
   }, [onError]);
 
   const handleBattleActionSuccess = useCallback((actionData: any) => {
-    const battleData = actionData?.data?.battle || actionData?.battle;
+    console.log('🔄 handleBattleActionSuccess appelé avec:', actionData);
+    const battleData = actionData?.data?.battle || actionData?.battle || actionData;
+    console.log('🎮 battleData extrait:', battleData);
     
     if (actionData?.success && battleData) {
+      console.log('✅ Mise à jour de l\'état du combat avec:', {
+        currentTurn: battleData.currentTurn,
+        turnCount: battleData.turnCount,
+        battleId: battleData.battleId
+      });
       dispatch({ type: 'BATTLE_ACTION_SUCCESS', payload: battleData });
       
-      // Réinitialiser les animations après un délai
+      // ✅ Réinitialiser les animations après un délai
       setTimeout(() => {
         dispatch({ type: 'RESET_ANIMATIONS' });
       }, animationDuration);
       
-      // Vérifier si la bataille est terminée
+      // ✅ Si après l'action du joueur, c'est le tour de l'ennemi, fermer le modal hack s'il était ouvert
+      if (battleData.currentTurn === 'enemy' && battleData.hackChallenge === null && state.isHackModalVisible) {
+        console.log('🚨 Fermeture du modal hack car challenge résolu');
+        dispatch({ type: 'SHOW_HACK_MODAL', payload: false });
+      }
+      
+      // ✅ Vérifier si la bataille est terminée
       if (battleData.isFinished) {
         onBattleEnd?.(battleData);
       }
+    } else {
+      console.log('❌ handleBattleActionSuccess: Pas de mise à jour', {
+        success: actionData?.success,
+        hasBattleData: !!battleData
+      });
     }
-  }, [animationDuration, onBattleEnd]);
+  }, [animationDuration, onBattleEnd, state.isHackModalVisible]);
 
   const executeAction = useCallback(async (action: any, submitFn: (formData: FormData) => void) => {
-    if (!state.currentBattle) return;
+    if (!state.currentBattle) {
+      console.log('❌ executeAction: Pas de combat actuel');
+      return;
+    }
 
+    console.log('⚔️ executeAction: Début de l\'exécution REMIX', { action, battleId: state.currentBattle.battleId });
     setLoadingState(true);
 
     try {
@@ -217,17 +262,25 @@ export function useInteractiveBattle(options: UseInteractiveBattleOptions = {}) 
       formData.append('battleId', state.currentBattle.battleId);
       
       if (action.type === 'attack' && action.moveId !== undefined) {
+        formData.append('intent', 'attack');
         formData.append('moveIndex', action.moveId.toString());
+        console.log('⚔️ Préparation FormData attaque:', { 
+          battleId: state.currentBattle.battleId, 
+          moveIndex: action.moveId 
+        });
       } else if (action.type === 'flee') {
         formData.append('intent', 'forfeit');
+        console.log('🏃‍♂️ Préparation FormData forfait');
       }
-
+      
       submitFn(formData);
     } catch (error) {
+      console.error('❌ executeAction: Erreur capturée:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'action';
       setErrorState(errorMessage);
+      setLoadingState(false);
     }
-  }, [state.currentBattle, setLoadingState, setErrorState]);
+  }, [state.currentBattle?.battleId, setLoadingState, setErrorState]);
 
   const handleForfeit = useCallback(async (submitFn: (formData: FormData) => void) => {
     if (!state.currentBattle) return;
@@ -245,11 +298,12 @@ export function useInteractiveBattle(options: UseInteractiveBattleOptions = {}) 
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'abandon';
       setErrorState(errorMessage);
     }
-  }, [state.currentBattle, setLoadingState, setErrorState]);
+  }, [state.currentBattle?.battleId, setLoadingState, setErrorState]);
 
   const handleHackSubmit = useCallback(async (answer: string, submitFn: (formData: FormData) => void) => {
     if (!state.currentBattle || !state.currentBattle.hackChallenge) return;
 
+    console.log('🚨 handleHackSubmit appelé avec:', { answer, battleId: state.currentBattle.battleId });
     setLoadingState(true);
 
     try {
@@ -258,17 +312,24 @@ export function useInteractiveBattle(options: UseInteractiveBattleOptions = {}) 
       formData.append('battleId', state.currentBattle.battleId);
       formData.append('answer', answer);
 
+      console.log('🚨 Préparation FormData hack:', { 
+        battleId: state.currentBattle.battleId, 
+        answer 
+      });
+
       submitFn(formData);
     } catch (error) {
+      console.error('❌ handleHackSubmit: Erreur capturée:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la soumission du hack';
       setErrorState(errorMessage);
+      setLoadingState(false);
     }
-  }, [state.currentBattle, setLoadingState, setErrorState]);
+  }, [state.currentBattle?.battleId, state.currentBattle?.hackChallenge, setLoadingState, setErrorState]);
 
-  // Utilitaires
+  // ✅ Utilitaires - Utilisation de propriétés spécifiques
   const canPlayerAct = useCallback(() => {
     return state.currentBattle?.currentTurn === 'player' && !state.isLoading && !state.currentBattle?.isFinished;
-  }, [state.currentBattle, state.isLoading]);
+  }, [state.currentBattle?.currentTurn, state.isLoading, state.currentBattle?.isFinished]);
 
   const getBattleStatus = useCallback(() => {
     if (!state.currentBattle) return 'no-battle';
@@ -276,19 +337,21 @@ export function useInteractiveBattle(options: UseInteractiveBattleOptions = {}) 
     if (state.isLoading) return 'loading';
     if (state.currentBattle.currentTurn === 'player') return 'player-turn';
     return 'enemy-turn';
-  }, [state.currentBattle, state.isLoading]);
+  }, [state.currentBattle?.isFinished, state.isLoading, state.currentBattle?.currentTurn]);
 
   const getPlayerPokemon = useCallback(() => {
     return state.currentBattle?.playerPokemon || null;
-  }, [state.currentBattle]);
+  }, [state.currentBattle?.playerPokemon]);
 
   const getEnemyPokemon = useCallback(() => {
     return state.currentBattle?.enemyPokemon || null;
-  }, [state.currentBattle]);
+  }, [state.currentBattle?.enemyPokemon]);
 
   const getBattleLog = useCallback(() => {
     return state.currentBattle?.battleLog || [];
-  }, [state.currentBattle]);
+  }, [state.currentBattle?.battleLog]);
+
+  // ✅ Note: Le polling est supprimé - on s'appuie sur les fetchers pour la mise à jour temps réel
 
   return {
     // État

@@ -1,7 +1,6 @@
 import type { Context } from "hono";
 import { TeamBattleService, TurnBasedBattleService } from "../services/services.js";
 import { mapBattleResultToApi, mapBattleErrorToApi } from '../mapper/battle.mapper.js';
-import { Team } from '@pokemon-battle/shared';
 import { asyncHandler } from '../utils/asyncWrapper.js';
 import { ValidationError } from '../models/errors.js';
 import { WeatherDetectionService } from '../services/weatherService/weatherDetectionService.js';
@@ -10,7 +9,7 @@ import {
   turnBasedBattleRequestSchema as turnBasedBattleSchema 
 } from '../schemas/index.js';
 import { zValidator } from '@hono/zod-validator';
-import { formatResponse, BATTLE_MESSAGES, validateCoordinates } from '@pokemon-battle/shared';
+import { formatResponse, BATTLE_MESSAGES, validateCoordinates, Team } from '@pokemon-battle/shared';
 
 // ✅ TYPES
 interface BattleHandler {

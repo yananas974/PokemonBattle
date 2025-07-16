@@ -2,6 +2,8 @@ import React from 'react';
 import type { PokemonMove } from '~/types/battle';
 import { getTypeColor } from '~/utils/pokemonTypes';
 
+
+
 interface MoveSelectorProps {
   moves: PokemonMove[];
   onSelectMove: (move: PokemonMove) => void;
@@ -19,7 +21,7 @@ export const MoveSelector: React.FC<MoveSelectorProps> = ({
   const displayMoves = [...moves];
   while (displayMoves.length < 4) {
     displayMoves.push({
-      id: -1,
+      id: -1, // ✅ Récupération directe de la propriété id
       name: '---',
       type: 'normal',
       power: 0,

@@ -6,8 +6,9 @@ export function useUser(): User | undefined {
   const dashboardData = useRouteLoaderData('routes/dashboard._index') as any;
   const pokemonData = useRouteLoaderData('routes/dashboard.pokemon._index') as any;
   const teamsData = useRouteLoaderData('routes/dashboard.teams._index') as any;
-  const teamSelectPokemonData = useRouteLoaderData('routes/dashboard.teams.$teamId.select-pokemon') as any; // ✅ Ajouter ta route
+  const teamSelectPokemonData = useRouteLoaderData('routes/dashboard.teams.$teamId.select-pokemon') as any;
   const battleData = useRouteLoaderData('routes/dashboard.battle._index') as any;
+  const battleInteractiveData = useRouteLoaderData('routes/dashboard.battle.interactive') as any;
   const friendsData = useRouteLoaderData('routes/dashboard.friends._index') as any;
   const profileData = useRouteLoaderData('routes/dashboard.profile') as any;
   
@@ -15,8 +16,9 @@ export function useUser(): User | undefined {
   return dashboardData?.user || 
          pokemonData?.user || 
          teamsData?.user || 
-         teamSelectPokemonData?.user || // ✅ Ajouter ici aussi
+         teamSelectPokemonData?.user ||
          battleData?.user || 
+         battleInteractiveData?.user ||
          friendsData?.user || 
          profileData?.user;
 }

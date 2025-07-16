@@ -1,14 +1,13 @@
 import { apiCall, handleApiError } from '~/utils/api';
 import type { 
-  BattleResponse, 
+  InteractiveBattleResponse, 
   InitBattleRequest, 
-  ExecuteActionRequest,
-  BattleState 
+  ExecuteActionRequest
 } from '~/types/battle';
 
 export const interactiveBattleService = {
   // Initialiser un nouveau combat interactif
-  async initBattle(request: InitBattleRequest, token?: string): Promise<BattleResponse> {
+  async initBattle(request: InitBattleRequest, token?: string): Promise<InteractiveBattleResponse> {
     console.log('🚀 Frontend: Initialisation du combat interactif:', request);
     console.log('🔑 Token utilisé:', token ? token.substring(0, 20) + '...' : 'AUCUN');
     
@@ -52,7 +51,7 @@ export const interactiveBattleService = {
   },
 
   // Exécuter une action (attaque ou fuite)
-  async executeAction(request: ExecuteActionRequest, token?: string): Promise<BattleResponse> {
+  async executeAction(request: ExecuteActionRequest, token?: string): Promise<InteractiveBattleResponse> {
     console.log('⚔️ Exécution de l\'action:', request);
     
     const response = await apiCall('/api/interactive-battle/move', {
@@ -74,7 +73,7 @@ export const interactiveBattleService = {
   },
 
   // Récupérer l'état actuel du combat
-  async getBattleState(battleId: string, token?: string): Promise<BattleResponse> {
+  async getBattleState(battleId: string, token?: string): Promise<InteractiveBattleResponse> {
     console.log('📊 Récupération de l\'état du combat:', battleId);
     
     const response = await apiCall(`/api/interactive-battle/state/${battleId}`, {}, token);
@@ -85,7 +84,7 @@ export const interactiveBattleService = {
   },
 
   // Abandonner le combat
-  async forfeitBattle(battleId: string, token?: string): Promise<BattleResponse> {
+  async forfeitBattle(battleId: string, token?: string): Promise<InteractiveBattleResponse> {
     console.log('🏃‍♂️ Abandon du combat:', battleId);
     
     const response = await apiCall(`/api/interactive-battle/${battleId}/forfeit`, {
@@ -104,7 +103,7 @@ export const interactiveBattleService = {
   },
 
   // Résoudre un défi de hack
-  async solveHackChallenge(battleId: string, answer: string, token?: string): Promise<BattleResponse> {
+  async solveHackChallenge(battleId: string, answer: string, token?: string): Promise<InteractiveBattleResponse> {
     console.log('🧩 Résolution du défi de hack:', { battleId, answer });
     
     const response = await apiCall('/api/interactive-battle/solve-hack', {

@@ -1,26 +1,17 @@
-import React from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
+import type { Pokemon } from '@pokemon-battle/shared';
 
-interface Pokemon {
-  pokemon_id: number;
-  name_fr: string;
-  type: string;
-  level: number;
-  hp: number;
-  attack: number;
-  defense: number;
-  speed: number;
-  sprite_url: string;
-}
-
+// ✅ INTERFACE ADAPTÉE POUR LA CARTE
 interface ModernPokemonCardProps {
-  pokemon: Pokemon;
+  pokemon: Pokemon | any; // Plus flexible pour différents formats de données
   isSelected?: boolean;
   onClick?: () => void;
   variant?: 'battle' | 'team' | 'compact';
   showStats?: boolean;
 }
 
-const typeColors: Record<string, { primary: string; secondary: string; accent: string }> = {
+// ✅ COULEURS OPTIMISÉES AVEC MÉMOÏSATION
+const TYPE_COLORS = {
   'Feu': { primary: 'from-red-500 to-orange-600', secondary: 'bg-red-100', accent: 'border-red-300' },
   'Eau': { primary: 'from-blue-500 to-cyan-600', secondary: 'bg-blue-100', accent: 'border-blue-300' },
   'Plante': { primary: 'from-green-500 to-emerald-600', secondary: 'bg-green-100', accent: 'border-green-300' },
@@ -39,25 +30,37 @@ const typeColors: Record<string, { primary: string; secondary: string; accent: s
   'Acier': { primary: 'from-slate-500 to-gray-600', secondary: 'bg-slate-100', accent: 'border-slate-300' },
   'Fée': { primary: 'from-pink-400 to-rose-500', secondary: 'bg-pink-100', accent: 'border-pink-300' },
   'Normal': { primary: 'from-gray-400 to-stone-500', secondary: 'bg-gray-100', accent: 'border-gray-300' }
-};
+} as const;
 
-export const ModernPokemonCard: React.FC<ModernPokemonCardProps> = ({
+const DEFAULT_COLORS = TYPE_COLORS['Normal'];
+
+// ✅ COMPOSANT OPTIMISÉ AVEC MEMO
+const ModernPokemonCardComponent: React.FC<ModernPokemonCardProps> = ({
   pokemon,
   isSelected = false,
   onClick,
   variant = 'team',
   showStats = true
 }) => {
-  const typeStyle = typeColors[pokemon.type] || typeColors['Normal'];
+  // ✅ MÉMOÏSATION DU STYLE DE TYPE
+  const typeStyle = useMemo(() => {
+    return TYPE_COLORS[pokemon.type as keyof typeof TYPE_COLORS] || DEFAULT_COLORS;
+  }, [pokemon.type]);
   
-  const cardClasses = `
+  // ✅ MÉMOÏSATION DES CLASSES CSS
+  const cardClasses = useMemo(() => `
     relative overflow-hidden rounded-2xl transition-all duration-300 cursor-pointer
     ${isSelected ? 'ring-4 ring-yellow-400 ring-opacity-75 shadow-2xl scale-105' : 'hover:scale-102 hover:shadow-xl'}
     ${variant === 'battle' ? 'w-80 h-96' : variant === 'compact' ? 'w-48 h-64' : 'w-64 h-80'}
-  `;
+  `, [isSelected, variant]);
+  
+  // ✅ CALLBACK OPTIMISÉ POUR LE CLICK
+  const handleClick = useCallback(() => {
+    onClick?.();
+  }, [onClick]);
 
   return (
-    <div className={cardClasses} onClick={onClick}>
+    <div className={cardClasses} onClick={handleClick}>
       {/* Background avec gradient du type */}
       <div className={`absolute inset-0 bg-gradient-to-br ${typeStyle.primary} opacity-90`} />
       
@@ -83,7 +86,7 @@ export const ModernPokemonCard: React.FC<ModernPokemonCardProps> = ({
             </div>
           </div>
           <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-full px-3 py-1">
-            <span className="text-white font-bold text-sm">Nv.{pokemon.level}</span>
+            <span className="text-white font-bold text-sm">Nv.{(pokemon as any).level || 1}</span>
           </div>
         </div>
 
@@ -106,19 +109,19 @@ export const ModernPokemonCard: React.FC<ModernPokemonCardProps> = ({
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="flex justify-between">
                 <span className="text-white opacity-80">HP</span>
-                <span className="text-white font-bold">{pokemon.hp}</span>
+                <span className="text-white font-bold">{(pokemon as any).hp || (pokemon as any).base_hp || 100}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-white opacity-80">ATK</span>
-                <span className="text-white font-bold">{pokemon.attack}</span>
+                <span className="text-white font-bold">{(pokemon as any).attack || (pokemon as any).base_attack || 50}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-white opacity-80">DEF</span>
-                <span className="text-white font-bold">{pokemon.defense}</span>
+                <span className="text-white font-bold">{(pokemon as any).defense || (pokemon as any).base_defense || 50}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-white opacity-80">SPD</span>
-                <span className="text-white font-bold">{pokemon.speed}</span>
+                <span className="text-white font-bold">{(pokemon as any).speed || (pokemon as any).base_speed || 50}</span>
               </div>
             </div>
           </div>
@@ -140,4 +143,14 @@ export const ModernPokemonCard: React.FC<ModernPokemonCardProps> = ({
       <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white to-transparent opacity-0 hover:opacity-10 transition-opacity duration-300 transform rotate-45 translate-x-full hover:translate-x-[-100%]" />
     </div>
   );
-}; 
+};
+
+// ✅ EXPORT MEMO POUR L'OPTIMISATION
+export const ModernPokemonCard = memo(ModernPokemonCardComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.pokemon.id === nextProps.pokemon.id &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.variant === nextProps.variant &&
+    prevProps.showStats === nextProps.showStats
+  );
+}); 

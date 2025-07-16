@@ -4,7 +4,8 @@ import {
   PokemonDetailResponse, 
   StandardApiResponse 
 } from '@pokemon-battle/shared';
-import { apiCallWithRequest, apiCall, handleApiError } from '~/utils/api';
+import { apiCall, handleApiError } from '~/utils/api';
+import { apiCallServer } from '~/utils/api.server';
 
 // ✅ HELPER DRY POUR LES APPELS API côté serveur (loaders)
 async function makeApiCallServer<T>(
@@ -12,7 +13,7 @@ async function makeApiCallServer<T>(
   request: Request,
   options: RequestInit = {}
 ): Promise<T> {
-  const response = await apiCallWithRequest(endpoint, request, options);
+  const response = await apiCallServer(endpoint, request, options);
   await handleApiError(response);
   return response.json();
 }

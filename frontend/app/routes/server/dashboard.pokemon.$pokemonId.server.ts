@@ -1,31 +1,44 @@
-import { apiCallWithRequest } from '~/utils/api';
+import type { LoaderFunctionArgs } from '@remix-run/node';
+import { json, redirect } from '@remix-run/node';
 import type { PokemonDetail } from '@pokemon-battle/shared';
-import { withAuthLoader } from '~/utils/withAuthLoader';
+import { getUserFromSession } from '~/sessions.server';
+import { apiCallWithRequest } from '~/utils/api';
 
-export const loader = withAuthLoader(async (user, request, params) => {
+export const loader = async ({ request, params }: LoaderFunctionArgs) => {
+  const { user } = await getUserFromSession(request);
   
+  if (!user) {
+    return redirect('/login');
+  }
+
   const pokemonId = params.pokemonId;
-  
   
   if (!pokemonId || isNaN(Number(pokemonId))) {
     throw new Response('Pokemon ID invalide', { status: 400 });
   }
 
-  const response = await apiCallWithRequest(`/api/pokemon/${pokemonId}`, request);
+  try {
+    const response = await apiCallWithRequest(`/api/pokemon/${pokemonId}`, request);
 
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Response('Pokemon non trouvé', { status: 404 });
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Response('Pokemon non trouvé', { status: 404 });
+      }
+      throw new Error(`API error: ${response.status}`);
     }
-    throw new Error(`API error: ${response.status}`);
-  }
 
-  const data = await response.json();
-  const pokemon = data.data?.pokemon || data.pokemon;
-  
-  if (!pokemon) {
-    throw new Response('Pokemon non trouvé dans la réponse', { status: 404 });
+    const data = await response.json();
+    const pokemon = data.data?.pokemon || data.pokemon;
+    
+    if (!pokemon) {
+      throw new Response('Pokemon non trouvé dans la réponse', { status: 404 });
+    }
+    
+    return json({ pokemon: pokemon as PokemonDetail });
+  } catch (error) {
+    return json({
+      pokemon: null,
+      error: error instanceof Error ? error.message : 'Erreur inconnue'
+    });
   }
-  
-  return Response.json({ user, pokemon: pokemon as PokemonDetail });
-});
+};

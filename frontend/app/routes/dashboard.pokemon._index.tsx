@@ -1,25 +1,48 @@
 // Import des fonctions serveur depuis le fichier .server.ts
 export { loader } from './server/dashboard.pokemon._index.server';
 
-import type { MetaFunction } from '@remix-run/node';
 import { useLoaderData, useNavigation } from '@remix-run/react';
-import { useEffect } from 'react';
+import { useEffect, memo, useMemo } from 'react';
 import { Pokemon } from '@pokemon-battle/shared';
-import PokemonCard from '~/components/PokemonCard';
+import { VirtualizedGrid } from '~/components/VirtualizedGrid';
+import { ModernPokemonCard } from '~/components/ModernPokemonCard';
 import { ModernButton } from '~/components/ui/ModernButton';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { GenericSuccessMessage, GenericErrorMessage } from '~/components/GenericMessage';
 import { usePokemonList } from '~/hooks/usePokemonList';
 
-
-// Composant pour afficher la grille des Pokémon
-const PokemonGrid = ({ 
+// ✅ COMPOSANT DE GRILLE VIRTUALISÉE OPTIMISÉ
+const PokemonGrid = memo(({ 
   pokemon, 
   isLoading 
 }: { 
   pokemon: Pokemon[]; 
   isLoading: boolean;
 }) => {
+  // ✅ Calcul responsive des colonnes
+  const getItemsPerRow = useMemo(() => {
+    if (typeof window === 'undefined') return 4;
+    const width = window.innerWidth;
+    if (width >= 1536) return 6; // 2xl
+    if (width >= 1280) return 5; // xl
+    if (width >= 1024) return 4; // lg
+    if (width >= 768) return 3;  // md
+    if (width >= 640) return 2;  // sm
+    return 2; // mobile
+  }, []);
+
+  // ✅ RENDU AVEC VIRTUALIZATION
+  const renderPokemonCard = useMemo(() => 
+    (pokemon: Pokemon) => (
+      <ModernPokemonCard 
+        key={pokemon.id}
+        pokemon={pokemon}
+        variant="compact"
+        onClick={() => window.location.href = `/dashboard/pokemon/${pokemon.id}`}
+      />
+    ), []
+  );
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
@@ -37,13 +60,24 @@ const PokemonGrid = ({
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-      {pokemon.map((poke: Pokemon) => (
-        <PokemonCard key={poke.id} pokemon={poke} />
-      ))}
-    </div>
+    <VirtualizedGrid
+      items={pokemon}
+      itemHeight={280} // Hauteur des cartes compact
+      containerHeight={600} // Hauteur du container
+      itemsPerRow={getItemsPerRow}
+      renderItem={renderPokemonCard}
+      gap={24}
+    />
   );
-};
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.pokemon.length === nextProps.pokemon.length &&
+    prevProps.pokemon.every((pokemon, index) => 
+      pokemon.id === nextProps.pokemon[index]?.id
+    )
+  );
+});
 
 // Composant pour l'état vide
 const EmptyState = ({ 
@@ -230,57 +264,54 @@ export default function ModernPokemonIndex() {
   const isLoading = pokemonList.isLoading || isNavigationLoading;
 
   return (
-    <div className="min-h-screen relative">
-      <div className="max-w-7xl mx-auto px-6 pb-12">
-       
-        {/* Messages de statut */}
-        {error && (
-          <GenericErrorMessage message={error} />
-        )}
-      
-        {success && (
-          <GenericSuccessMessage message="Base de données Pokémon connectée" />
-        )}
+    <>
+      {/* Messages de statut */}
+      {error && (
+        <GenericErrorMessage message={error} />
+      )}
+    
+      {success && (
+        <GenericSuccessMessage message="Base de données Pokémon connectée" />
+      )}
 
-        {/* Erreur du hook */}
-        {pokemonList.error && (
-          <ModernCard variant="glass" className="bg-red-500/20 border-red-400/30 mb-6">
-            <div className="p-6">
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">❌</span>
-                <div>
-                  <h3 className="text-red-200 font-bold mb-2">Erreur</h3>
-                  <p className="text-red-100">{pokemonList.error}</p>
-                </div>
+      {/* Erreur du hook */}
+      {pokemonList.error && (
+        <ModernCard variant="glass" className="bg-red-500/20 border-red-400/30 mb-6">
+          <div className="p-6">
+            <div className="flex items-start space-x-3">
+              <span className="text-2xl">❌</span>
+              <div>
+                <h3 className="text-red-200 font-bold mb-2">Erreur</h3>
+                <p className="text-red-100">{pokemonList.error}</p>
               </div>
             </div>
-          </ModernCard>
-        )}
-        
-        {/* Filtres */}
-        <ModernPokemonFilter
-          searchFilter={pokemonList.searchFilter}
-          typeFilter={pokemonList.typeFilter}
-          availableTypes={pokemonList.availableTypes}
-          onSearchChange={pokemonList.setSearchFilter}
-          onTypeChange={pokemonList.setTypeFilter}
-          onReset={pokemonList.resetFilters}
+          </div>
+        </ModernCard>
+      )}
+      
+      {/* Filtres */}
+      <ModernPokemonFilter
+        searchFilter={pokemonList.searchFilter}
+        typeFilter={pokemonList.typeFilter}
+        availableTypes={pokemonList.availableTypes}
+        onSearchChange={pokemonList.setSearchFilter}
+        onTypeChange={pokemonList.setTypeFilter}
+        onReset={pokemonList.resetFilters}
+        isLoading={isLoading}
+      />
+     
+      {/* Contenu principal */}
+      {filteredPokemon.length === 0 ? (
+        <EmptyState 
+          hasFilters={hasFilters}
+          onResetFilters={pokemonList.resetFilters}
+        />
+      ) : (
+        <PokemonGrid 
+          pokemon={filteredPokemon}
           isLoading={isLoading}
         />
-       
-        {/* Contenu principal */}
-        {filteredPokemon.length === 0 ? (
-          <EmptyState 
-            hasFilters={hasFilters}
-            onResetFilters={pokemonList.resetFilters}
-          />
-        ) : (
-          <PokemonGrid 
-            pokemon={filteredPokemon}
-            isLoading={isLoading}
-          />
-        )}
-      </div>
-    </div>
+      )}
+    </>
   );
 } 

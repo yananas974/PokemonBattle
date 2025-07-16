@@ -2,6 +2,7 @@ import { WeatherCondition, WeatherConditionType } from '../enums';
 
 // ✅ INTERFACE POUR LES EFFETS MÉTÉOROLOGIQUES
 export interface WeatherEffect {
+  name: string;
   condition: WeatherConditionType;
   bonusTypes: string[];
   malusTypes: string[];

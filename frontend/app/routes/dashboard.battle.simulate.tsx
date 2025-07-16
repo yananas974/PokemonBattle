@@ -31,7 +31,30 @@ export default function BattleSimulation() {
   const { playDashboard } = useGlobalAudio();
   
   // Utilisation du hook useBattleSimulation
-  const battleSimulation = useBattleSimulation({
+  const {
+    currentStep,
+    selectedTeam,
+    battleMode,
+    enemyTeam,
+    useWeather,
+    location,
+    isSimulating,
+    battleResult,
+    showResultModal,
+    error,
+    selectTeam,
+    selectMode,
+    selectEnemy,
+    setWeather: setUseWeather,
+    setLocation,
+    startSimulation,
+    backToStep,
+    resetBattle,
+    closeModal,
+    showModal,
+    getStepStatus,
+    canStartBattle
+  } = useBattleSimulation({
     initialTeam: preselectedPlayer,
     initialEnemy: preselectedEnemy,
     onSimulationStart: () => {
@@ -53,49 +76,49 @@ export default function BattleSimulation() {
 
   // Géolocalisation
   useEffect(() => {
-    if (battleSimulation.useWeather) {
-      battleSimulationService.getCurrentLocation().then(battleSimulation.setLocation);
+    if (useWeather) {
+      battleSimulationService.getCurrentLocation().then(setLocation);
     }
-  }, [battleSimulation.useWeather]);
+  }, [useWeather, setLocation]);
 
   // Navigation entre étapes - utilisation du hook
   const handleTeamSelection = (team: any) => {
-    battleSimulation.selectTeam(team);
+    selectTeam(team);
   };
 
   const handleModeSelection = (mode: 'team' | 'turnbased') => {
-    battleSimulation.selectMode(mode);
+    selectMode(mode);
   };
 
   const handleEnemySelection = (enemy: any) => {
-    battleSimulation.selectEnemy(enemy);
+    selectEnemy(enemy);
   };
 
   const handleBackToStep = (step: any) => {
-    battleSimulation.backToStep(step);
+    backToStep(step);
   };
 
   const handleStartBattle = async () => {
-    await battleSimulation.startSimulation(async () => {
+    await startSimulation(async () => {
       const request: TeamBattleRequest = {
         team1: {
-          id: battleSimulation.selectedTeam.id,
-          teamName: battleSimulation.selectedTeam.teamName || battleSimulation.selectedTeam.name,
-          pokemon: battleSimulation.selectedTeam.pokemon
+          id: selectedTeam.id,
+          teamName: selectedTeam.teamName || selectedTeam.name,
+          pokemon: selectedTeam.pokemon
         },
         team2: {
-          id: battleSimulation.enemyTeam.id,
-          teamName: battleSimulation.enemyTeam.teamName || battleSimulation.enemyTeam.name,
-          pokemon: battleSimulation.enemyTeam.pokemon
+          id: enemyTeam.id,
+          teamName: enemyTeam.teamName || enemyTeam.name,
+          pokemon: enemyTeam.pokemon
         },
-        ...(battleSimulation.useWeather && battleSimulation.location ? { 
-          lat: battleSimulation.location.lat, 
-          lon: battleSimulation.location.lon 
+        ...(useWeather && location ? { 
+          lat: location.lat, 
+          lon: location.lon 
         } : {})
       };
 
       let result;
-      if (battleSimulation.battleMode === 'team') {
+      if (battleMode === 'team') {
         result = await battleSimulationService.simulateTeamBattle(request, user.backendToken);
       } else {
         result = await battleSimulationService.simulateTurnBasedBattle(
@@ -110,32 +133,23 @@ export default function BattleSimulation() {
 
   // Nouvelle bataille
   const handleNewBattle = () => {
-    battleSimulation.resetBattle();
+    resetBattle();
   };
 
   // Fermer le modal
   const handleCloseModal = () => {
-    battleSimulation.closeModal();
+    closeModal();
   };
 
   // Retour au menu
   const handleReturnToMenu = () => {
-    battleSimulation.closeModal();
+    closeModal();
     navigate('/dashboard/battle');
   };
 
 
 
-  // Helper pour les étapes
-  const getStepStatus = (step: BattleStep) => {
-    const steps = ['team-selection', 'mode-selection', 'enemy-selection', 'battle-ready', 'battle-result'];
-    const currentIndex = steps.indexOf(currentStep);
-    const stepIndex = steps.indexOf(step);
-    
-    if (stepIndex < currentIndex) return 'completed';
-    if (stepIndex === currentIndex) return 'current';
-    return 'pending';
-  };
+  // Helper pour les étapes (utilisation de la fonction du hook)
 
   return (
     <div className="space-y-6">
@@ -527,25 +541,8 @@ export default function BattleSimulation() {
                 console.log('- enemyTeam:', enemyTeam?.name);
                 
                 // Force l'affichage du modal avec des données de test
-                setBattleResult({
-                  success: true,
-                  winner: 'Test Team',
-                  totalTurns: 5,
-                  battleLog: [
-                    {
-                      turn: 1,
-                      attacker: 'Pikachu',
-                      move: 'Éclair',
-                      moveType: 'Électrik',
-                      damage: 25,
-                      description: 'Test attack',
-                      isCritical: false,
-                      typeEffectiveness: 1,
-                      stab: true
-                    }
-                  ]
-                });
-                setShowResultModal(true);
+                // Note: Cette fonction de test utilise directement showModal() du hook
+                showModal();
                 console.log('🎯 Modal de test activé');
               }}
               variant="yellow"

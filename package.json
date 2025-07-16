@@ -24,6 +24,8 @@
     "typecheck": "npm run typecheck --workspace=shared && npm run typecheck --workspace=backend && npm run typecheck --workspace=frontend",
     "lint": "npm run lint --workspace=frontend && npm run lint --workspace=backend",
     "test": "npm run test --workspace=backend && npm run test --workspace=frontend",
+    "test:watch": "npm run test:watch --workspace=backend & npm run test:watch --workspace=frontend",
+    "test:coverage": "npm run test:coverage --workspace=backend && npm run test:coverage --workspace=frontend",
     "db:reset": "npm run db:reset --workspace=backend",
     "db:generate": "npm run db:generate --workspace=backend",
     "db:migrate": "npm run db:migrate --workspace=backend",

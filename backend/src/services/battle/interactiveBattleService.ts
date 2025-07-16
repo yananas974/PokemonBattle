@@ -111,7 +111,7 @@ export class InteractiveBattleService {
   /**
    * Exécuter le mouvement du joueur
    */
-  static async executePlayerMove(request: PlayerMoveRequest): Promise<InteractiveBattleState> {
+  static async executePlayerMove(request: PlayerMoveRequest & { userId?: number }): Promise<InteractiveBattleState> {
     
     return serviceWrapper(async () => {
       const battleState = this.activeBattles.get(request.battleId);
@@ -134,12 +134,8 @@ export class InteractiveBattleService {
         throw new ValidationError('Pokémon non disponible');
       }
       
-      // Attaques
+      // ✅ NOUVEAU: Combat interactif - seulement l'attaque du joueur
       const playerMove = battleState.availableMoves[request.moveIndex];
-      const enemyMove = await this.selectEnemyMove(enemyPokemon);
-      
-      // Déterminer l'ordre (vitesse)
-      const playerFirst = playerPokemon.effective_speed >= enemyPokemon.effective_speed;
       
       // ✅ Deep copy des objets Pokemon pour éviter les mutations non voulues
       const newState = { 
@@ -153,17 +149,8 @@ export class InteractiveBattleService {
       const newPlayerPokemon = newState.currentTeam1Pokemon!;
       const newEnemyPokemon = newState.currentTeam2Pokemon!;
       
-      if (playerFirst) {
-        await this.executeMove(newState, newPlayerPokemon, newEnemyPokemon, playerMove, ACTION_SOURCES.PLAYER);
-        if (!newEnemyPokemon.is_ko) {
-          await this.executeMove(newState, newEnemyPokemon, newPlayerPokemon, enemyMove, ACTION_SOURCES.ENEMY);
-        }
-      } else {
-        await this.executeMove(newState, newEnemyPokemon, newPlayerPokemon, enemyMove, ACTION_SOURCES.ENEMY);
-        if (!newPlayerPokemon.is_ko) {
-          await this.executeMove(newState, newPlayerPokemon, newEnemyPokemon, playerMove, ACTION_SOURCES.PLAYER);
-        }
-      }
+      // ✅ Exécuter seulement l'attaque du joueur
+      await this.executeMove(newState, newPlayerPokemon, newEnemyPokemon, playerMove, ACTION_SOURCES.PLAYER);
       
       // ✅ Utiliser le helper du shared pour déterminer le vainqueur
       newState.winner = determineWinner(newState.team1Pokemon, newState.team2Pokemon);
@@ -184,14 +171,14 @@ export class InteractiveBattleService {
       
       // Continuer le combat normalement si pas de hack actif
       if (!newState.winner && !newState.isHackActive) {
-        newState.turn++;
-        newState.isPlayerTurn = true; // ✅ Toujours revenir au joueur après un tour
-        newState.waitingForPlayerMove = true;
+        // ✅ NOUVEAU: Après l'attaque du joueur, passer au tour de l'ennemi
+        newState.isPlayerTurn = false; // Tour de l'ennemi
+        newState.waitingForPlayerMove = false; // Ne pas attendre le joueur
         
-        const currentPlayerPokemon = newState.currentTeam1Pokemon;
-        if (currentPlayerPokemon) {
-          newState.availableMoves = await PokemonMoveService.getPokemonMoves(currentPlayerPokemon.pokemon_id);
-        }
+        // ✅ Déclencher automatiquement le tour de l'ennemi
+        setTimeout(() => {
+          this.executeEnemyTurn(request.battleId);
+        }, 500); // Délai de 0.5 secondes pour plus de fluidité
       }
       
       this.activeBattles.set(request.battleId, newState);
@@ -463,5 +450,73 @@ export class InteractiveBattleService {
     (battleState as any).lastHackTurn = battleState.turn;
     
     console.log(`🔄 Hack state reset - retour au tour du joueur (turn: ${battleState.turn})`);
+  }
+
+  /**
+   * ✅ NOUVEAU: Exécuter automatiquement le tour de l'ennemi
+   */
+  static async executeEnemyTurn(battleId: string): Promise<void> {
+    const battleState = this.activeBattles.get(battleId);
+    
+    if (!battleState || battleState.winner || battleState.isHackActive || battleState.isPlayerTurn) {
+      console.log(`🤖 Impossible d'exécuter le tour ennemi pour la bataille ${battleId}`);
+      return;
+    }
+
+    console.log(`🤖 Exécution automatique du tour ennemi pour la bataille ${battleId}`);
+
+    try {
+      const enemyPokemon = battleState.currentTeam2Pokemon;
+      const playerPokemon = battleState.currentTeam1Pokemon;
+      
+      if (!enemyPokemon || !playerPokemon) {
+        console.error('❌ Pokémon manquant pour le combat');
+        return;
+      }
+
+      // Sélectionner une attaque aléatoire pour l'ennemi
+      const enemyMove = await this.selectEnemyMove(enemyPokemon);
+      console.log(`🤖 Ennemi utilise: ${enemyMove.name}`);
+
+      // ✅ Deep copy pour éviter les mutations non voulues
+      const newState = { 
+        ...battleState,
+        currentTeam1Pokemon: { ...playerPokemon },
+        currentTeam2Pokemon: { ...enemyPokemon },
+        battleLog: [...battleState.battleLog]
+      };
+      
+      // ✅ Exécuter le mouvement de l'ennemi en utilisant la méthode existante
+      await this.executeMove(newState, newState.currentTeam2Pokemon!, newState.currentTeam1Pokemon!, enemyMove, ACTION_SOURCES.ENEMY);
+
+      // ✅ Utiliser le helper du shared pour déterminer le vainqueur
+      newState.winner = determineWinner(newState.team1Pokemon, newState.team2Pokemon);
+
+      // Vérifier si le combat est terminé
+      if (newState.winner) {
+        newState.phase = BATTLE_PHASE_CONSTANTS.FINISHED;
+        newState.waitingForPlayerMove = false;
+        console.log(`🏆 Combat terminé - vainqueur: ${newState.winner}`);
+      } else {
+        // Passer au tour suivant (retour au joueur)
+        newState.turn++;
+        newState.isPlayerTurn = true;
+        newState.waitingForPlayerMove = true;
+        
+        // Charger les mouvements disponibles pour le joueur
+        const updatedPlayerPokemon = newState.currentTeam1Pokemon;
+        if (updatedPlayerPokemon) {
+          newState.availableMoves = await PokemonMoveService.getPokemonMoves(updatedPlayerPokemon.pokemon_id);
+        }
+      }
+
+      // Sauvegarder l'état mis à jour
+      this.activeBattles.set(battleId, newState);
+      
+      console.log(`🤖 Tour ennemi terminé - Combat au tour ${newState.turn}, joueur: ${newState.isPlayerTurn}`);
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'exécution du tour ennemi:', error);
+    }
   }
 } 

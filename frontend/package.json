@@ -13,7 +13,9 @@
     "start": "remix-serve ./build/server/index.js",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf build .cache node_modules/.cache",
-    "test": "echo \"Tests à implémenter\" && exit 0"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@pokemon-battle/shared": "file:../shared",
@@ -26,10 +28,15 @@
   },
   "devDependencies": {
     "@remix-run/dev": "^2.16.8",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.0.0",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
     "@typescript-eslint/eslint-plugin": "^6.7.4",
     "@typescript-eslint/parser": "^6.7.4",
+    "@vitejs/plugin-react": "^4.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
     "autoprefixer": "^10.4.19",
     "eslint": "^8.38.0",
     "eslint-import-resolver-typescript": "^3.6.1",
@@ -37,10 +44,12 @@
     "eslint-plugin-jsx-a11y": "^6.7.1",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "jsdom": "^23.0.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
     "vite": "^6.3.5",
-    "vite-tsconfig-paths": "^4.2.1"
+    "vite-tsconfig-paths": "^4.2.1",
+    "vitest": "^1.0.0"
   },
   "engines": {
     "node": ">=20.0.0"

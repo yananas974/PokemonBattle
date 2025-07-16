@@ -1,15 +1,21 @@
+import React, { memo, useMemo } from 'react';
 import { Pokemon } from "@pokemon-battle/shared";
 import { Link } from "@remix-run/react";
 import { getTypeGradient } from "~/utils/pokemonTypes";
-
 
 type PokemonCardProps = {
     pokemon: Pokemon;
 }
 
-
-const PokemonCard = ({ pokemon }: PokemonCardProps) => {
-  const bgGradient = getTypeGradient(pokemon.type); 
+// ✅ COMPOSANT OPTIMISÉ AVEC MEMO
+const PokemonCardComponent = ({ pokemon }: PokemonCardProps) => {
+  // ✅ MÉMOÏSATION DU GRADIENT
+  const bgGradient = useMemo(() => getTypeGradient(pokemon.type), [pokemon.type]);
+  
+  // ✅ MÉMOÏSATION DU NUMÉRO FORMATÉ
+  const formattedNumber = useMemo(() => {
+    return pokemon.id.toString().padStart(3, '0');
+  }, [pokemon.id]); 
 
 return (
   <Link 
@@ -19,7 +25,7 @@ return (
   <div className={`relative bg-gradient-to-br ${bgGradient} rounded-2xl p-4 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden`}>
     {/* Numéro Pokédex */}
     <div className="absolute top-2 right-2 bg-black bg-opacity-30 text-white text-xs font-bold px-2 py-1 rounded-full">
-      #{pokemon.id.toString().padStart(3, '0')}
+      #{formattedNumber}
     </div>
 
     {/* Image Pokémon */}
@@ -61,5 +67,14 @@ return (
   </div>
 </Link> )
 }
+
+// ✅ EXPORT MEMO POUR L'OPTIMISATION
+const PokemonCard = memo(PokemonCardComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.pokemon.id === nextProps.pokemon.id &&
+    prevProps.pokemon.name_fr === nextProps.pokemon.name_fr &&
+    prevProps.pokemon.type === nextProps.pokemon.type
+  );
+});
 
 export default PokemonCard;

@@ -11,7 +11,9 @@
     "start:production": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "test": "echo \"Tests à implémenter\" && exit 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "echo \"Linting à implémenter\" && exit 0",
     "db:reset": "tsx src/reset-db.ts",
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
@@ -42,7 +44,9 @@
   },
   "devDependencies": {
     "@types/pg": "^8.10.9",
-    "tsx": "^4.6.0"
+    "tsx": "^4.6.0",
+    "vitest": "^1.0.0",
+    "@vitest/coverage-v8": "^1.0.0"
   },
   "engines": {
     "node": ">=20.0.0"

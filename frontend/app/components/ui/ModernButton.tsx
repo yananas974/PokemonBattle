@@ -11,6 +11,7 @@ interface ModernButtonProps {
   loading?: boolean;
   className?: string;
   type?: 'button' | 'submit' | 'reset';
+  fullWidth?: boolean;
 }
 
 const variants = {
@@ -40,7 +41,8 @@ export const ModernButton: React.FC<ModernButtonProps> = ({
   disabled = false,
   loading = false,
   className = '',
-  type = 'button'
+  type = 'button',
+  fullWidth = false
 }) => {
   const baseClasses = `
     font-semibold transition-all duration-200 transform
@@ -48,6 +50,7 @@ export const ModernButton: React.FC<ModernButtonProps> = ({
     ${variants[variant]}
     ${sizes[size]}
     ${className}
+    ${fullWidth ? 'w-full' : ''}
   `;
 
   const content = (

@@ -7,7 +7,7 @@ const { getSession, commitSession, destroySession } = createCookieSessionStorage
     secure: false, // true en production avec HTTPS
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 jours
+    maxAge: 3456, // 4 jours
     path: '/',
   },
 });

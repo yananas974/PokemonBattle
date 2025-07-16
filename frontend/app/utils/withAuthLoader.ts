@@ -1,22 +1,23 @@
 import { LoaderFunctionArgs, redirect } from '@remix-run/node';
 import { getUserFromSession } from '~/sessions.server';
-import type { User } from '@pokemon-battle/shared';
+import type { UserWithToken } from '@pokemon-battle/shared';
 
 type LoaderCallback<T> = (
-  user: User,
+  user: UserWithToken,
   request: Request,
   params: Record<string, string | undefined>
 ) => Promise<T>;
 
 export function withAuthLoader<T>(callback: LoaderCallback<T>) {
   return async ({ request, params }: LoaderFunctionArgs) => {
-    const { user } = await getUserFromSession(request);
+    const sessionData = await getUserFromSession(request);
 
-    if (!user) {
+    if (!sessionData.user) {
       throw redirect('/login');
     }
 
-    const data = await callback(user, request, params);
+    // ✅ Passer l'objet user complet avec backendToken
+    const data = await callback(sessionData.user, request, params);
 
     // ✅ Ne pas envelopper dans Response.json
     return data;

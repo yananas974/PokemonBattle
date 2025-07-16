@@ -5,6 +5,8 @@ interface UseAudioReturn {
   pause: () => void;
   stop: () => void;
   setVolume: (volume: number) => void;
+  fadeIn: (duration?: number) => Promise<void>;
+  fadeOut: (duration?: number) => Promise<void>;
   isPlaying: boolean;
   isLoaded: boolean;
 }
@@ -12,7 +14,9 @@ interface UseAudioReturn {
 export function useAudio(src: string, options: { 
   volume?: number; 
   loop?: boolean; 
-  autoPlay?: boolean 
+  autoPlay?: boolean;
+  fadeIn?: boolean;
+  fadeOut?: boolean;
 } = {}): UseAudioReturn {
   const { volume = 0.3, loop = true, autoPlay = false } = options;
   
@@ -71,5 +75,46 @@ export function useAudio(src: string, options: {
     audioRef.current.volume = Math.max(0, Math.min(1, newVolume));
   };
 
-  return { play, pause, stop, setVolume, isPlaying, isLoaded };
+  const fadeIn = async (duration: number = 1000) => {
+    if (!audioRef.current) return;
+    const audio = audioRef.current;
+    audio.volume = 0;
+    await play();
+    
+    const steps = 20;
+    const stepSize = volume / steps;
+    const stepInterval = duration / steps;
+    
+    for (let i = 0; i < steps; i++) {
+      setTimeout(() => {
+        if (audio) {
+          audio.volume = Math.min(volume, (i + 1) * stepSize);
+        }
+      }, i * stepInterval);
+    }
+  };
+
+  const fadeOut = async (duration: number = 1000) => {
+    if (!audioRef.current) return;
+    const audio = audioRef.current;
+    const startVolume = audio.volume;
+    
+    const steps = 20;
+    const stepSize = startVolume / steps;
+    const stepInterval = duration / steps;
+    
+    for (let i = 0; i < steps; i++) {
+      setTimeout(() => {
+        if (audio) {
+          audio.volume = Math.max(0, startVolume - (i + 1) * stepSize);
+        }
+      }, i * stepInterval);
+    }
+    
+    setTimeout(() => {
+      pause();
+    }, duration);
+  };
+
+  return { play, pause, stop, setVolume, fadeIn, fadeOut, isPlaying, isLoaded };
 } 

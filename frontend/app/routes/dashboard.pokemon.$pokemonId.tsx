@@ -1,13 +1,9 @@
-import type { LoaderFunctionArgs, MetaFunction } from '@remix-run/node';
-import { json, redirect } from '@remix-run/node';
+import type { MetaFunction } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import { useEffect } from 'react';
-import type { Pokemon, PokemonDetail } from '@pokemon-battle/shared';
-
+import type { Pokemon } from '@pokemon-battle/shared';
 import { 
   VintageCard, 
-  VintageButton,
-  PokemonSprite, 
 } from '~/components';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
@@ -136,11 +132,11 @@ const PokemonHeader = ({
             {/* Informations physiques */}
             <div className="grid grid-cols-3 gap-4 mt-6">
               <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 text-center">
-                <div className="text-3xl font-bold mb-1">{pokemonInfo.height}M</div>
+                <div className="text-3xl font-bold mb-1">{(pokemonInfo.height / 10).toFixed(1)}M</div>
                 <div className="text-sm opacity-75">Taille</div>
               </div>
               <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 text-center">
-                <div className="text-3xl font-bold mb-1">{pokemonInfo.weight}KG</div>
+                <div className="text-3xl font-bold mb-1">{(pokemonInfo.weight / 10).toFixed(1)}KG</div>
                 <div className="text-sm opacity-75">Poids</div>
               </div>
               <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-4 text-center">
@@ -318,13 +314,6 @@ const PokemonInfo = ({
           <div className="flex items-center justify-between">
             <span className="text-white opacity-75">Numéro National</span>
             <span className="text-white font-semibold">#{pokemonInfo.formattedId}</span>
-          </div>
-        </ModernCard>
-        
-        <ModernCard variant="glass" className="p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-white opacity-75">Dimensions</span>
-            <span className="text-white font-semibold">{pokemonInfo.height}M × {pokemonInfo.weight}KG</span>
           </div>
         </ModernCard>
       </div>

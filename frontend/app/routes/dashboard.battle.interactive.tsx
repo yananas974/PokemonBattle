@@ -1,10 +1,10 @@
-import { useLoaderData, useActionData, useNavigation, useSubmit } from '@remix-run/react';
-import { useEffect } from 'react';
+import { useLoaderData, useActionData, useNavigation, useSubmit, useFetcher } from '@remix-run/react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import type { MetaFunction } from '@remix-run/react';
 import { useInteractiveBattle } from '~/hooks/useInteractiveBattle';
 
 // Import des fonctions serveur depuis le fichier .server.ts
-export { loader, action } from './server/dashboard.battle.interactive.server';
+export { loader } from './server/dashboard.battle.interactive.server';
 
 // Client-side imports
 import { ModernCard } from '~/components/ui/ModernCard';
@@ -21,6 +21,132 @@ export const meta: MetaFunction = () => {
     { title: 'Combat Interactif - Pokemon Battle Arena' },
     { name: 'description', content: 'Affrontez vos adversaires dans des combats épiques en temps réel !' },
   ];
+};
+
+// Action Remix complète pour le combat interactif
+export const action = async ({ request }: { request: Request }) => {
+  console.log('🎯 === ACTION REMIX COMBAT INTERACTIF ===');
+  
+  try {
+    const formData = await request.formData();
+    const intent = formData.get('intent') as string;
+    const battleId = formData.get('battleId') as string;
+    
+    console.log('📋 FormData reçue:', { intent, battleId });
+    
+    // Import dynamique pour éviter l'import côté client
+    const { apiCallServer } = await import('~/utils/api.server');
+    const { getUserFromSession } = await import('~/sessions.server');
+    
+    // Vérifier l'authentification
+    const { user } = await getUserFromSession(request);
+    if (!user) {
+      return Response.json({
+        success: false,
+        error: 'Non autorisé'
+      });
+    }
+    
+    console.log('🔐 User authentifié:', user.username);
+    
+    // Router selon le type d'action
+    switch (intent) {
+      case 'attack': {
+        const moveIndex = formData.get('moveIndex') as string;
+        console.log('⚔️ Action attaque:', { battleId, moveIndex });
+        
+        const response = await apiCallServer('/api/interactive-battle/move', request, {
+          method: 'POST',
+          body: JSON.stringify({
+            battleId,
+            moveIndex: parseInt(moveIndex)
+          })
+        });
+        
+        const data = await response.json();
+        console.log('✅ Réponse attaque:', data);
+        
+        // ✅ Si après l'attaque du joueur, c'est le tour de l'ennemi, 
+        // attendre un peu puis récupérer l'état mis à jour
+        if (data.success && data.data?.battle?.currentTurn === 'enemy') {
+          console.log('🤖 Tour ennemi détecté dans l\'action, attente de 0.7 secondes...');
+          
+          // Attendre que l'ennemi attaque automatiquement (0.7s pour être sûr que le backend a terminé)
+          await new Promise(resolve => setTimeout(resolve, 700));
+          
+          // Récupérer l'état mis à jour
+          const statusResponse = await apiCallServer(`/api/interactive-battle/${battleId}`, request, {
+            method: 'GET'
+          });
+          
+          const statusData = await statusResponse.json();
+          console.log('🔄 État récupéré après attaque ennemi:', statusData);
+          
+          if (statusData.success && statusData.data?.battle) {
+            // Retourner l'état mis à jour au lieu de l'état initial
+            return Response.json(statusData);
+          }
+        }
+        
+        return Response.json(data);
+      }
+      
+      case 'hack': {
+        const answer = formData.get('answer') as string;
+        console.log('🚨 Action hack challenge:', { battleId, answer });
+        
+        const response = await apiCallServer('/api/interactive-battle/solve-hack', request, {
+          method: 'POST',
+          body: JSON.stringify({
+            battleId,
+            answer
+          })
+        });
+        
+        const data = await response.json();
+        console.log('✅ Réponse hack:', data);
+        return Response.json(data);
+      }
+      
+      case 'forfeit': {
+        console.log('🏃‍♂️ Action forfait:', { battleId });
+        
+        const response = await apiCallServer(`/api/interactive-battle/${battleId}/forfeit`, request, {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        console.log('✅ Réponse forfait:', data);
+        return Response.json(data);
+      }
+      
+      case 'get-status': {
+        console.log('🔄 Action récupération état:', { battleId });
+        
+        const response = await apiCallServer(`/api/interactive-battle/${battleId}`, request, {
+          method: 'GET'
+        });
+        
+        const data = await response.json();
+        console.log('✅ Réponse état:', data);
+        return Response.json(data);
+      }
+      
+      default:
+        console.log('❌ Intent non reconnu:', intent);
+        return Response.json({
+          success: false,
+          error: `Action non reconnue: ${intent}`
+        });
+    }
+    
+  } catch (error) {
+    console.error('❌ Erreur dans action Remix:', error);
+    return Response.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erreur lors de l\'action'
+    });
+  }
 };
 
 
@@ -179,10 +305,13 @@ const BattleActions = ({
   if (currentBattle.currentTurn !== 'player' || isLoading) {
     return (
       <div className="bg-white/90 backdrop-blur-sm rounded-lg p-6 text-center">
-        <div className="text-4xl mb-4">⏳</div>
+        <div className="text-4xl mb-4">🤖</div>
         <p className="text-gray-600 font-medium">
-          {isLoading ? 'Combat en cours...' : 'En attente du tour ennemi...'}
+          {isLoading ? 'Combat en cours...' : 'L\'ennemi réfléchit à son attaque...'}
         </p>
+        <div className="mt-4">
+          <div className="animate-pulse bg-gray-300 h-2 rounded-full"></div>
+        </div>
       </div>
     );
   }
@@ -248,9 +377,38 @@ export default function InteractiveBattlePage() {
   const actionData = useActionData<any>();
   const navigation = useNavigation();
   const submit = useSubmit();
+  const fetcher = useFetcher<any>();
+  const statusFetcher = useFetcher<any>();
   const { playBattle } = useGlobalAudio();
+  
+  // ✅ Référence pour éviter la boucle infinie
+  const processedFetcherRef = useRef<any>(null);
 
-  // Utilisation du hook useInteractiveBattle avec destructuring complet
+  console.log('🔄 Fetcher state:', fetcher.state);
+  console.log('🔄 Fetcher data:', fetcher.data);
+  console.log('🔄 StatusFetcher state:', statusFetcher.state);
+  console.log('🔄 StatusFetcher data:', statusFetcher.data);
+
+  // ✅ Mémoriser les données de combat pour éviter les re-renders
+  const battleData = useMemo(() => loaderData.battle, [loaderData.battle?.battleId]);
+
+  // ✅ Callbacks mémorisés pour éviter les re-renders infinis
+  const handleBattleEnd = useCallback((result: any) => {
+    console.log('🏁 Combat terminé:', result);
+  }, []);
+
+  const handleBattleError = useCallback((error: string) => {
+    console.error('❌ Erreur de combat:', error);
+  }, []);
+
+  // ✅ Mémoriser les options du hook pour éviter les re-renders
+  const hookOptions = useMemo(() => ({
+    initialBattle: battleData,
+    onBattleEnd: handleBattleEnd,
+    onError: handleBattleError
+  }), [battleData, handleBattleEnd, handleBattleError]);
+
+  // Utilisation du hook useInteractiveBattle avec options mémorisées
   const {
     currentBattle,
     showMoveSelector,
@@ -270,15 +428,20 @@ export default function InteractiveBattlePage() {
     getPlayerPokemon,
     getEnemyPokemon,
     getBattleLog
-  } = useInteractiveBattle({
-    initialBattle: loaderData.battle,
-    onBattleEnd: (result) => {
-      console.log('🏁 Combat terminé:', result);
-    },
-    onError: (error) => {
-      console.error('❌ Erreur de combat:', error);
-    }
-  });
+  } = useInteractiveBattle(hookOptions);
+
+  // ✅ Mémoriser les dépendances des useEffect
+  const hackModalDeps = useMemo(() => [
+    currentBattle?.isHackActive,
+    currentBattle?.hackChallenge,
+    isHackModalVisible,
+    setIsHackModalVisible
+  ], [currentBattle?.isHackActive, currentBattle?.hackChallenge, isHackModalVisible, setIsHackModalVisible]);
+
+  const actionDataDeps = useMemo(() => [
+    actionData,
+    handleBattleActionSuccess
+  ], [actionData, handleBattleActionSuccess]);
 
   useEffect(() => {
     playBattle();
@@ -288,29 +451,92 @@ export default function InteractiveBattlePage() {
     if (currentBattle?.isHackActive && currentBattle.hackChallenge && !isHackModalVisible) {
       setIsHackModalVisible(true);
     }
-  }, [currentBattle?.isHackActive, currentBattle?.hackChallenge, isHackModalVisible, setIsHackModalVisible]);
+  }, hackModalDeps);
 
   useEffect(() => {
-    const battleData = actionData?.data?.battle || actionData?.battle;
+    console.log('🔄 Frontend: ActionData reçue:', actionData);
+    
+    const battleData = actionData?.data?.battle || actionData?.battle || actionData;
+    
+    console.log('🎮 Frontend: BattleData extraite:', battleData);
     
     if (actionData?.success && battleData) {
-      handleBattleActionSuccess(battleData);
+      console.log('✅ Frontend: Mise à jour de l\'état du combat');
+      handleBattleActionSuccess(actionData);
+    } else {
+      console.log('❌ Frontend: Pas de mise à jour - success:', actionData?.success, 'battleData:', !!battleData);
     }
-  }, [actionData, handleBattleActionSuccess]);
+  }, actionDataDeps);
 
-  const handleAction = async (action: any) => {
-    await executeAction(action, submit);
-  };
+  // ✅ Traitement direct des données fetcher (plus simple et fiable)
+  useEffect(() => {
+    console.log('🔄 Effect fetcher: fetcher.data exists:', !!fetcher.data, 'fetcher.state:', fetcher.state);
+    
+    // Éviter la boucle infinie en vérifiant si on a déjà traité ces données
+    if (fetcher.data && fetcher.state === 'idle' && fetcher.data.success && 
+        fetcher.data !== processedFetcherRef.current) {
+      
+      processedFetcherRef.current = fetcher.data;
+      
+      console.log('🚀 Frontend: Traitement direct des données fetcher');
+      console.log('🚀 Frontend: FetcherData complète:', fetcher.data);
+      
+      const battleData = fetcher.data?.data?.battle || fetcher.data?.battle || fetcher.data;
+      
+      console.log('🎮 Frontend: FetcherBattleData extraite:', battleData);
+      
+      if (battleData && battleData.currentTurn) {
+        console.log('✅ Frontend: Mise à jour de l\'état du combat via Fetcher');
+        handleBattleActionSuccess(fetcher.data);
+        
+        // ✅ L'action Remix gère maintenant l'attente de l'ennemi automatiquement
+      } else {
+        console.log('❌ Frontend: Pas de battleData valide dans fetcher:', battleData);
+      }
+    }
+  }, [fetcher.data, fetcher.state, handleBattleActionSuccess]);
 
-  const handleForfeit = async () => {
+  // ✅ Gérer les données du status fetcher
+  useEffect(() => {
+    if (statusFetcher.data && statusFetcher.state === 'idle') {
+      console.log('🔄 StatusFetcher data reçue:', statusFetcher.data);
+      
+      const battleData = statusFetcher.data?.battle;
+      if (battleData) {
+        console.log('✅ Mise à jour via statusFetcher');
+        handleBattleActionSuccess({ success: true, data: { battle: battleData } });
+      }
+    }
+  }, [statusFetcher.data, statusFetcher.state, handleBattleActionSuccess]);
+
+  // ✅ Mémoriser les handlers pour éviter les re-renders
+  const handleAction = useCallback(async (action: any) => {
+    console.log('🎯 handleAction appelé avec:', action);
+    await executeAction(action, (formData) => {
+      console.log('🚀 Utilisation du fetcher pour l\'action');
+      fetcher.submit(formData, { method: 'post' });
+    });
+  }, [executeAction, fetcher]);
+
+  const handleForfeit = useCallback(async () => {
     await handleForfeitAction(submit);
-  };
+  }, [handleForfeitAction, submit]);
 
-  const handleHackSubmit = async (answer: string) => {
-    await handleHackSubmitAction(answer, submit);
-  };
+  const handleHackSubmit = useCallback(async (answer: string) => {
+    await handleHackSubmitAction(answer, (formData) => {
+      console.log('🚀 Utilisation du fetcher pour le hack');
+      fetcher.submit(formData, { method: 'post' });
+    });
+  }, [handleHackSubmitAction, fetcher]);
 
   console.log('🎮 État du combat:', currentBattle);
+  console.log('📊 Infos render:', { 
+    hasActionData: !!actionData, 
+    isLoading, 
+    navigationState: navigation.state,
+    currentTurn: currentBattle?.currentTurn,
+    waitingForPlayerMove: currentBattle?.waitingForPlayerMove 
+  });
   
   const isSubmitting = navigation.state === 'submitting';
   const effectiveLoading = isLoading || isSubmitting;

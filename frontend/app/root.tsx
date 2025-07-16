@@ -15,6 +15,8 @@ import { globalAudio } from '~/utils/globalAudioManager';
 import "./tailwind.css";
 import "./styles/pokemon-modern.css";
 import { AudioProvider } from '~/contexts/AudioContext';
+import { ErrorProvider } from '~/contexts/ErrorContext';
+import { ErrorDisplay, GlobalErrorBoundary } from '~/components/ErrorDisplay';
 import QuickActionsNavbar from '~/components/QuickActionsNavbar';
 import NavbarSpacer from '~/components/NavbarSpacer';
 import SimplePokemonParticles from '~/components/SimplePokemonParticles';
@@ -43,11 +45,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <AudioProvider>
-          {children}
-          <ScrollRestoration />
-          <Scripts />
-        </AudioProvider>
+        <ErrorProvider>
+          <AudioProvider>
+            <GlobalErrorBoundary>
+              {children}
+              <ErrorDisplay />
+            </GlobalErrorBoundary>
+            <ScrollRestoration />
+            <Scripts />
+          </AudioProvider>
+        </ErrorProvider>
       </body>
     </html>
   );
@@ -103,6 +110,7 @@ export default function App() {
       <div className="absolute inset-0 bg-black/40 z-0"></div>
       
       <div className="relative z-10">
+        {/* ✅ Navigation sera maintenant gérée par le layout dashboard */}
         {shouldShowNavigation && <QuickActionsNavbar user={user} />}
         {shouldShowNavigation && <NavbarSpacer />}
         <Outlet />

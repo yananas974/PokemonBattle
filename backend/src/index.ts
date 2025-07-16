@@ -2,12 +2,19 @@ import 'dotenv/config';
 
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { errorHandler } from './middlewares/errorHandler.middleware.js';
-import { corsMiddleware } from './config/cors.Config.js';
+import { corsMiddleware, securityHeaders } from './config/cors.Config.js';
+import { PORT, validateConfiguration } from './config/env.Config.js';
 import routes from './routes/routes.js';
 
+// ✅ VALIDATION DE LA CONFIGURATION AU DÉMARRAGE
+try {
+  validateConfiguration();
+} catch (error) {
+  console.error('❌ Erreur de configuration:', error);
+  process.exit(1);
+}
 
 const app = new Hono()
 
@@ -16,7 +23,15 @@ app.onError(errorHandler);
 
 // Middlewares globaux
 app.use('*', logger());
-app.use('*', corsMiddleware); 
+app.use('*', corsMiddleware);
+
+// ✅ AJOUT DES HEADERS DE SÉCURITÉ
+app.use('*', async (c, next) => {
+  await next();
+  Object.entries(securityHeaders).forEach(([key, value]) => {
+    c.header(key, value);
+  });
+}); 
 
 // Routes
 app.route('/api', routes);
@@ -31,16 +46,17 @@ app.get('/health', (c) => {
   });
 });
 
-// 🚀 DÉMARRAGE SIMPLE - Plus de try/catch !
+// 🚀 DÉMARRAGE SÉCURISÉ DU SERVEUR
 async function startServer() {
   console.log('🚀 === DÉMARRAGE DU SERVEUR ===');
   
-  const port = 3001;
-  console.log(`🌟 Server is running on port ${port}`);
+  console.log(`🌟 Server is running on port ${PORT}`);
+  console.log('🔒 Headers de sécurité activés');
+  console.log('🌐 CORS configuré');
   
   serve({
     fetch: app.fetch,
-    port
+    port: PORT
   });
 }
 

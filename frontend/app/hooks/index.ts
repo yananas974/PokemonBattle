@@ -1,7 +1,17 @@
 export { useUser, useOptionalUser } from './useUser';
+
+// ✅ SYSTÈME AUDIO PRINCIPAL
+export { useGlobalAudio } from './useGlobalAudio';
+
+// ✅ OPTIMISATIONS DE PERFORMANCE
+export { useDebounce, useDebouncedCallback } from './useDebounce';
+
+// ✅ GESTION D'ERREURS
+export { useAsyncOperation, useFormSubmission, useRetryableOperation } from './useAsyncOperation';
+
+// ⚠️  SYSTÈMES AUDIO OBSOLÈTES (compatibilité)
 export { useAudio } from './useAudio';
 export { useAudioManager } from './useAudioManager';
-export { useGlobalAudio } from './useGlobalAudio';
 export { usePokemonParticles } from './usePokemonParticles';
 export { useScrollNavigation } from './useScrollNavigation';
 export { useWeather } from './useWeather';

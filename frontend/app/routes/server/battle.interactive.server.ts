@@ -77,8 +77,10 @@ export const action = withAuthAction(async (user, request, params) => {
           user.backendToken
         );
 
-        if (battleResponse.success && battleResponse.data?.battle) {
-          return redirect(`/dashboard/battle/interactive?battleId=${battleResponse.data.battle.battleId}`);
+        if (battleResponse.success && battleResponse.battle) {
+          // Utiliser un ID temporaire si battleId n'est pas disponible
+          const battleId = (battleResponse.battle as any).battleId || `temp-${Date.now()}`;
+          return redirect(`/dashboard/battle/interactive?battleId=${battleId}`);
         } else {
           return Response.json({
             success: false,

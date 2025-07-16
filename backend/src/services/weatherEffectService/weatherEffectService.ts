@@ -2,6 +2,7 @@ import { WeatherEffect } from '@pokemon-battle/shared';
 
 export const WEATHER_EFFECTS: WeatherEffect[] = [
   {
+    name: 'ensoleillé',
     condition: 'ClearDay',
     bonusTypes: ['Feu', 'Sol', 'Roche'],
     malusTypes: ['Eau', 'Glace'],
@@ -9,6 +10,7 @@ export const WEATHER_EFFECTS: WeatherEffect[] = [
     description: 'Temps ensoleillé - Les types Feu, Sol et Roche sont renforcés'
   },
   {
+    name: 'pluvieux',
     condition: 'Rain',
     bonusTypes: ['Eau', 'Électrik', 'Plante'],
     malusTypes: ['Feu', 'Sol', 'Roche'],
@@ -16,6 +18,7 @@ export const WEATHER_EFFECTS: WeatherEffect[] = [
     description: 'Temps pluvieux - Les types Eau, Électrik et Plante sont renforcés'
   },
   {
+    name: 'neigeux',
     condition: 'Snow',
     bonusTypes: ['Glace', 'Acier'],
     malusTypes: ['Feu', 'Plante', 'Vol'],
@@ -23,6 +26,7 @@ export const WEATHER_EFFECTS: WeatherEffect[] = [
     description: 'Temps neigeux - Les types Glace et Acier sont renforcés'
   },
   {
+    name: 'orage',
     condition: 'Thunderstorm',
     bonusTypes: ['Électrik', 'Ténèbres'],
     malusTypes: ['Vol', 'Eau'],
@@ -30,6 +34,7 @@ export const WEATHER_EFFECTS: WeatherEffect[] = [
     description: 'Orage - Les types Électrik et Ténèbres sont très renforcés'
   },
   {
+    name: 'nuageux',
     condition: 'Clouds',
     bonusTypes: ['Vol', 'Dragon'],
     malusTypes: ['Sol', 'Roche'],
@@ -37,6 +42,7 @@ export const WEATHER_EFFECTS: WeatherEffect[] = [
     description: 'Temps nuageux - Les types Vol et Dragon sont légèrement renforcés'
   },
   {
+    name: 'brouillard',
     condition: 'Fog',
     bonusTypes: ['Spectre', 'Psy'],
     malusTypes: ['Normal', 'Combat'],
@@ -44,6 +50,7 @@ export const WEATHER_EFFECTS: WeatherEffect[] = [
     description: 'Brouillard - Les types Spectre et Psy sont renforcés'
   },
   {
+    name: 'brumeux',
     condition: 'Mist',
     bonusTypes: ['Vol', 'Insecte'],
     malusTypes: ['Feu', 'Poison'],

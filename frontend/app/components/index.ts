@@ -12,6 +12,7 @@ export { PokemonAudioPlayer } from './PokemonAudioPlayer';
 // ===== MODERN COMPONENTS =====
 export { ModernDashboard } from './ModernDashboard';
 export { ModernPokemonCard } from './ModernPokemonCard';
+export { VirtualizedGrid } from './VirtualizedGrid';
 
 // ===== BATTLE COMPONENTS =====
 export { HealthBar } from './HealthBar';
@@ -27,6 +28,4 @@ export { WeatherEffect } from './WeatherEffect';
 export { default as SimplePokemonParticles } from './SimplePokemonParticles';
 
 // ===== DEFAULT EXPORTS =====
-export { default as ClientOnly } from './ClientOnly';
-export { default as TopNavigation } from './TopNavigation';
 export { default as NavbarSpacer } from './NavbarSpacer';

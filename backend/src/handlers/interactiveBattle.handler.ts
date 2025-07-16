@@ -156,25 +156,43 @@ export const interactiveBattleHandlers: InteractiveBattleHandler = {
   }),
 
   executePlayerMove: authAsyncHandler(async (c: Context) => {
+    console.log('🎯 === HANDLER EXECUTE PLAYER MOVE APPELÉ ===');
+    
     const body = await c.req.json();
     const { battleId, moveIndex } = body;
     
+    console.log('📦 Données reçues:', { battleId, moveIndex });
+    
     // Authentification - L'utilisateur est déjà authentifié par le middleware
     const user = getAuthenticatedUser(c);
+    console.log('👤 Utilisateur authentifié:', user.id);
     
     // Validation
     const { battleId: validatedBattleId, moveIndex: validatedMoveIndex } = playerMoveSchema.parse({ battleId, moveIndex });
+    console.log('✅ Données validées:', { validatedBattleId, validatedMoveIndex });
     
     // Exécuter le mouvement
+    console.log('⚔️ Exécution du mouvement...');
     const battleState = await InteractiveBattleService.executePlayerMove({
       battleId: validatedBattleId,
       moveIndex: validatedMoveIndex,
       userId: user.id
     });
     
-    return c.json(formatInteractiveBattleResponse(BATTLE_MESSAGES.MOVE_EXECUTED, {
+    console.log('🎮 État de combat retourné:', {
+      battleId: battleState.battleId,
+      turn: battleState.turn,
+      isPlayerTurn: battleState.isPlayerTurn,
+      currentTurn: battleState.isHackActive ? 'hack' : (battleState.isPlayerTurn ? 'player' : 'enemy')
+    });
+    
+    const formattedResponse = formatInteractiveBattleResponse(BATTLE_MESSAGES.MOVE_EXECUTED, {
       battle: formatBattleState(battleState)
-    }));
+    });
+    
+    console.log('📤 Réponse formatée:', formattedResponse);
+    
+    return c.json(formattedResponse);
   }),
 
   getBattleState: authAsyncHandler(async (c: Context) => {

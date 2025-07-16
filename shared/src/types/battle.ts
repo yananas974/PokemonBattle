@@ -166,6 +166,31 @@ export interface BattleResponse {
   timeBonus?: number;
 }
 
+// ✅ RÉPONSE DE COMBAT INTERACTIF
+export interface InteractiveBattleResponse {
+  success: boolean;
+  data?: {
+    battle: InteractiveBattleData;
+  };
+  battle?: InteractiveBattleData;
+  message?: string;
+  error?: string;
+}
+
+export interface InteractiveBattleData {
+  battleId: string;
+  playerPokemon: any;
+  enemyPokemon: any;
+  currentTurn: string;
+  battleLog: any[];
+  weather: any;
+  isFinished: boolean;
+  winner: string | null;
+  turnCount: number;
+  hackChallenge?: any;
+  isHackActive?: boolean;
+}
+
 // ✅ POKÉMON AVEC EFFETS
 export interface PokemonWithEffects extends BattlePokemon {
   statusEffects: string[];

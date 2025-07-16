@@ -1,21 +1,24 @@
 import { interactiveBattleService } from '~/services/interactiveBattleService';
 import { teamService } from '~/services/teamService';
-import { withAuthLoader } from '~/utils/withAuthLoader';
-import { withAuthAction } from '~/utils/withAuthAction';
-import { getUserFromSession } from '~/sessions.server';
 
-export const loader = withAuthLoader(async (user, request, params) => {
+
+export const loader = async ({ request }: { request: Request }) => {
+  const { getUserFromSession } = await import('~/sessions.server');
+  const { user } = await getUserFromSession(request);
+  
+  if (!user) {
+    throw new Response('Unauthorized', { status: 401 });
+  }
   const url = new URL(request.url);
   const battleId = url.searchParams.get('battleId');
   const playerTeamId = url.searchParams.get('playerTeamId');
   const enemyTeamId = url.searchParams.get('enemyTeamId');
 
-  const { user: userData } = await getUserFromSession(request);
-  console.log(userData);
+  console.log('🔐 Loader: Utilisateur authentifié:', user);
   
   try {
     if (battleId) {
-      const battleResponse = await interactiveBattleService.getBattleState(battleId, userData.backendToken);
+      const battleResponse = await interactiveBattleService.getBattleState(battleId, user.backendToken);
       
       if (battleResponse.success && battleResponse.battle) {
         return Response.json({
@@ -36,7 +39,7 @@ export const loader = withAuthLoader(async (user, request, params) => {
       });
     }
 
-    const teamsData = await teamService.getMyTeams(request);
+    const teamsData = await teamService.getMyTeams(user.backendToken);
     const playerTeam = teamsData.teams.find(t => t.id === parseInt(playerTeamId));
     const enemyTeam = teamsData.teams.find(t => t.id === parseInt(enemyTeamId));
     
@@ -54,7 +57,7 @@ export const loader = withAuthLoader(async (user, request, params) => {
     const initResponse = await interactiveBattleService.initBattle({
       playerTeamId: parseInt(playerTeamId),
       enemyTeamId: parseInt(enemyTeamId)
-    }, userData.backendToken);
+    }, user.backendToken);
 
     console.log('📦 Réponse de l\'API:', initResponse);
 
@@ -91,7 +94,7 @@ export const loader = withAuthLoader(async (user, request, params) => {
         initResponse: initResponse,
         playerTeamId,
         enemyTeamId,
-        hasToken: !!userData.backendToken,
+        hasToken: !!user.backendToken,
         timestamp: new Date().toISOString()
       }
     });
@@ -117,15 +120,42 @@ export const loader = withAuthLoader(async (user, request, params) => {
       debugInfo: errorDetails,
       forceErrorDisplay: true
     }, { status: 200 });
+  } 
+};
+
+export const action = async ({ request }: { request: Request }) => {
+  console.log('🎯 === ACTION REMIX BRUTE APPELÉE ===');
+  console.log('🌐 Request method:', request.method);
+  console.log('🌐 Request URL:', request.url);
+  
+  const { getUserFromSession } = await import('~/sessions.server');
+  const { user } = await getUserFromSession(request);
+  
+  if (!user) {
+    console.log('❌ User non authentifié dans action');
+    return Response.json({ success: false, error: 'Non autorisé' }, { status: 401 });
   }
-});
-  export const action = withAuthAction(async (user, request, params) => {
+  
+  console.log('🔐 User dans action:', { id: user.id, username: user.username, hasBackendToken: !!user.backendToken });
+  
   const formData = await request.formData();
   const battleId = formData.get('battleId') as string;
   const moveIndex = formData.get('moveIndex') as string;
   const intent = formData.get('intent') as string;
   const answer = formData.get('answer') as string;
   const token = user.backendToken;
+  
+  console.log('📦 Action Remix - FormData reçue:', {
+    battleId,
+    moveIndex,
+    intent,
+    answer,
+    hasToken: !!token,
+    url: request.url,
+    method: request.method
+  });
+  
+  console.log('📋 FormData complète:', Object.fromEntries(formData.entries()));
 
   try {
     if (intent === 'forfeit') {
@@ -135,12 +165,49 @@ export const loader = withAuthLoader(async (user, request, params) => {
       const response = await interactiveBattleService.solveHackChallenge(battleId, answer, token);
       return Response.json(response);
     } else if (moveIndex) {
-      const response = await interactiveBattleService.executeAction({
-        battleId,
-        action: { type: 'attack', moveId: parseInt(moveIndex) }
-      }, token);
+      console.log('🎯 Action Remix: Exécution de l\'attaque', { battleId, moveIndex });
+      console.log('🌐 Backend URL:', process.env.BACKEND_URL || 'http://localhost:3001');
+      console.log('🔑 Token présent:', !!token);
       
-      return Response.json(response);
+      // ✅ Appel direct au backend au lieu de passer par le service frontend
+      try {
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+        const requestBody = {
+          battleId,
+          moveIndex: parseInt(moveIndex)
+        };
+        
+        console.log('📤 Envoi vers backend:', { url: `${backendUrl}/api/interactive-battle/move`, body: requestBody });
+        
+        const apiResponse = await fetch(`${backendUrl}/api/interactive-battle/move`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(requestBody)
+        });
+        
+        console.log('📊 Réponse backend status:', apiResponse.status, apiResponse.statusText);
+        
+        if (!apiResponse.ok) {
+          const errorText = await apiResponse.text();
+          console.error('❌ Erreur backend:', { status: apiResponse.status, text: errorText });
+          throw new Error(`Backend API error: ${apiResponse.status} - ${errorText}`);
+        }
+        
+        const response = await apiResponse.json();
+        console.log('📦 Action Remix: Réponse reçue du backend:', response);
+        console.log('✅ Action Remix: Renvoi de la réponse au client');
+        
+        return Response.json(response);
+      } catch (error) {
+        console.error('❌ Action Remix: Erreur appel backend:', error);
+        return Response.json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Erreur lors de l\'appel backend'
+        });
+      }
     }
 
     return Response.json({
@@ -153,4 +220,4 @@ export const loader = withAuthLoader(async (user, request, params) => {
       error: error instanceof Error ? error.message : 'Erreur lors de l\'action'
     });
   }
-}); 
+};
