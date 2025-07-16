@@ -20,14 +20,13 @@ const getTokenFromBrowser = (): string | null => {
 };
 
 // ✅ Fonction pour récupérer le token depuis la session côté serveur
-const getBackendTokenFromSession = async (request: Request): Promise<string | null> => {
+const getBackendTokenFromSession = async (_request: Request): Promise<string | null> => {
   if (typeof window !== 'undefined') return null; // Côté client, retourner null
   
   try {
     // Import dynamique pour éviter l'import côté client
-    const { getBackendTokenFromSession: getToken } = await import('~/sessions.server');
-    const token = await getToken(request);
-    return token && token !== 'undefined' && token !== 'null' ? token : null;
+    // Note: Cette fonction doit être appelée côté serveur uniquement
+    throw new Error('getBackendTokenFromSession ne peut être utilisé que côté serveur');
   } catch (error) {
     console.log('⚠️ Impossible de récupérer le token de la session:', error);
     return null;

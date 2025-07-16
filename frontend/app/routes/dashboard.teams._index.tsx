@@ -128,7 +128,7 @@ export default function ModernTeamsIndex() {
                         variant="water"
                         href={`/dashboard/teams/${team.id}`}
                         size="sm"
-                        fullWidth
+                        className="w-full"
                       >
                         👁️ Voir
                       </ModernButton>
@@ -137,7 +137,7 @@ export default function ModernTeamsIndex() {
                         variant="grass"
                         href={`/dashboard/teams/${team.id}/select-pokemon`}
                         size="sm"
-                        fullWidth
+                        className="w-full"
                       >
                         ✏️ Modifier
                       </ModernButton>
@@ -156,7 +156,7 @@ export default function ModernTeamsIndex() {
                           variant="fire"
                           type="submit"
                           size="sm"
-                          fullWidth
+                          className="w-full"
                         >
                           🗑️ Supprimer
                         </ModernButton>
