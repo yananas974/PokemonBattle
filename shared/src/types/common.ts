@@ -1,10 +1,5 @@
 // ✅ TYPES COMMUNS
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-}
+import { StandardApiResponse } from './api';
 
 export interface PaginationParams {
   page?: number;
@@ -12,7 +7,7 @@ export interface PaginationParams {
   search?: string;
 }
 
-export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+export interface PaginatedResponse<T> extends StandardApiResponse<T[]> {
   pagination: {
     page: number;
     limit: number;

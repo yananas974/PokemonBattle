@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { globalAudio, TRACKS } from '~/utils/globalAudioManager';
 
 export function useGlobalAudio() {
@@ -7,31 +7,40 @@ export function useGlobalAudio() {
   const [volume, setVolumeState] = useState(globalAudio.getVolume());
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
+  // ✅ Référence pour l'interval pour éviter les memory leaks
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // Vérifier le statut périodiquement
   useEffect(() => {
     const updateStatus = () => {
       setIsPlaying(globalAudio.isPlaying());
       setCurrentTrack(globalAudio.getCurrentTrack());
-      // Vérifier si l'autoplay est bloqué (méthode temporaire)
-      setAutoplayBlocked(globalAudio.getCurrentTrack() !== null && !globalAudio.isPlaying());
+      // Vérifier si l'autoplay est bloqué
+      setAutoplayBlocked(globalAudio.isAutoplayBlocked());
     };
 
     // Vérification initiale
     updateStatus();
 
-    // Vérification périodique
-    const interval = setInterval(updateStatus, 1000);
+    // ✅ Vérification périodique avec référence stable
+    intervalRef.current = setInterval(updateStatus, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      // ✅ Cleanup complet
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      // ✅ Cleanup audio si nécessaire
+      globalAudio.cleanup();
+    };
   }, []);
 
   const playDashboard = useCallback(() => {
-    console.log('🎵 Chargement musique dashboard: 02 Opening (part 2).mp3');
     globalAudio.switchTrack('/audio/02 Opening (part 2).mp3', TRACKS.DASHBOARD);
   }, []);
 
   const playBattle = useCallback(() => {
-    console.log('🎵 Chargement musique combat: battle.mp3');
     globalAudio.switchTrack('/audio/battle23.mp3', TRACKS.BATTLE);
   }, []);
 

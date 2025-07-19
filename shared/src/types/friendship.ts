@@ -121,14 +121,7 @@ export interface FriendshipStats {
   }>;
 }
 
-// ✅ CONTEXTE AUTHENTIFIÉ POUR LES AMITIÉS
-export interface AuthenticatedContext {
-  user: {
-    id: number;
-    email: string;
-    username: string;
-  };
-}
+// ✅ NOTE: AuthenticatedContext supprimé - utiliser ApiAuthenticatedContext de types/api.ts
 
 // ✅ TYPES POUR LES HANDLERS D'AMITIÉ
 export type FriendshipHandler = {

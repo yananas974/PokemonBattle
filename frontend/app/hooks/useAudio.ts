@@ -37,7 +37,6 @@ export function useAudio(src: string, options: {
     audio.addEventListener('ended', handleEnded);
 
     if (autoPlay) {
-      audio.play().then(() => setIsPlaying(true)).catch(console.warn);
     }
 
     return () => {
@@ -53,7 +52,6 @@ export function useAudio(src: string, options: {
       await audioRef.current.play();
       setIsPlaying(true);
     } catch (error) {
-      console.warn('Erreur lecture audio:', error);
     }
   };
 

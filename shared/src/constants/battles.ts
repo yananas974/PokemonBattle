@@ -44,15 +44,7 @@ export const BATTLE_ACTION_TYPES = {
   HACK: 'hack'
 } as const;
 
-// ✅ Phases de combat
-export const BATTLE_PHASES = {
-  INIT: 'init',
-  BATTLE: 'battle',
-  FINISHED: 'finished',
-  MOVE_SELECTION: 'move_selection',
-  MOVE_EXECUTION: 'move_execution',
-  SWITCH: 'switch'
-} as const;
+// ✅ NOTE: Phases de combat déplacées vers enums/index.ts pour éviter les doublons
 
 // ✅ Équipes
 export const BATTLE_TEAMS = {
@@ -78,5 +70,4 @@ export const BATTLE_WINNERS = {
 export type BattleWinner = typeof BATTLE_WINNERS[keyof typeof BATTLE_WINNERS];
 export type BattleTeam = typeof BATTLE_TEAMS[keyof typeof BATTLE_TEAMS];
 export type ActionSource = typeof ACTION_SOURCES[keyof typeof ACTION_SOURCES];
-export type BattlePhase = typeof BATTLE_PHASES[keyof typeof BATTLE_PHASES];
 export type PokemonStatusType = typeof POKEMON_STATUS[keyof typeof POKEMON_STATUS]; 

@@ -3,13 +3,12 @@ export { loader, action } from './server/dashboard.teams.$teamId.select-pokemon.
 
 import type { MetaFunction } from '@remix-run/node';
 import { useLoaderData, useActionData, useNavigation, useSubmit, Link } from '@remix-run/react';
-import { ModernCard } from '~/components/ui/ModernCard';
-import { ModernButton } from '~/components/ui/ModernButton';
-import { VirtualizedGrid } from '~/components/VirtualizedGrid';
-import { ModernPokemonCard } from '~/components/ModernPokemonCard';
+import { VirtualizedGrid } from '~/components/pokemon/VirtualizedGrid';
+import { ModernPokemonCard } from '~/components/pokemon/ModernPokemonCard';
 import type { Pokemon } from '@pokemon-battle/shared';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useTeamPokemon } from '~/hooks/useCollection';
+import { ModernButton } from '~/components/ui/ModernButton';
 
 // Types pour les données
 interface LoaderData {

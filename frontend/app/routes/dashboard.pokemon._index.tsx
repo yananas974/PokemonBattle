@@ -4,11 +4,12 @@ export { loader } from './server/dashboard.pokemon._index.server';
 import { useLoaderData, useNavigation } from '@remix-run/react';
 import { useEffect, memo, useMemo } from 'react';
 import { Pokemon } from '@pokemon-battle/shared';
-import { VirtualizedGrid } from '~/components/VirtualizedGrid';
-import { ModernPokemonCard } from '~/components/ModernPokemonCard';
+// ✅ Import lazy loading SSR-compatible
+import { LazyVirtualizedGrid } from '~/components/lazy';
+import { ModernPokemonCard } from '~/components/pokemon/ModernPokemonCard';
 import { ModernButton } from '~/components/ui/ModernButton';
 import { ModernCard } from '~/components/ui/ModernCard';
-import { GenericSuccessMessage, GenericErrorMessage } from '~/components/GenericMessage';
+import { GenericSuccessMessage, GenericErrorMessage } from '~/components/feedback/GenericMessage';
 import { usePokemonList } from '~/hooks/usePokemonList';
 
 // ✅ COMPOSANT DE GRILLE VIRTUALISÉE OPTIMISÉ
@@ -60,7 +61,7 @@ const PokemonGrid = memo(({
   }
 
   return (
-    <VirtualizedGrid
+    <LazyVirtualizedGrid
       items={pokemon}
       itemHeight={280} // Hauteur des cartes compact
       containerHeight={600} // Hauteur du container
@@ -224,7 +225,6 @@ export default function ModernPokemonIndex() {
     initialSearchFilter: currentFilters?.search || '',
     initialTypeFilter: currentFilters?.type || '',
     onError: (error) => {
-      console.error('❌ Erreur Pokémon:', error);
     }
   });
 

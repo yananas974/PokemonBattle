@@ -34,7 +34,6 @@ export const loader = withAuthLoader(async (user, request, params) => {
       canStartBattle: !!(selectedPlayerTeam && selectedEnemyTeam)
     });
   } catch (error) {
-    console.error('Erreur lors du chargement des équipes:', error);
     return Response.json({
       user,
       teams: [],
@@ -96,7 +95,6 @@ export const action = withAuthAction(async (user, request, params) => {
         }, { status: 400 });
     }
   } catch (error: any) {
-    console.error('Erreur dans l\'action de combat:', error);
     return Response.json({
       success: false,
       error: error.message || 'Erreur lors de l\'action'

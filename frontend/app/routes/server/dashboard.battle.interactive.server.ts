@@ -14,7 +14,6 @@ export const loader = async ({ request }: { request: Request }) => {
   const playerTeamId = url.searchParams.get('playerTeamId');
   const enemyTeamId = url.searchParams.get('enemyTeamId');
 
-  console.log('🔐 Loader: Utilisateur authentifié:', user);
   
   try {
     if (battleId) {
@@ -52,23 +51,16 @@ export const loader = async ({ request }: { request: Request }) => {
       });
     }
 
-    console.log('🚀 Tentative d\'initialisation du combat:', { playerTeamId, enemyTeamId });
     
     const initResponse = await interactiveBattleService.initBattle({
       playerTeamId: parseInt(playerTeamId),
       enemyTeamId: parseInt(enemyTeamId)
     }, user.backendToken);
 
-    console.log('📦 Réponse de l\'API:', initResponse);
 
-    const battleData = initResponse.data?.battle || initResponse.battle;
-    console.log('⚔️ Données de combat extraites:', battleData);
+    const battleData = initResponse.battle || (initResponse as any).data?.battle;
     
     if (initResponse.success === true && battleData && typeof battleData === 'object') {
-      console.log('✅ Combat initialisé avec succès, chargement de l\'interface');
-      console.log('🎮 Battle ID:', battleData.battleId);
-      console.log('👤 Pokémon joueur:', battleData.playerPokemon?.name_fr);
-      console.log('🤖 Pokémon ennemi:', battleData.enemyPokemon?.name_fr);
       
       return Response.json({
         user,
@@ -80,10 +72,8 @@ export const loader = async ({ request }: { request: Request }) => {
       });
     }
 
-    console.log('❌ Échec de l\'initialisation:', initResponse.error || 'Données de combat manquantes');
     
     const errorMessage = initResponse.error || initResponse.message || 'Erreur lors de l\'initialisation du combat';
-    console.error('🚨 ERREUR FINALE:', errorMessage);
     
     return Response.json({
       user,
@@ -100,7 +90,6 @@ export const loader = async ({ request }: { request: Request }) => {
     });
 
   } catch (error) {
-    console.error('🚨 ERREUR DANS LE LOADER:', error);
     
     const errorDetails = {
       type: error instanceof Error ? error.constructor.name : typeof error,
@@ -110,7 +99,6 @@ export const loader = async ({ request }: { request: Request }) => {
       url: request.url
     };
     
-    console.error('🚨 DÉTAILS COMPLETS DE L\'ERREUR:', errorDetails);
     
     return Response.json({
       user,
@@ -122,98 +110,108 @@ export const loader = async ({ request }: { request: Request }) => {
     }, { status: 200 });
   } 
 };
-
 export const action = async ({ request }: { request: Request }) => {
-  console.log('🎯 === ACTION REMIX BRUTE APPELÉE ===');
-  console.log('🌐 Request method:', request.method);
-  console.log('🌐 Request URL:', request.url);
   
-  const { getUserFromSession } = await import('~/sessions.server');
-  const { user } = await getUserFromSession(request);
-  
-  if (!user) {
-    console.log('❌ User non authentifié dans action');
-    return Response.json({ success: false, error: 'Non autorisé' }, { status: 401 });
-  }
-  
-  console.log('🔐 User dans action:', { id: user.id, username: user.username, hasBackendToken: !!user.backendToken });
-  
-  const formData = await request.formData();
-  const battleId = formData.get('battleId') as string;
-  const moveIndex = formData.get('moveIndex') as string;
-  const intent = formData.get('intent') as string;
-  const answer = formData.get('answer') as string;
-  const token = user.backendToken;
-  
-  console.log('📦 Action Remix - FormData reçue:', {
-    battleId,
-    moveIndex,
-    intent,
-    answer,
-    hasToken: !!token,
-    url: request.url,
-    method: request.method
-  });
-  
-  console.log('📋 FormData complète:', Object.fromEntries(formData.entries()));
-
   try {
-    if (intent === 'forfeit') {
-      const response = await interactiveBattleService.forfeitBattle(battleId, token);
-      return Response.json(response);
-    } else if (intent === 'hack' && answer) {
-      const response = await interactiveBattleService.solveHackChallenge(battleId, answer, token);
-      return Response.json(response);
-    } else if (moveIndex) {
-      console.log('🎯 Action Remix: Exécution de l\'attaque', { battleId, moveIndex });
-      console.log('🌐 Backend URL:', process.env.BACKEND_URL || 'http://localhost:3001');
-      console.log('🔑 Token présent:', !!token);
-      
-      // ✅ Appel direct au backend au lieu de passer par le service frontend
-      try {
-        const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
-        const requestBody = {
-          battleId,
-          moveIndex: parseInt(moveIndex)
-        };
+    const formData = await request.formData();
+    const intent = formData.get('intent') as string;
+    const battleId = formData.get('battleId') as string;
+    
+    
+    // Import dynamique pour éviter l'import côté client
+    const { apiCallServer } = await import('~/utils/api.server');
+    const { getUserFromSession } = await import('~/sessions.server');
+    
+    // Vérifier l'authentification
+    const { user } = await getUserFromSession(request);
+    if (!user) {
+      return Response.json({
+        success: false,
+        error: 'Non autorisé'
+      });
+    }
+    
+    
+    // Router selon le type d'action
+    switch (intent) {
+      case 'attack': {
+        const moveIndex = formData.get('moveIndex') as string;
         
-        console.log('📤 Envoi vers backend:', { url: `${backendUrl}/api/interactive-battle/move`, body: requestBody });
-        
-        const apiResponse = await fetch(`${backendUrl}/api/interactive-battle/move`, {
+        const response = await apiCallServer('/api/interactive-battle/move', request, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(requestBody)
+          body: JSON.stringify({
+            battleId,
+            moveIndex: parseInt(moveIndex)
+          })
         });
         
-        console.log('📊 Réponse backend status:', apiResponse.status, apiResponse.statusText);
+        const data = await response.json();
         
-        if (!apiResponse.ok) {
-          const errorText = await apiResponse.text();
-          console.error('❌ Erreur backend:', { status: apiResponse.status, text: errorText });
-          throw new Error(`Backend API error: ${apiResponse.status} - ${errorText}`);
+        // ✅ Si après l'attaque du joueur, c'est le tour de l'ennemi, 
+        // attendre un peu puis récupérer l'état mis à jour
+        if (data.success && data.data?.battle?.currentTurn === 'enemy') {
+          
+          // Attendre que l'ennemi attaque automatiquement (0.7s pour être sûr que le backend a terminé)
+          await new Promise(resolve => setTimeout(resolve, 700));
+          
+          // Récupérer l'état mis à jour
+          const statusResponse = await apiCallServer(`/api/interactive-battle/${battleId}`, request, {
+            method: 'GET'
+          });
+          
+          const statusData = await statusResponse.json();
+          
+          if (statusData.success && statusData.data?.battle) {
+            // Retourner l'état mis à jour au lieu de l'état initial
+            return Response.json(statusData);
+          }
         }
         
-        const response = await apiResponse.json();
-        console.log('📦 Action Remix: Réponse reçue du backend:', response);
-        console.log('✅ Action Remix: Renvoi de la réponse au client');
+        return Response.json(data);
+      }
+      
+      case 'hack': {
+        const answer = formData.get('answer') as string;
         
-        return Response.json(response);
-      } catch (error) {
-        console.error('❌ Action Remix: Erreur appel backend:', error);
+        const response = await apiCallServer('/api/interactive-battle/solve-hack', request, {
+          method: 'POST',
+          body: JSON.stringify({
+            battleId,
+            answer
+          })
+        });
+        
+        const data = await response.json();
+        return Response.json(data);
+      }
+      
+      case 'forfeit': {
+        
+        const response = await apiCallServer(`/api/interactive-battle/${battleId}/forfeit`, request, {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        return Response.json(data);
+      }
+      
+      case 'get-status': {
+        
+        const response = await apiCallServer(`/api/interactive-battle/${battleId}`, request, {
+          method: 'GET'
+        });
+        
+        const data = await response.json();
+        return Response.json(data);
+      }
+      
+      default:
         return Response.json({
           success: false,
-          error: error instanceof Error ? error.message : 'Erreur lors de l\'appel backend'
+          error: `Action non reconnue: ${intent}`
         });
-      }
     }
-
-    return Response.json({
-      success: false,
-      error: 'Action non reconnue'
-    });
+    
   } catch (error) {
     return Response.json({
       success: false,

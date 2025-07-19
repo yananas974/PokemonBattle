@@ -17,23 +17,61 @@ export class WeatherDetectionService {
       const currentHour = new Date().getHours();
       const isNight = currentHour < 6 || currentHour > 18;
       
-      // Mapper la condition OpenWeatherMap vers nos conditions
+      // Utiliser le même système de mapping que dans weather.handler.ts
       const description = weatherData.description.toLowerCase();
       
-      if (description.includes('clear') || description.includes('dégagé')) {
-        weatherCondition = isNight ? 'ClearNight' : 'ClearDay';
-      } else if (description.includes('rain') || description.includes('pluie')) {
-        weatherCondition = 'Rain';
-      } else if (description.includes('snow') || description.includes('neige')) {
-        weatherCondition = 'Snow';
-      } else if (description.includes('storm') || description.includes('orage')) {
-        weatherCondition = 'Thunderstorm';
-      }
+      const conditionMapping: Record<string, string> = {
+        'ciel dégagé': isNight ? 'ClearNight' : 'ClearDay',
+        'clear sky': isNight ? 'ClearNight' : 'ClearDay',
+        'quelques nuages': 'Clouds',
+        'few clouds': 'Clouds',
+        'nuageux': 'Clouds',
+        'cloudy': 'Clouds',
+        'nuages épars': 'Clouds', 
+        'scattered clouds': 'Clouds',
+        'nuages fragmentés': 'Clouds',
+        'broken clouds': 'Clouds',
+        'couvert': 'Clouds',
+        'overcast clouds': 'Clouds',
+        'légère pluie': 'Rain',
+        'light rain': 'Rain',
+        'bruine légère': 'Rain',
+        'light drizzle': 'Rain',
+        'bruine': 'Rain',
+        'drizzle': 'Rain',
+        'pluie modérée': 'Rain',
+        'moderate rain': 'Rain',
+        'forte pluie': 'Rain',
+        'heavy intensity rain': 'Rain',
+        'neige': 'Snow',
+        'snow': 'Snow',
+        'orage': 'Thunderstorm',
+        'thunderstorm': 'Thunderstorm'
+      };
+      
+      weatherCondition = conditionMapping[description] || (isNight ? 'ClearNight' : 'ClearDay');
+      
+      console.log(`🌤️ Mapping météo: "${description}" -> "${weatherCondition}"`)
       
       const weatherEffects = WeatherEffectService.getWeatherEffectByCondition(weatherCondition);
       const timeBonus = WeatherEffectService.calculateTimeBonus();
       
-      return { weatherEffects, timeBonus, weatherCondition };
+      return { 
+        weatherEffects, 
+        timeBonus, 
+        weatherCondition,
+        // Ajouter les données complètes de l'API météo
+        weatherData: {
+          condition: weatherCondition,
+          description: weatherData.description,
+          icon: weatherData.icon,
+          location: weatherData.location,
+          country: weatherData.country,
+          temperature: weatherData.temperature,
+          humidity: weatherData.humidity,
+          windSpeed: weatherData.windSpeed
+        }
+      };
     });
   }
 
@@ -46,7 +84,21 @@ export class WeatherDetectionService {
     } catch (error) {
       const weatherEffects = WeatherEffectService.getWeatherEffectByCondition('ClearDay');
       const timeBonus = WeatherEffectService.calculateTimeBonus();
-      return { weatherEffects, timeBonus, weatherCondition: 'ClearDay' };
+      return { 
+        weatherEffects, 
+        timeBonus, 
+        weatherCondition: 'ClearDay',
+        weatherData: {
+          condition: 'ClearDay',
+          description: 'Temps ensoleillé',
+          icon: '01d',
+          location: 'Inconnu',
+          country: 'FR',
+          temperature: 20,
+          humidity: 50,
+          windSpeed: 10
+        }
+      };
     }
   }
 } 

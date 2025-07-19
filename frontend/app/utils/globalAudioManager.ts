@@ -6,6 +6,8 @@ class GlobalAudioManager {
   private isInitialized: boolean = false;
   private autoplayBlocked: boolean = false;
   private pendingTrack: string | null = null;
+  private unlockHandlers: (() => void)[] = [];
+  private audioEventHandlers: Map<string, () => void> = new Map();
 
   private constructor() {
     // Singleton
@@ -26,31 +28,70 @@ class GlobalAudioManager {
     this.currentAudio.loop = true;
     this.currentAudio.volume = this.volume;
     
+    // ✅ Gérer les événements audio pour éviter les memory leaks
+    this.setupAudioEventHandlers();
+    
     // Écouter les événements d'interaction utilisateur pour débloquer l'autoplay
     this.setupAutoplayUnlock();
     
-    console.log('🎵 Audio Manager initialisé');
     this.isInitialized = true;
+  }
+
+  // ✅ Configuration des event handlers avec cleanup
+  private setupAudioEventHandlers() {
+    if (!this.currentAudio) return;
+
+    // Event handlers avec cleanup automatique
+    const onEnded = () => {
+      // Redémarrer la piste si elle se termine (backup pour loop)
+      if (this.currentAudio && this.currentTrack) {
+        this.currentAudio.currentTime = 0;
+        this.currentAudio.play().catch(() => {
+          this.autoplayBlocked = true;
+        });
+      }
+    };
+
+    const onError = () => {
+      this.currentTrack = null;
+      this.autoplayBlocked = true;
+    };
+
+    // Stocker les handlers pour pouvoir les supprimer
+    this.audioEventHandlers.set('ended', onEnded);
+    this.audioEventHandlers.set('error', onError);
+
+    this.currentAudio.addEventListener('ended', onEnded);
+    this.currentAudio.addEventListener('error', onError);
   }
 
   private setupAutoplayUnlock() {
     const unlockAudio = () => {
       if (this.currentAudio && this.autoplayBlocked && this.pendingTrack) {
-        console.log('🔓 Déblocage audio suite à interaction utilisateur');
-        this.currentAudio.play().catch(console.warn);
         this.autoplayBlocked = false;
         this.pendingTrack = null;
         
-        // Retirer les listeners une fois débloqué
-        document.removeEventListener('click', unlockAudio);
-        document.removeEventListener('keydown', unlockAudio);
-        document.removeEventListener('touchstart', unlockAudio);
+        // ✅ Retirer TOUS les listeners de unlock
+        this.removeUnlockListeners();
       }
     };
 
-    document.addEventListener('click', unlockAudio);
-    document.addEventListener('keydown', unlockAudio);
-    document.addEventListener('touchstart', unlockAudio);
+    // ✅ Stocker les handlers pour pouvoir les supprimer
+    this.unlockHandlers = [unlockAudio];
+
+    document.addEventListener('click', unlockAudio, { passive: true });
+    document.addEventListener('keydown', unlockAudio, { passive: true });
+    document.addEventListener('touchstart', unlockAudio, { passive: true });
+  }
+
+  // ✅ Méthode pour supprimer les listeners de unlock
+  private removeUnlockListeners() {
+    this.unlockHandlers.forEach(handler => {
+      document.removeEventListener('click', handler);
+      document.removeEventListener('keydown', handler);
+      document.removeEventListener('touchstart', handler);
+    });
+    this.unlockHandlers = [];
   }
 
   async switchTrack(src: string, trackName: string) {
@@ -59,13 +100,9 @@ class GlobalAudioManager {
 
     // Si c'est déjà la même piste, ne rien faire
     if (this.currentTrack === trackName && !this.autoplayBlocked) {
-      console.log(`🎵 Piste "${trackName}" déjà en cours (${src})`);
       return;
     }
 
-    console.log(`🎵 Changement audio:`);
-    console.log(`  - Ancien: ${this.currentTrack}`);
-    console.log(`  - Nouveau: ${trackName} (${src})`);
 
     // Changer la source et relancer
     this.currentAudio.src = src;
@@ -73,18 +110,13 @@ class GlobalAudioManager {
 
     try {
       await this.currentAudio.play();
-      console.log(`✅ Lecture démarrée: ${trackName} - ${src}`);
       this.autoplayBlocked = false;
     } catch (error) {
       const err = error as Error;
       if (err.name === 'NotAllowedError') {
-        console.warn('🔒 Autoplay bloqué par le navigateur - interaction utilisateur requise');
-        console.warn('   Cliquez n\'importe où pour démarrer l\'audio');
         this.autoplayBlocked = true;
         this.pendingTrack = trackName;
       } else {
-        console.warn('❌ Erreur lecture audio:', error);
-        console.warn(`   Fichier: ${src}`);
       }
     }
   }
@@ -97,7 +129,6 @@ class GlobalAudioManager {
 
   resume() {
     if (this.currentAudio) {
-      this.currentAudio.play().catch(console.warn);
     }
   }
 
@@ -134,6 +165,40 @@ class GlobalAudioManager {
 
   getPendingTrack(): string | null {
     return this.pendingTrack;
+  }
+
+  // ✅ Méthode de destruction complète pour éviter les memory leaks
+  destroy() {
+    // Arrêter l'audio
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio.src = '';
+      
+      // Supprimer tous les event handlers audio
+      this.audioEventHandlers.forEach((handler, event) => {
+        this.currentAudio?.removeEventListener(event, handler);
+      });
+      this.audioEventHandlers.clear();
+      
+      this.currentAudio = null;
+    }
+
+    // Supprimer les listeners de unlock
+    this.removeUnlockListeners();
+
+    // Reset de l'état
+    this.currentTrack = null;
+    this.pendingTrack = null;
+    this.isInitialized = false;
+    this.autoplayBlocked = false;
+  }
+
+  // ✅ Méthode de cleanup pour les changements de page
+  cleanup() {
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+    }
+    this.removeUnlockListeners();
   }
 }
 

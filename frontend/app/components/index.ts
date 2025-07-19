@@ -1,31 +1,32 @@
 // 🎨 POKEMON BATTLE COMPONENT SYSTEM
-// Modern component architecture with backward compatibility
+// Modern component architecture with logical organization
 
-// ===== CORE COMPONENTS (Existing) =====
-export { StatusIndicator } from './StatusIndicator';
-export { VintageCard } from './VintageCard';
-export { VintageButton } from './VintageButton';
-export { VintageTitle } from './VintageTitle';
-export { default as QuickActionsNavbar } from './QuickActionsNavbar';
-export { PokemonAudioPlayer } from './PokemonAudioPlayer';
+// ===== LAYOUT COMPONENTS =====
+export * from './layout';
 
-// ===== MODERN COMPONENTS =====
-export { ModernDashboard } from './ModernDashboard';
-export { ModernPokemonCard } from './ModernPokemonCard';
-export { VirtualizedGrid } from './VirtualizedGrid';
+// ===== DASHBOARD COMPONENTS =====
+export * from './dashboard';
+
+// ===== POKEMON COMPONENTS =====
+export * from './pokemon';
 
 // ===== BATTLE COMPONENTS =====
-export { HealthBar } from './HealthBar';
-export { MoveSelector } from './MoveSelector';
-export { BattleLog } from './BattleLog';
-export { InteractiveBattle } from './InteractiveBattle';
-export { BattleResultModal } from './BattleResultModal';
-export { HackChallengeModal } from './HackChallengeModal';
+export * from './battle';
 
-// ===== UTILITY COMPONENTS =====
-export { PokemonSprite } from './PokemonSprite';
-export { WeatherEffect } from './WeatherEffect';
-export { default as SimplePokemonParticles } from './SimplePokemonParticles';
+// ===== MODAL COMPONENTS =====
+export * from './modals';
 
-// ===== DEFAULT EXPORTS =====
-export { default as NavbarSpacer } from './NavbarSpacer';
+// ===== FEEDBACK COMPONENTS =====
+export * from './feedback';
+
+// ===== EFFECTS COMPONENTS =====
+export * from './effects';
+
+// ===== AUDIO COMPONENTS =====
+export * from './audio';
+
+// ===== NAVIGATION COMPONENTS =====
+export * from './navigation';
+
+// ===== UI COMPONENTS =====
+export * from './ui';

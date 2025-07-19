@@ -18,10 +18,12 @@ export {
   BATTLE_CONSTANTS,
   DEFAULT_MOVE,
   POKEMON_STATUS,
-  BATTLE_PHASES as BATTLE_PHASE_CONSTANTS,
   BATTLE_TEAMS,
   ACTION_SOURCES
 } from './constants/battles.js';
+
+// ✅ EXPORT BATTLE_PHASES depuis enums pour rétrocompatibilité
+export { BattlePhase as BATTLE_PHASES, BattlePhase as BATTLE_PHASE_CONSTANTS } from './enums/index.js';
 
 // ✅ EXPORTS UTILITAIRES
 export * from './utils/battleHelpers.js';

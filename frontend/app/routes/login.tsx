@@ -50,9 +50,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         email
       }, { status: 400 });
     }
+    console.log('🔍 Login data:', loginData);
     
-    // ✅ Authentification
-    const authResponse: AuthResponse = await authService.login(loginData);
+    // ✅ Authentification avec architecture propre
+    const authResponse: AuthResponse = await authService.loginWithRequest(loginData, request);
     
     if (!authResponse.success || !authResponse.user) {
       return json({
@@ -62,11 +63,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }, { status: 401 });
     }
 
-    // ✅ Créer session et rediriger
+    // ✅ Créer session et rediriger avec token backend
     return createUserSession(
       authResponse.user.id.toString(),
       authResponse.user,
-      redirectTo
+      redirectTo,
+      authResponse.user.backendToken
     );
 
   } catch (error: any) {
@@ -86,7 +88,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }, { status: 400 });
     }
 
-    console.error('Login error:', error);
     
     return json({
       errors: { 

@@ -6,14 +6,10 @@ import { withAuthAction } from '~/utils/withAuthAction';
 
 export const loader = withAuthLoader(async (user, request, params) => {   
   try {
-    console.log('🔍 Chargement des équipes pour l\'utilisateur:', user.id);
-    console.log('🔍 User object:', user);
     
     const teamsResponse = await teamService.getMyTeams(request);
-    console.log('📦 Réponse du service teams:', teamsResponse);
 
     if (!teamsResponse || !teamsResponse.success) {
-      console.error('❌ Échec du chargement des équipes:', teamsResponse);
       
       return {
         user,
@@ -23,17 +19,17 @@ export const loader = withAuthLoader(async (user, request, params) => {
       };
     }
 
-    console.log('✅ Équipes chargées avec succès:', teamsResponse.teams?.length || 0, 'équipes');
     
     return {
       user,
       teams: teamsResponse.teams || [],
+      totalCount: teamsResponse.totalCount || 0,
+      maxTeamsPerUser: 10, // Vous pouvez ajuster cette valeur selon vos besoins
       status: 'success' as const,
       message: 'Équipes chargées avec succès'
     };
 
   } catch (error) {
-    console.error('💥 Erreur dans le loader des équipes:', error);
 
     return {
       user,
@@ -59,7 +55,6 @@ export const action = withAuthAction(async (user, request, params) => {
         return redirect(`/dashboard/teams?error=${encodeURIComponent(result.error || 'Erreur lors de la suppression')}`);
       }
     } catch (error) {
-      console.error('Erreur lors de la suppression de l\'équipe:', error);
       return redirect('/dashboard/teams?error=delete-failed');
     }
   }

@@ -23,9 +23,7 @@ class AudioManager {
         this.fadeIn(audio, this.volume, 2000);
       }
       
-      console.log(`🎵 Lecture: ${src}`);
     } catch (error) {
-      console.warn('Erreur lecture audio:', error);
     }
   }
 
@@ -34,7 +32,6 @@ class AudioManager {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
       this.currentAudio = null;
-      console.log('🔇 Audio arrêté');
     }
   }
 

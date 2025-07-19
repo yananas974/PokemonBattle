@@ -175,7 +175,6 @@ export default function FriendTeams() {
     friendId: friend.id,
   });
 
-  console.log('🎯 Component data:', { friend, teams: friendTeams?.length, canViewTeams, error });
 
   if (error) {
     return (

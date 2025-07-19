@@ -1,19 +1,16 @@
 import { useLoaderData, Form } from '@remix-run/react';
 import type { TeamWithPokemon, LoaderTeamsListData } from '@pokemon-battle/shared';
-import {
-  VintageCard,
-  VintageButton,
-  StatusIndicator,
-} from '~/components';
+import { StatusIndicator } from '~/components/battle/StatusIndicator';
 import { ModernButton } from '~/components/ui/ModernButton';
-import { ModernPokemonCard } from '~/components/ModernPokemonCard';
+import { ModernPokemonCard } from '~/components/pokemon/ModernPokemonCard';
+import { ModernCard } from '~/components/ui/ModernCard';
+import { PokemonInTeam } from '@pokemon-battle/shared';
 
 
 export { loader, action } from './server/dashboard.teams._index.server';
 
 export default function ModernTeamsIndex() {
   const data = useLoaderData<LoaderTeamsListData | null>();
-  console.log('🔍 Données reçues dans le composant:', data);
   
   if (!data || !data.teams) {
     return (
@@ -28,23 +25,23 @@ export default function ModernTeamsIndex() {
   return (
     <>
       {/* Statistiques rapides */}
-      <VintageCard variant="glass" className="mb-6">
+      <ModernCard variant="glass" className="mb-6">
         <div className="p-4">
           <div className="text-white opacity-75 text-lg">
             {teams.length} équipe{teams.length !== 1 ? 's' : ''} disponible{teams.length !== 1 ? 's' : ''}
           </div>
         </div>
-      </VintageCard>
+      </ModernCard>
 
       {/* Liste des équipes ou message vide */}
       {teams.length === 0 ? (
-        <VintageCard variant="glass" className="text-center py-16">
+        <ModernCard variant="glass" className="text-center py-16">
           <div className="text-8xl mb-6 opacity-50">👥</div>
           <h3 className="text-4xl font-bold text-white mb-4">Aucune équipe créée</h3>
           <p className="text-xl text-white opacity-75 mb-8 max-w-md mx-auto">
             Créez votre première équipe pour commencer vos aventures Pokémon et affronter d'autres dresseurs
           </p>
-          <VintageButton
+          <ModernButton
             variant="pokemon"
             href="/dashboard/teams/create"
             size="xl"
@@ -52,10 +49,10 @@ export default function ModernTeamsIndex() {
           >
             <span>➕</span>
             <span>Créer ma première équipe</span>
-          </VintageButton>
-        </VintageCard>
+          </ModernButton>
+        </ModernCard>
       ) : (
-        <VintageCard variant="glass">
+        <ModernCard variant="glass">
           <h2 className="text-3xl font-bold text-white mb-6 flex items-center space-x-3">
             <span>🏆</span>
             <span>Mes Équipes ({teams.length})</span>
@@ -79,19 +76,19 @@ export default function ModernTeamsIndex() {
                   {/* Pokémon de l'équipe - Version optimisée */}
                   <div className="grid grid-cols-3 gap-2 mb-4">
                     {Array.from({ length: 6 }).map((_, index) => {
-                      const pokemon = team.pokemon?.[index];
+                      const pokemonInTeam = team.pokemon?.[index] as unknown as PokemonInTeam;
                       return (
                         <div
                           key={index}
                           className="aspect-square bg-white bg-opacity-10 rounded-lg flex items-center justify-center overflow-hidden"
                         >
-                          {pokemon ? (
+                          {pokemonInTeam ? (
                             <div className="w-full h-full scale-75">
                               <ModernPokemonCard
-                                pokemon={pokemon}
+                                pokemon={pokemonInTeam}
                                 variant="compact"
                                 showStats={false}
-                                onClick={() => window.location.href = `/dashboard/pokemon/${pokemon.id}`}
+                                onClick={() => window.location.href = `/dashboard/pokemon/${pokemonInTeam.pokemon_id}`}
                               />
                             </div>
                           ) : (
@@ -145,9 +142,9 @@ export default function ModernTeamsIndex() {
                 </div>
               ))}
             </div>
-          </VintageCard>
+          </ModernCard>
         )}
-      </div>
+        </>
     
   );
 }

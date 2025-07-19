@@ -22,18 +22,15 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   }
 
   try {
-    console.log('🔄 Chargement des équipes pour l\'ami ID:', friendIdNumber);
     
     // Récupérer les informations de l'ami
     const friendsResponse = await friendshipService.getFriends(request);
-    console.log('✅ Friends response:', friendsResponse);
     
     const friendData = friendsResponse?.data?.friends?.find(f => 
       f.friend?.id === friendIdNumber
     );
 
     if (!friendData) {
-      console.error('❌ Ami non trouvé dans la liste:', friendIdNumber);
       return Response.json({
         user,
         friend: { 
@@ -50,14 +47,11 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     }
 
     const friend = friendData.friend!;
-    console.log('✅ Ami trouvé:', friend);
 
     // Récupérer les équipes de l'ami
     const teamsResponse = await friendshipService.getFriendTeams(friendIdNumber, request);
-    console.log('🔍 Teams response structure:', JSON.stringify(teamsResponse, null, 2));
     
     const teams = teamsResponse?.data || [];
-    console.log('✅ Teams extracted:', teams);
 
     return Response.json({
       user,
@@ -66,7 +60,6 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       canViewTeams: true
     });
   } catch (error) {
-    console.error('❌ Erreur lors du chargement des équipes:', error);
     return Response.json({
       user,
       friend: { 

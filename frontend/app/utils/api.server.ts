@@ -3,12 +3,9 @@ import { getBackendTokenFromSession } from '~/sessions.server';
 // ✅ Version serveur uniquement de la fonction API
 export const getTokenFromSession = async (request: Request): Promise<string | null> => {
   try {
-    console.log('🔍 Récupération token depuis session...');
     const token = await getBackendTokenFromSession(request);
-    console.log('🔑 Token récupéré:', token ? token.substring(0, 20) + '...' : 'AUCUN');
     return token && token !== 'undefined' && token !== 'null' ? token : null;
   } catch (error) {
-    console.log('⚠️ Impossible de récupérer le token de la session:', error);
     return null;
   }
 };
@@ -38,22 +35,14 @@ export const apiCallServer = async (
     ...options,
   };
 
-  console.log('🌐 API Call Server to:', url);
-  console.log('🔧 Environment BACKEND_URL:', process.env.BACKEND_URL);
   if (token) {
-    console.log('🔑 Token serveur envoyé:', token.substring(0, 20) + '...');
   } else {
-    console.log('❌ Aucun token serveur disponible');
   }
   
   try {
     const response = await fetch(url, defaultOptions);
-    console.log('✅ API Server Response status:', response.status);
     return response;
   } catch (error) {
-    console.error('❌ Fetch error:', error);
-    console.error('🌐 URL tentée:', url);
-    console.error('📦 Options:', defaultOptions);
     throw error;
   }
 };

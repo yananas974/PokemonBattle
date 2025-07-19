@@ -198,19 +198,14 @@ export default function BattleHub() {
   // Utilisation du hook useBattleHub
   const battleHub = useBattleHub({
     onTeamSelected: (team) => {
-      console.log('🛡️ Équipe sélectionnée:', team);
     },
     onEnemySelected: (enemy) => {
-      console.log('⚔️ Adversaire sélectionné:', enemy);
     },
     onBattleModeSelected: (mode) => {
-      console.log('🎮 Mode de combat sélectionné:', mode);
     },
     onBattleReady: (selectedTeam, enemyTeam, mode) => {
-      console.log('🚀 Prêt pour le combat:', { selectedTeam, enemyTeam, mode });
     },
     onError: (error) => {
-      console.error('❌ Erreur du hub de combat:', error);
     }
   });
 

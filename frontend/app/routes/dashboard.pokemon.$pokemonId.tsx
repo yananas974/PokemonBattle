@@ -2,9 +2,6 @@ import type { MetaFunction } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import { useEffect } from 'react';
 import type { Pokemon } from '@pokemon-battle/shared';
-import { 
-  VintageCard, 
-} from '~/components';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
 import { useGlobalAudio } from '~/hooks/useGlobalAudio';
@@ -88,7 +85,7 @@ const PokemonHeader = ({
   if (!pokemonInfo) return null;
 
   return (
-    <VintageCard variant="glass" className="mb-8 overflow-hidden">
+    <ModernCard variant="glass" className="mb-8 overflow-hidden">
       <div className={cn('bg-gradient-to-br', typeGradient, 'p-8 -m-8 mb-6')}>
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-10">
@@ -147,7 +144,7 @@ const PokemonHeader = ({
           </div>
         </div>
       </div>
-    </VintageCard>
+    </ModernCard>
   );
 };
 
@@ -174,7 +171,7 @@ const PokemonStats = ({
   if (!stats) return null;
 
   return (
-    <VintageCard variant="glass">
+    <ModernCard variant="glass">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-3xl font-bold text-white flex items-center space-x-3">
           <span>📊</span>
@@ -278,7 +275,7 @@ const PokemonStats = ({
           )}
         </>
       )}
-    </VintageCard>
+    </ModernCard>
   );
 };
 
@@ -293,7 +290,7 @@ const PokemonInfo = ({
   if (!pokemonInfo) return null;
 
   return (
-    <VintageCard variant="glass">
+    <ModernCard variant="glass">
       <h3 className="text-2xl font-bold text-white mb-4 flex items-center space-x-2">
         <span>ℹ️</span>
         <span>Informations</span>
@@ -319,7 +316,7 @@ const PokemonInfo = ({
       </div>
 
      
-    </VintageCard>
+    </ModernCard>
   );
 };
 
@@ -372,10 +369,8 @@ export default function ModernPokemonDetail() {
     initialPokemon,
     initialError,
     onPokemonLoad: (pokemon) => {
-      console.log('🎮 Pokémon chargé:', pokemon);
     },
     onError: (error) => {
-      console.error('❌ Erreur Pokémon:', error);
     }
   });
 

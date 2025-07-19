@@ -1,4 +1,5 @@
 import { useReducer, useCallback } from 'react';
+import { Team, BattleResult } from '@pokemon-battle/shared';
 
 // Types pour les étapes de bataille
 export type BattleStep = 'team-selection' | 'mode-selection' | 'enemy-selection' | 'battle-ready' | 'battle-result';
@@ -6,14 +7,14 @@ export type BattleMode = 'team' | 'turnbased';
 
 // Types pour les actions
 export type BattleSimulationAction = 
-  | { type: 'SELECT_TEAM'; payload: any }
+  | { type: 'SELECT_TEAM'; payload: Team }
   | { type: 'SELECT_MODE'; payload: BattleMode }
-  | { type: 'SELECT_ENEMY'; payload: any }
+  | { type: 'SELECT_ENEMY'; payload: Team }
   | { type: 'SET_STEP'; payload: BattleStep }
   | { type: 'SET_WEATHER'; payload: boolean }
   | { type: 'SET_LOCATION'; payload: { lat: number; lon: number } | null }
   | { type: 'START_SIMULATION' }
-  | { type: 'SIMULATION_SUCCESS'; payload: any }
+  | { type: 'SIMULATION_SUCCESS'; payload: BattleResult }
   | { type: 'SIMULATION_ERROR'; payload: string }
   | { type: 'SHOW_RESULT_MODAL'; payload: boolean }
   | { type: 'RESET_BATTLE' }
@@ -22,13 +23,13 @@ export type BattleSimulationAction =
 // État de la simulation
 export interface BattleSimulationState {
   currentStep: BattleStep;
-  selectedTeam: any | null;
+  selectedTeam: Team | null;
   battleMode: BattleMode;
-  enemyTeam: any | null;
+  enemyTeam: Team | null;
   useWeather: boolean;
   location: { lat: number; lon: number } | null;
   isSimulating: boolean;
-  battleResult: any | null;
+  battleResult: BattleResult | null;
   showResultModal: boolean;
   error: string | null;
 }
@@ -156,10 +157,10 @@ function battleSimulationReducer(
 
 // Options pour le hook
 export interface UseBattleSimulationOptions {
-  initialTeam?: any;
-  initialEnemy?: any;
+  initialTeam?: Team;
+  initialEnemy?: Team;
   onSimulationStart?: () => void;
-  onSimulationEnd?: (result: any) => void;
+  onSimulationEnd?: (result: BattleResult) => void;
   onError?: (error: string) => void;
 }
 
@@ -189,7 +190,7 @@ export function useBattleSimulation(options: UseBattleSimulationOptions = {}) {
   const [state, dispatch] = useReducer(battleSimulationReducer, initialState);
 
   // Actions
-  const selectTeam = useCallback((team: any) => {
+  const selectTeam = useCallback((team: Team) => {
     dispatch({ type: 'SELECT_TEAM', payload: team });
   }, []);
 
@@ -197,7 +198,7 @@ export function useBattleSimulation(options: UseBattleSimulationOptions = {}) {
     dispatch({ type: 'SELECT_MODE', payload: mode });
   }, []);
 
-  const selectEnemy = useCallback((enemy: any) => {
+  const selectEnemy = useCallback((enemy: Team) => {
     dispatch({ type: 'SELECT_ENEMY', payload: enemy });
   }, []);
 
@@ -209,7 +210,7 @@ export function useBattleSimulation(options: UseBattleSimulationOptions = {}) {
     dispatch({ type: 'SET_LOCATION', payload: location });
   }, []);
 
-  const startSimulation = useCallback(async (simulationFn: () => Promise<any>) => {
+  const startSimulation = useCallback(async (simulationFn: () => Promise<BattleResult>) => {
     if (!state.selectedTeam || !state.enemyTeam) {
       const error = 'Équipes manquantes';
       dispatch({ type: 'SIMULATION_ERROR', payload: error });

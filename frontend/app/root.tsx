@@ -8,19 +8,33 @@ import {
   isRouteErrorResponse,
   useLocation,
 } from "@remix-run/react";
-import type { LinksFunction } from "@remix-run/node";
+import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { useEffect } from 'react';
+import { getSecurityHeaders, generateNonce } from '~/utils/security';
+import { preloader, shouldPreload } from '~/utils/preloader';
 import { globalAudio } from '~/utils/globalAudioManager';
 
 import "./tailwind.css";
 import "./styles/pokemon-modern.css";
 import { AudioProvider } from '~/contexts/AudioContext';
 import { ErrorProvider } from '~/contexts/ErrorContext';
-import { ErrorDisplay, GlobalErrorBoundary } from '~/components/ErrorDisplay';
-import QuickActionsNavbar from '~/components/QuickActionsNavbar';
-import NavbarSpacer from '~/components/NavbarSpacer';
-import SimplePokemonParticles from '~/components/SimplePokemonParticles';
+import { ErrorDisplay, GlobalErrorBoundary } from '~/components/feedback/ErrorDisplay';
+import QuickActionsNavbar from '~/components/layout/QuickActionsNavbar';
+import NavbarSpacer from '~/components/layout/NavbarSpacer';
+import SimplePokemonParticles from '~/components/effects/SimplePokemonParticles';
 import { useOptionalUser } from '~/hooks/useUser';
+
+// ✅ Loader avec headers de sécurité
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const nonce = generateNonce();
+  
+  return new Response(JSON.stringify({ nonce }), {
+    headers: {
+      'Content-Type': 'application/json',
+      ...getSecurityHeaders(nonce),
+    },
+  });
+};
 
 export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -93,6 +107,23 @@ export default function App() {
   useEffect(() => {
     globalAudio.initialize();
   }, []);
+
+  // ✅ Preloading intelligent basé sur la route
+  useEffect(() => {
+    if (!shouldPreload()) return;
+
+    const pathname = location.pathname;
+    
+    if (pathname.includes('/dashboard')) {
+      preloader.preloadForRoute('dashboard');
+    }
+    if (pathname.includes('/pokemon')) {
+      preloader.preloadForRoute('pokemon');
+    }
+    if (pathname.includes('/battle')) {
+      preloader.preloadForRoute('battle');
+    }
+  }, [location.pathname]);
 
   const shouldShowNavigation = location.pathname.startsWith('/dashboard');
 

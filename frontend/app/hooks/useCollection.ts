@@ -269,7 +269,6 @@ export function useTeamPokemon(initialPokemon: any[] = [], maxPokemon: number = 
     initialItems: initialPokemon,
     maxItems: maxPokemon,
     onError: (error) => {
-      console.error('Erreur équipe Pokémon:', error);
     }
   });
 } 

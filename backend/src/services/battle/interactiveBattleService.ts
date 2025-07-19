@@ -48,7 +48,8 @@ export class InteractiveBattleService {
     team2: any,
     weatherEffects: any,
     timeBonus: number,
-    playerId: number
+    playerId: number,
+    weatherData?: any
   ): Promise<InteractiveBattleState> {
     
     return serviceWrapper(async () => {
@@ -90,6 +91,7 @@ export class InteractiveBattleService {
         availableMoves,
         battleLog: [],
         weatherEffects,
+        weatherData,
         weatherTurns: 0,
         timeBonus,
         winner: null,
@@ -380,6 +382,8 @@ export class InteractiveBattleService {
       } else {
         // Pour les mauvaises réponses, on garde le hack actif mais on informe l'utilisateur
         const timeRemaining = formatTimeRemaining(timeElapsed, battleState.hackChallenge.time_limit);
+        
+        // NE PAS sauvegarder l'état - garder le hack actif
         return {
           success: false,
           message: `${HACK_CHALLENGE_MESSAGES.FAILURE} ${HACK_CHALLENGE_MESSAGES.TIME_REMAINING} ${timeRemaining}`,
@@ -406,6 +410,7 @@ export class InteractiveBattleService {
       battleState.battleLog.push(bonusAction);
     }
     
+    // Réinitialiser l'état hack seulement quand c'est résolu avec succès
     this.resetHackState(battleState);
   }
 
@@ -433,6 +438,7 @@ export class InteractiveBattleService {
       }
     }
     
+    // Réinitialiser l'état hack seulement pour les timeouts/abandons  
     this.resetHackState(battleState);
   }
 

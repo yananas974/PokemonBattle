@@ -87,7 +87,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }, { status: 400 });
     }
 
-    console.error('Register error:', error);
     
     return json({
       errors: { 
@@ -113,7 +112,7 @@ export default function Register() {
   const defaultUsername = actionData?.username || '';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen  flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       {/* Background effects */}
       <div className="absolute inset-0 bg-black bg-opacity-20" />
       

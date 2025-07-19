@@ -13,7 +13,6 @@ export const loader = withAuthLoader(async (user, request, params) => {
   }
   
   try {
-    console.log('🔍 Loader - Utilisateur connecté:', user);
     
     const [teamsResponse, pokemonResponse] = await Promise.all([
       teamService.getMyTeams(request),
@@ -52,7 +51,6 @@ export const loader = withAuthLoader(async (user, request, params) => {
     };
 
   } catch (error) {
-    console.error('Erreur dans le loader:', error);
     throw new Response('Erreur lors du chargement', { status: 500 });
   }
 });
@@ -69,7 +67,6 @@ export const action = withAuthAction(async (user, request, params) => {
     const intent = formData.get('intent') as string;
     const pokemonId = formData.get('pokemonId') as string;
     
-    console.log('🔍 Action reçue:', { intent, pokemonId, teamId });
     
     switch (intent) {
       case 'addPokemon':
@@ -77,7 +74,6 @@ export const action = withAuthAction(async (user, request, params) => {
           return Response.json({ error: 'ID Pokémon manquant' }, { status: 400 });
         }
         
-        console.log('➕ Ajout du Pokémon:', { teamId, pokemonId });
         
         const addResult = await teamService.addPokemonToTeam(
           parseInt(teamId),
@@ -101,7 +97,6 @@ export const action = withAuthAction(async (user, request, params) => {
           return Response.json({ error: 'ID Pokémon manquant' }, { status: 400 });
         }
         
-        console.log('➖ Suppression du Pokémon:', { teamId, pokemonId });
         
         const removeResult = await teamService.removePokemonFromTeam(
           parseInt(teamId),
@@ -125,7 +120,6 @@ export const action = withAuthAction(async (user, request, params) => {
     }
     
   } catch (error) {
-    console.error('Erreur lors de l\'action:', error);
     return Response.json({ 
       error: 'Une erreur est survenue lors de l\'opération' 
     }, { status: 500 });

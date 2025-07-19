@@ -1,4 +1,5 @@
 import { apiCallWithRequest, apiCall, handleApiError } from '~/utils/api';
+import { TeamWithPokemon } from '@pokemon-battle/shared';
 
 interface User {
   id: number;
@@ -155,7 +156,7 @@ export const friendshipService = {
   },
 
   // ✅ Récupérer les équipes d'un ami
-  async getFriendTeams(friendId: number, requestOrToken?: Request | string): Promise<{ success: boolean; message: string; data: any[] }> {
+  async getFriendTeams(friendId: number, requestOrToken?: Request | string): Promise<{ success: boolean; message: string; data: TeamWithPokemon[] }> {
     if (requestOrToken instanceof Request) {
       return makeApiCallServer(`/api/friends/teams/${friendId}`, requestOrToken);
     } else {

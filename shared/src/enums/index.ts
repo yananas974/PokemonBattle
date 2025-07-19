@@ -73,13 +73,17 @@ export enum BattleAction {
   FORFEIT = 'forfeit'
 }
 
-// ✅ ENUMS POUR LES PHASES DE COMBAT
+// ✅ ENUMS POUR LES PHASES DE COMBAT (unifié avec constants/battles.ts)
 export enum BattlePhase {
   INIT = 'init',
+  BATTLE = 'battle',
+  FINISHED = 'finished',
+  MOVE_SELECTION = 'move_selection',
+  MOVE_EXECUTION = 'move_execution',
+  SWITCH = 'switch',
   PLAYER_TURN = 'player_turn',
   ENEMY_TURN = 'enemy_turn',
-  HACK_CHALLENGE = 'hack_challenge',
-  FINISHED = 'finished'
+  HACK_CHALLENGE = 'hack_challenge'
 }
 
 // ✅ ENUMS POUR LES RÔLES UTILISATEUR

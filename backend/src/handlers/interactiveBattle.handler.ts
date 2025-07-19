@@ -94,7 +94,7 @@ const formatBattleState = (battleState: any): BattleResponseData => ({
   } : null,
   currentTurn: battleState.isHackActive ? 'hack' : (battleState.isPlayerTurn ? 'player' : 'enemy'),
   battleLog: battleState.battleLog || [],
-  weather: battleState.weatherEffects,
+  weather: battleState.weatherData || battleState.weatherEffects,
   isFinished: !!battleState.winner,
   winner: battleState.winner === 'team1' ? 'player' : 
          battleState.winner === 'team2' ? 'enemy' : 
@@ -139,7 +139,7 @@ export const interactiveBattleHandlers: InteractiveBattleHandler = {
     const team2 = prepareBattleTeam(enemyTeam);
     
     // Récupérer les effets météo
-    const { weatherEffects, timeBonus } = await WeatherDetectionService.detectWeatherEffects(lat, lon);
+    const { weatherEffects, timeBonus, weatherData } = await WeatherDetectionService.detectWeatherEffects(lat, lon);
     
     // Initialiser le combat
     const battleState = await InteractiveBattleService.initializeInteractiveBattle(
@@ -147,7 +147,8 @@ export const interactiveBattleHandlers: InteractiveBattleHandler = {
       team2,
       weatherEffects,
       timeBonus,
-      user.id
+      user.id,
+      weatherData
     );
     
     return c.json(formatInteractiveBattleResponse(BATTLE_MESSAGES.INITIALIZED, {

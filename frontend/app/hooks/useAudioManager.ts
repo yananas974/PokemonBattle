@@ -1,14 +1,42 @@
-// ❌ OBSOLÈTE - REMPLACÉ PAR useGlobalAudio
-// Ce hook est conservé pour compatibilité mais ne devrait plus être utilisé
-// Utilisez useGlobalAudio à la place
+import { useState, useEffect } from 'react';
+import { audioManager, AUDIO_TRACKS } from '~/utils/audioManager';
 
-import { useGlobalAudio } from './useGlobalAudio';
-
-/**
- * @deprecated Utilisez useGlobalAudio à la place
- * Ce hook redirige vers le nouveau système audio unifié
- */
 export function useAudioManager() {
-  console.warn('⚠️ useAudioManager est obsolète. Utilisez useGlobalAudio à la place.');
-  return useGlobalAudio();
-}
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolumeState] = useState(audioManager.getCurrentVolume());
+
+  useEffect(() => {
+    // Vérifier le statut toutes les secondes
+    const interval = setInterval(() => {
+      setIsPlaying(audioManager.isPlaying() || false);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const playDashboard = () => {
+    audioManager.playTrack(AUDIO_TRACKS.dashboard);
+  };
+
+  const playBattle = () => {
+    audioManager.playTrack(AUDIO_TRACKS.battle);
+  };
+
+  const stop = () => {
+    audioManager.stopCurrent();
+  };
+
+  const setVolume = (newVolume: number) => {
+    setVolumeState(newVolume);
+    audioManager.setVolume(newVolume);
+  };
+
+  return {
+    playDashboard,
+    playBattle,
+    stop,
+    setVolume,
+    isPlaying,
+    volume
+  };
+} 

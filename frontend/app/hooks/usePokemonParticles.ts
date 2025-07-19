@@ -37,9 +37,9 @@ export const usePokemonParticles = ({
   // Récupérer les Pokémon depuis l'API
   const fetchPokemon = useCallback(async () => {
     try {
-      console.log('🎮 usePokemonParticles: Récupération des Pokémon...');
       
-      const token = typeof window !== 'undefined' ? localStorage.getItem('backendToken') : null;
+      // Les tokens sont maintenant gérés côté serveur via les sessions sécurisées
+      const token = null;
       const response = await pokemonService.getAllPokemon(token || undefined);
       
       if (response.success && response.pokemon.length > 0) {
@@ -49,15 +49,12 @@ export const usePokemonParticles = ({
           !p.sprite_url.includes('null')
         );
         
-        console.log(`✅ ${validPokemon.length} Pokémon valides récupérés`);
         setPokemonPool(validPokemon);
         setError(null);
       } else {
-        console.error('❌ Aucun Pokémon récupéré');
         setError('Aucun Pokémon disponible');
       }
     } catch (error) {
-      console.error('❌ Erreur lors de la récupération des Pokémon:', error);
       setError('Erreur lors du chargement des Pokémon');
     } finally {
       setIsLoading(false);
@@ -97,9 +94,7 @@ export const usePokemonParticles = ({
         newParticles.push(createParticle(containerWidth, containerHeight));
       }
       setParticles(newParticles);
-      console.log(`✅ ${newParticles.length} particules initialisées`);
     } catch (error) {
-      console.error('❌ Erreur lors de l\'initialisation des particules:', error);
     }
   }, [pokemonPool, maxParticles, createParticle]);
 

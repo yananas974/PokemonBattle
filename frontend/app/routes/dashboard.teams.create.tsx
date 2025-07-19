@@ -6,7 +6,7 @@ import { useLoaderData, Link, Form, useActionData, useNavigation } from '@remix-
 import { useState } from 'react';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
-import { AppLink } from '~/components/AppLink';
+import { AppLink } from '~/components/navigation/AppLink';
 
 // Types pour les données
 interface LoaderData {

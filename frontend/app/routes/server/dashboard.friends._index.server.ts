@@ -2,7 +2,7 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from '@remix-run/node';
 import { redirect } from '@remix-run/node';
 import { getUserFromSession } from '~/sessions.server';
 import { friendshipService } from '~/services/friendshipService';
-import type { SendFriendRequestRequest, LoaderData, ActionData } from '@pokemon-battle/shared';
+import type { SendFriendRequestRequest } from '@pokemon-battle/shared';
 
 
 // Loader - Récupérer toutes les données d'amitié

@@ -4,7 +4,7 @@ import { Link, useLocation } from '@remix-run/react';
 import { ModernCard } from '~/components/ui/ModernCard';
 import { ModernButton } from '~/components/ui/ModernButton';
 import { useState, useEffect } from 'react';
-import { AppLink } from '~/components/AppLink';
+import { AppLink } from '~/components/navigation/AppLink';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json(null, { status: 404 });

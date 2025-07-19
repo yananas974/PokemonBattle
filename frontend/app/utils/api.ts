@@ -13,10 +13,11 @@ const isValidToken = (token: string | undefined | null): token is string => {
     token.split('.').length === 3);
 };
 
-// ✅ Fonction pour récupérer le token depuis le DOM/localStorage côté client
+// ✅ Côté client, plus besoin de localStorage - les cookies httpOnly sont automatiquement envoyés
 const getTokenFromBrowser = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('backendToken') || null;
+  // Les tokens sont désormais dans les cookies httpOnly, pas accessible côté client
+  // Cette fonction reste pour compatibilité mais retourne null
+  return null;
 };
 
 // ✅ Fonction pour récupérer le token depuis la session côté serveur
@@ -25,11 +26,12 @@ const getBackendTokenFromSession = async (request: Request): Promise<string | nu
   
   try {
     // Import dynamique pour éviter l'import côté client
-    const { getBackendTokenFromSession: getToken } = await import('~/sessions.server');
+    const { getBackendTokenFromSession: getToken } = await import('../sessions.server.js');
     const token = await getToken(request);
+    console.log('🔍 Token récupéré de la session:', token ? 'PRÉSENT' : 'ABSENT');
     return token && token !== 'undefined' && token !== 'null' ? token : null;
   } catch (error) {
-    console.log('⚠️ Impossible de récupérer le token de la session:', error);
+    console.log('❌ Erreur récupération token:', error);
     return null;
   }
 };
@@ -70,15 +72,11 @@ export const apiCall = async (
     ...options,
   };
 
-  console.log('API Call to:', url, 'with credentials: include');
   if (isValidToken(finalToken)) {
-    console.log('🔑 Token valide envoyé:', finalToken.substring(0, 20) + '...');
   } else {
-    console.log('❌ Aucun token valide disponible (token reçu:', finalToken, ')');
   }
   
   const response = await fetch(url, defaultOptions);
-  console.log('API Response status:', response.status);
   return response;
 };
 

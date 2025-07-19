@@ -3,11 +3,11 @@ import { createCookieSessionStorage } from '@remix-run/node';
 const { getSession, commitSession, destroySession } = createCookieSessionStorage({
   cookie: {
     name: '__pokemon_session',
-    secrets: ['pokemon-secret-key-for-dev'], // En production, utiliser process.env.SESSION_SECRET
-    secure: false, // true en production avec HTTPS
+    secrets: [process.env.SESSION_SECRET || 'pokemon-secret-key-for-dev'],
+    secure: process.env.NODE_ENV === 'production', // HTTPS en production
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 3456, // 4 jours
+    maxAge: 60 * 60 * 24 * 7, // 7 jours
     path: '/',
   },
 });
@@ -27,10 +27,10 @@ export async function getUserFromSession(request: Request) {
   return { userId, user };
 }
 
-export async function createUserSession(userId: string, user: any, redirectTo: string) {
+export async function createUserSession(userId: string, user: any, redirectTo: string, backendToken?: string) {
   const session = await getSession();
   session.set('userId', userId);
-  session.set('user', user);
+  session.set('user', { ...user, backendToken });
   return new Response(null, {
     status: 302,
     headers: {
@@ -38,6 +38,14 @@ export async function createUserSession(userId: string, user: any, redirectTo: s
       'Set-Cookie': await commitSession(session),
     },
   });
+}
+
+// Nouvelle fonction pour stocker uniquement le token backend de manière sécurisée
+export async function setBackendTokenInSession(request: Request, backendToken: string) {
+  const session = await getUserSession(request);
+  const user = session.get('user') || {};
+  session.set('user', { ...user, backendToken });
+  return await commitSession(session);
 }
 
 export async function getTokenFromSession(request: Request) {

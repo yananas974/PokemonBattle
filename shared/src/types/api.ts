@@ -7,21 +7,31 @@ export interface StandardApiResponse<T = any> {
   timestamp?: string;
 }
 
+// ✅ TYPES D'ERREUR POUR RÉTROCOMPATIBILITÉ
 export interface ErrorResponse {
   success: false;
   error: string;
-  code?: string;
-  details?: any;
+  message?: string;
   timestamp?: string;
   path?: string;
+  code?: string;
+  details?: any;
 }
 
 export interface ValidationErrorResponse extends ErrorResponse {
+  code?: string;
+  fields?: Array<{
+    field: string;
+    message: string;
+    value?: any;
+  }>;
   validationErrors?: Array<{
     field: string;
     message: string;
   }>;
 }
+
+// ✅ NOTE: Types d'erreurs étendus disponibles dans types/errors.ts
 
 // ✅ TYPES DE CONTEXTE POUR L'AUTHENTIFICATION
 export interface ApiAuthenticatedContext {
@@ -34,7 +44,7 @@ export interface ApiAuthenticatedContext {
 
 // ✅ TYPES POUR LES HANDLERS
 export interface HandlerFunction {
-  (c: any): Promise<Response>;
+  (c: Record<string, any>): Promise<Response>;
 }
 
 export interface AuthenticatedHandler {

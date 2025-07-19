@@ -1,7 +1,7 @@
 import type { MetaFunction } from '@remix-run/node';
 import { useLoaderData } from '@remix-run/react';
 import { useEffect } from 'react';
-import { ModernDashboard } from '~/components/ModernDashboard';
+import { ModernDashboard } from '~/components/dashboard/ModernDashboard';
 import { useGlobalAudio } from '~/hooks/useGlobalAudio';
 import { withAuthLoader } from '~/utils/withAuthLoader';
 import { teamService } from '~/services/teamService';

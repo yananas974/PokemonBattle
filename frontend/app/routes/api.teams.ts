@@ -43,7 +43,6 @@ export const loader = withAuthLoader(async (user, request, _params) => {
         });
     }
   } catch (error) {
-    console.error('API Teams error:', error);
     return Response.json(
       { error: 'Failed to fetch teams data' },
       { status: 500 }
@@ -159,7 +158,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return Response.json({ error: 'Invalid intent' }, { status: 400 });
     }
   } catch (error) {
-    console.error('API Teams action error:', error);
     return Response.json(
       { error: 'Failed to perform action' },
       { status: 500 }

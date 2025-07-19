@@ -83,4 +83,4 @@ export const ModernButton: React.FC<ModernButtonProps> = ({
       {content}
     </button>
   );
-}; 
+};

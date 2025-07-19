@@ -150,7 +150,6 @@ export function ErrorProvider({ children }: { children: ReactNode }) {
         const result = await promise;
         return result;
       } catch (error) {
-        console.error('Erreur capturée par ErrorContext:', error);
         
         let errorMessage = fallbackMessage;
         let errorDetails = undefined;

@@ -27,10 +27,8 @@ export default function Settings() {
   const settingsManager = useSettings({
     onSave: async (settings) => {
       // Ici on pourrait envoyer les settings au serveur
-      console.log('💾 Sauvegarde des paramètres:', settings);
     },
     onError: (error) => {
-      console.error('❌ Erreur lors de la sauvegarde:', error);
     }
   });
 

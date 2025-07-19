@@ -1,16 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { 
-  WeatherResponse, 
-  WeatherRequest,
   WeatherEffectWithBonus,
-  WeatherCondition,
-  weatherValidators,
   ValidationService,
   getWeatherIcon,
-  getWeatherGradient,
-  formatTemperature,
-  formatWindSpeed,
-  formatHumidity
 } from '@pokemon-battle/shared';
 
 // Interface spécifique pour le widget météo
@@ -64,7 +56,6 @@ export const useWeather = (): UseWeatherReturn => {
       // Les données sont wrappées dans apiResponse.data par formatResponse
       const weatherData = apiResponse.data || apiResponse;
       
-      console.log('🌤️ Structure des données reçues:', weatherData);
       
       const processedWeather: WeatherData = {
         location: weatherData.location || 'Position actuelle',
@@ -79,13 +70,9 @@ export const useWeather = (): UseWeatherReturn => {
         effects: weatherData.effects
       };
       
-      console.log('🌤️ Données traitées:', processedWeather);
-      console.log('🌤️ Humidity brute:', weatherData.humidity, 'traitée:', processedWeather.humidity);
-      console.log('🌤️ WindSpeed brute:', weatherData.windSpeed, 'traitée:', processedWeather.windSpeed);
 
       setWeather(processedWeather);
     } catch (err) {
-      console.error('❌ Erreur météo:', err);
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
       setLoading(false);
@@ -130,7 +117,6 @@ export const useWeather = (): UseWeatherReturn => {
       await fetchWeather(lat, lon);
       
     } catch (err) {
-      console.error('❌ Erreur géolocalisation:', err);
       setError(err instanceof Error ? err.message : 'Erreur de géolocalisation');
     } finally {
       setLoading(false);

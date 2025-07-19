@@ -1,24 +1,5 @@
-// ✅ TYPES ET ENUMS COMMUNS
-export enum PokemonType {
-  NORMAL = 'normal',
-  FIRE = 'fire', 
-  WATER = 'water',
-  ELECTRIC = 'electric',
-  GRASS = 'grass',
-  ICE = 'ice',
-  FIGHTING = 'fighting',
-  POISON = 'poison',
-  GROUND = 'ground',
-  FLYING = 'flying',
-  PSYCHIC = 'psychic',
-  BUG = 'bug',
-  ROCK = 'rock',
-  GHOST = 'ghost',
-  DRAGON = 'dragon',
-  DARK = 'dark',
-  STEEL = 'steel',
-  FAIRY = 'fairy'
-}
+// ✅ TYPES POKEMON
+// NOTE: PokemonType enum déplacé vers enums/index.ts pour éviter les doublons
 
 // ✅ INTERFACE POKEMON API (format standardisé)
 export interface Pokemon {

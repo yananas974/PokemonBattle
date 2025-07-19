@@ -30,7 +30,7 @@ async function makeApiCall<T>(
 }
 
 // ✅ HELPER pour mapper les données du backend vers le format frontend
-const mapPokemonData = (backendPokemon: any): Pokemon => ({
+const mapPokemonData = (backendPokemon: Record<string, any>): Pokemon => ({
   id: backendPokemon.id,
   name_fr: backendPokemon.name_fr,
   name_en: backendPokemon.name_en,
@@ -48,17 +48,14 @@ const mapPokemonData = (backendPokemon: any): Pokemon => ({
 export const pokemonService = {
   // ✅ Récupérer tous les Pokémon avec support Request et token
   async getAllPokemon(requestOrToken?: Request | string): Promise<PokemonResponse> {
-    console.log('🔍 PokemonService: Récupération Pokemon...');
     
     let backendResponse: StandardApiResponse<{ pokemon: Pokemon[]; totalCount: number }>;
     
     if (requestOrToken instanceof Request) {
       // Côté serveur (loaders)
-      console.log('🔍 PokemonService: Utilisation côté serveur avec Request');
       backendResponse = await makeApiCallServer('/api/pokemon/all', requestOrToken);
     } else {
       // Côté client (actions/client-side)
-      console.log('🔍 PokemonService: Utilisation côté client avec token');
       backendResponse = await makeApiCall('/api/pokemon/all', {}, requestOrToken);
     }
     
@@ -101,7 +98,7 @@ export const pokemonService = {
     
     const endpoint = `/api/pokemon/search?${params.toString()}`;
     
-    let backendResponse: StandardApiResponse<{ pokemon: Pokemon[]; totalCount: number; filters: any }>;
+    let backendResponse: StandardApiResponse<{ pokemon: Pokemon[]; totalCount: number; filters: Record<string, any> }>;
     
     if (requestOrToken instanceof Request) {
       backendResponse = await makeApiCallServer(endpoint, requestOrToken);

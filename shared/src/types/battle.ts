@@ -103,6 +103,7 @@ export interface InteractiveBattleState extends TurnBasedBattleState {
   battleId: string;
   weatherTurns: number;
   timeBonus: number;
+  weatherData?: any;
   hackChallenge?: HackChallenge | null;
   isHackActive: boolean;
   hackStartTime?: number;
@@ -189,6 +190,8 @@ export interface InteractiveBattleData {
   turnCount: number;
   hackChallenge?: any;
   isHackActive?: boolean;
+  waitingForPlayerMove?: boolean;
+  timeBonus?: number;
 }
 
 // ✅ POKÉMON AVEC EFFETS

@@ -1,0 +1,1 @@
+export { PokemonAudioPlayer } from './PokemonAudioPlayer';

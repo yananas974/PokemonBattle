@@ -388,18 +388,12 @@ export class TurnBasedBattleService {
     const isCritical = Math.random() < criticalChance;
     const criticalMultiplier = isCritical ? 2.0 : 1.0;
     
-    // ✅ Bonus météo
+    // ✅ Bonus météo - utiliser le même système que preparePokemonForBattle
     let weatherBonus = 1.0;
-    if (weatherEffects) {
-      if (move.type === 'Feu' && weatherEffects.condition.includes('Soleil')) {
-        weatherBonus = 1.5;
-      } else if (move.type === 'Eau' && weatherEffects.condition.includes('Pluie')) {
-        weatherBonus = 1.5;
-      } else if (move.type === 'Feu' && weatherEffects.condition.includes('Pluie')) {
-        weatherBonus = 0.5;
-      } else if (move.type === 'Eau' && weatherEffects.condition.includes('Soleil')) {
-        weatherBonus = 0.5;
-      }
+    if (weatherEffects && weatherEffects.getMultiplierFor) {
+      // Calculer le bonus météo pour le type de l'attaque
+      weatherBonus = weatherEffects.getMultiplierFor(move.type as any);
+      console.log(`🌤️ Calcul weatherBonus: Type ${move.type} avec ${weatherEffects.condition} = ${weatherBonus}`);
     }
     
     // ✅ Variation aléatoire (85-100% en Gen 1)
