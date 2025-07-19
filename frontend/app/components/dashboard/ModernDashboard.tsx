@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from '@remix-run/react';
 
 export const ModernDashboard = ({ userName, stats }: { userName: string; stats: { totalPokemon: number; totalTeams: number } }) => {
@@ -113,5 +112,3 @@ export const ModernDashboard = ({ userName, stats }: { userName: string; stats: 
     </div>
   );
 };
-
-export default ModernDashboard;

@@ -7,8 +7,6 @@ import {
   getWeatherIcon, 
   getWeatherGradient, 
   formatTemperature,
-  formatWindSpeed,
-  formatHumidity 
 } from '@pokemon-battle/shared';
 
 import type { User } from '@pokemon-battle/shared';
@@ -296,7 +294,10 @@ const QuickActionsNavbar: React.FC<QuickActionsNavbarProps> = ({ user }) => {
             <button
               type="submit"
               onClick={() => {
-                // Les tokens sont maintenant gérés côté serveur via les sessions
+                // Nettoyer le localStorage côté client avant la soumission
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('backendToken');
+                }
               }}
               className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
